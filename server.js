@@ -107,9 +107,7 @@ app.get('/users', (req, res) => {
   res.json(users.filter(u => u.username !== req.session.user.username).map(u => ({ username: u.username, phone: u.phone })));
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on https://0.0.0.0:${PORT}`);
-});
+module.exports = app;
 
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
