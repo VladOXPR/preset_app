@@ -18,7 +18,7 @@ app.use(session({
 }));
 
 app.get('/', (req, res) => {
-  res.redirect('/login.html');
+  res.redirect('public/login.html');
 });
 
 function loadUsers() {
@@ -41,24 +41,24 @@ function saveMessages(messages) {
 
 app.get('/logout', (req, res) => {
   req.session.destroy(() => {
-    res.redirect('/login.html');
+    res.redirect('public/login.html');
   });
 });
 
 app.post('/signup', (req, res) => {
   const { phone, username, password, password2 } = req.body;
   if (!phone || !username || !password || !password2 || password !== password2) {
-    return res.redirect('/signup.html?error=invalid');
+    return res.redirect('public/signup.html?error=invalid');
   }
   let users = loadUsers();
   if (users.find(u => u.username === username)) {
-    return res.redirect('/signup.html?error=exists');
+    return res.redirect('public/signup.html?error=exists');
   }
   const hash = bcrypt.hashSync(password, 10);
   users.push({ phone, username, password: hash });
   saveUsers(users);
   req.session.user = { username };
-  res.redirect('/welcome.html');
+  res.redirect('public/welcome.html');
 });
 
 app.post('/login', (req, res) => {
@@ -66,10 +66,10 @@ app.post('/login', (req, res) => {
   let users = loadUsers();
   const user = users.find(u => u.username === username);
   if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.redirect('/login.html?error=invalid');
+    return res.redirect('public/login.html?error=invalid');
   }
   req.session.user = { username };
-  res.redirect('/welcome.html');
+  res.redirect('public/welcome.html');
 });
 
 app.post('/chat/send', (req, res) => {
