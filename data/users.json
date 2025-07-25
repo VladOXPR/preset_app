@@ -1,0 +1,27 @@
+[
+  {
+    "phone": "111",
+    "username": "User1",
+    "password": "$2b$10$n8rbEVuu1RY2gi58ccb04Oe2ukvmobim0QmfjIC3B5Gv.bqeF88n6"
+  },
+  {
+    "phone": "222",
+    "username": "User2",
+    "password": "$2b$10$F.5Ds2uI73/KYwIdfBSnyuyA8RwMim/8SzVSM0xEcUZdpzhMYvDi6"
+  },
+  {
+    "phone": "333",
+    "username": "User3",
+    "password": "$2b$10$uRh8Q26ivxf0R6hIQEFw3.GM1ImdKbfszr.WJdDtlbswQHDzJupUW"
+  },
+  {
+    "phone": "444",
+    "username": "User4",
+    "password": "$2b$10$8yIzpzrj/yNlbtLD/bjXYOlqGdZNQmsbMJ0X/RsNRejHd0AgUmhV2"
+  },
+  {
+    "phone": "555",
+    "username": "User5",
+    "password": "$2b$10$c2S44Oh3iDyM7UUd01J1CuJPH9jWea6N3rss7UfmWyqOciPe.BIvK"
+  }
+]
