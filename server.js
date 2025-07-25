@@ -1,4 +1,3 @@
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const session = require('express-session');
@@ -6,10 +5,9 @@ const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 
+const app = express();
 const USERS_FILE = path.join(__dirname, 'data', 'users.json');
 const MESSAGES_FILE = path.join(__dirname, 'data', 'messages.json');
-
-const app = express();
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static('public'));
@@ -20,7 +18,7 @@ app.use(session({
 }));
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '/login.html'));
+  res.redirect('/login.html');
 });
 
 function loadUsers() {
