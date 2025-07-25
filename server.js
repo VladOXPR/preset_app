@@ -6,7 +6,6 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 4000;
 const USERS_FILE = path.join(__dirname, 'data', 'users.json');
 const MESSAGES_FILE = path.join(__dirname, 'data', 'messages.json');
 
@@ -107,7 +106,11 @@ app.get('/users', (req, res) => {
   res.json(users.filter(u => u.username !== req.session.user.username).map(u => ({ username: u.username, phone: u.phone })));
 });
 
-module.exports = app;
+const PORT = process.env.PORT || 4000;
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running at http://0.0.0.0:${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+});
 
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
