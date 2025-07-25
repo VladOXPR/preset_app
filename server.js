@@ -1,3 +1,4 @@
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const session = require('express-session');
@@ -5,9 +6,10 @@ const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 
-const app = express();
 const USERS_FILE = path.join(__dirname, 'data', 'users.json');
 const MESSAGES_FILE = path.join(__dirname, 'data', 'messages.json');
+
+const app = express();
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static('public'));
@@ -18,7 +20,7 @@ app.use(session({
 }));
 
 app.get('/', (req, res) => {
-  res.redirect('public/login.html');
+  res.sendFile(path.join(__dirname, '/login.html'));
 });
 
 function loadUsers() {
@@ -41,24 +43,24 @@ function saveMessages(messages) {
 
 app.get('/logout', (req, res) => {
   req.session.destroy(() => {
-    res.redirect('public/login.html');
+    res.redirect('/login.html');
   });
 });
 
 app.post('/signup', (req, res) => {
   const { phone, username, password, password2 } = req.body;
   if (!phone || !username || !password || !password2 || password !== password2) {
-    return res.redirect('public/signup.html?error=invalid');
+    return res.redirect('/signup.html?error=invalid');
   }
   let users = loadUsers();
   if (users.find(u => u.username === username)) {
-    return res.redirect('public/signup.html?error=exists');
+    return res.redirect('/signup.html?error=exists');
   }
   const hash = bcrypt.hashSync(password, 10);
   users.push({ phone, username, password: hash });
   saveUsers(users);
   req.session.user = { username };
-  res.redirect('public/welcome.html');
+  res.redirect('/welcome.html');
 });
 
 app.post('/login', (req, res) => {
@@ -66,10 +68,10 @@ app.post('/login', (req, res) => {
   let users = loadUsers();
   const user = users.find(u => u.username === username);
   if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.redirect('public/login.html?error=invalid');
+    return res.redirect('/login.html?error=invalid');
   }
   req.session.user = { username };
-  res.redirect('public/welcome.html');
+  res.redirect('/welcome.html');
 });
 
 app.post('/chat/send', (req, res) => {
