@@ -8,7 +8,7 @@ const db = require('./database');
 
 // Initialize Express app and configuration
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware setup
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -18,6 +18,11 @@ app.use(session({
   resave: false,
   saveUninitialized: false
 }));
+
+// Health check endpoint for Vercel
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Static page routes - serve HTML files
 app.get('/', (req, res) => {
