@@ -24,6 +24,27 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Explicit static file routes for Vercel
+app.get('/style.css', (req, res) => {
+  res.setHeader('Content-Type', 'text/css');
+  res.sendFile(path.join(__dirname, 'public', 'style.css'));
+});
+
+app.get('/welcome.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, 'public', 'welcome.js'));
+});
+
+app.get('/chat.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, 'public', 'chat.js'));
+});
+
+app.get('/admin.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, 'public', 'admin.js'));
+});
+
 // Static page routes - serve HTML files
 app.get('/', (req, res) => {
   res.redirect('/login');
