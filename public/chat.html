@@ -7,13 +7,20 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="chat-container">
-        <div id="chatArea"></div>
-            <div class="chat-input-row">
-            <input class="chat-input" id="chatInput" placeholder="Type a message..." />
-            <button class="primary send-btn" id="sendBtn">Send</button>
+  <div class="chat-top">
+    <div class="chat-top-container">
+      <a href="/welcome" class="back-btn">✕</a>
+    </div>
+  </div>
+  <div class="chat-container">
+    <div id="chatArea"></div>
+    <div class="chat-bottom-container">
+        <div class="chat-input-row">
+        <input class="chat-input" id="chatInput" placeholder="Type a message..." />
+        <button class="primary send-btn" id="sendBtn">Send</button>
         </div>
     </div>
+  </div>
   <script src="chat.js"></script>
 </body>
 </html> 

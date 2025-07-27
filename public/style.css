@@ -121,7 +121,7 @@ a.secondary:hover, button.secondary:hover {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding: 32px 0 0 0;
+  padding: 90px 0 0 0;
   max-width: 400px;
   width: 100%;
   margin-bottom: 85px;
@@ -130,7 +130,7 @@ a.secondary:hover, button.secondary:hover {
   font-size: 20px;
   max-width: 70vw;
   word-break: break-word;
-  margin: 16px 16px;
+  margin: 10px 16px;
   position: static;
 }
 .chat-message.left {
@@ -181,7 +181,7 @@ a.secondary:hover, button.secondary:hover {
   background: #eee;
 } 
 .user-card {
-  border: 2px solid #fff;
+  border: 2px solid #4D4D4D;
   border-radius: 30px;
   padding: 20px;
   margin: 15px auto;
@@ -231,10 +231,25 @@ a.secondary:hover, button.secondary:hover {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(0,0,0,0.2);
-  backdrop-filter: blur(7px);
+  background: rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
   z-index: 100;
   padding-bottom: 0;
+  gap: 16px;
+}
+.delete-btn {
+  background: #ff4444;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 48px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.delete-btn:hover {
+  background: #cc3333;
 } 
 .welcome-top {
   position: fixed;
@@ -256,9 +271,9 @@ a.secondary:hover, button.secondary:hover {
   font-weight: 700;
 } 
 .logout-bottom .secondary {
-  background: #fff;
-  color: #000;
-  border: none;
+  background: transparent;
+  color: #fff;
+  border: 2px solid #fff;
   border-radius: 999px;
   padding: 15px 48px;
   font-size: 15px;
@@ -269,5 +284,55 @@ a.secondary:hover, button.secondary:hover {
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 .logout-bottom .secondary:hover {
-  background: #eee;
+  background: rgba(255,255,255,0.1);
+} 
+.chat-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 85px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
+  z-index: 101;
+  padding-left: 0;
+}
+.chat-top-container {
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 0 16px;
+}
+
+.chat-bottom-container {
+    max-width: 400px;
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0 16px;
+}
+
+.back-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.1);
+  border: 2px solid #fff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+.back-btn:hover {
+  background: rgba(255,255,255,0.2);
 } 

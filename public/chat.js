@@ -10,10 +10,16 @@ window.onload = function() {
   const sendBtn = document.getElementById('sendBtn');
 
   function render(messages, myUsername) {
+    console.log('Rendering messages:', messages);
+    console.log('My username:', myUsername);
     chatArea.innerHTML = '';
     messages.forEach(m => {
+      console.log('Message:', m);
+      console.log('from_user:', m.from_user);
+      console.log('myUsername:', myUsername);
+      console.log('Is my message?', m.from_user === myUsername);
       const div = document.createElement('div');
-      div.className = 'chat-message ' + (m.from === myUsername ? 'right' : 'left');
+      div.className = 'chat-message ' + (m.from_user === myUsername ? 'right' : 'left');
       div.textContent = m.text;
       chatArea.appendChild(div);
     });
@@ -22,6 +28,7 @@ window.onload = function() {
 
   let myUsername = null;
   fetch('/me').then(r => r.json()).then(me => {
+    console.log('Me response:', me);
     myUsername = me.username;
     loadHistory();
   });
@@ -30,6 +37,7 @@ window.onload = function() {
     fetch('/chat/history?user=' + encodeURIComponent(user))
       .then(r => r.json())
       .then(messages => {
+        console.log('Chat history response:', messages);
         render(messages, myUsername);
       });
   }

@@ -24,7 +24,7 @@ window.onload = function() {
       phone.textContent = u.phone;
       const chatBtn = document.createElement('a');
       chatBtn.textContent = 'Text me';
-      chatBtn.href = `chat.html?user=${encodeURIComponent(u.username)}`;
+      chatBtn.href = `/chat?user=${encodeURIComponent(u.username)}`;
       chatBtn.className = 'primary user-card-btn';
       card.appendChild(name);
       card.appendChild(phone);
