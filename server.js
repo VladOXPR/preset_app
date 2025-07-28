@@ -23,7 +23,8 @@ app.use(session({
     secure: false, // Set to false for HTTP, true for HTTPS
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax'
+    sameSite: 'lax',
+    path: '/'
   },
   name: 'preset_session'
 }));
@@ -76,6 +77,10 @@ app.get('/signup', (req, res) => {
 
 app.get('/welcome', (req, res) => {
   // Check if user is logged in
+  console.log('Welcome page access - Session ID:', req.sessionID);
+  console.log('Welcome page access - Session data:', req.session);
+  console.log('Welcome page access - Session user:', req.session.user);
+  
   if (!req.session.user) {
     console.log('Unauthorized access to welcome page, redirecting to login');
     return res.redirect('/login');
@@ -125,20 +130,22 @@ app.post('/signup', async (req, res) => {
     const hash = bcrypt.hashSync(password, 10);
     await db.createUser(username, phone, hash);
     
-    console.log('User created successfully, setting session');
-    req.session.user = { username };
-    
-    // Force session save and then redirect
-    req.session.save((err) => {
+    console.log('User created successfully, regenerating session');
+    req.session.regenerate((err) => {
       if (err) {
-        console.error('Session save error during signup:', err);
+        console.error('Session regeneration error during signup:', err);
         return res.redirect('/signup?error=server');
       }
-      console.log('Session saved successfully during signup, redirecting to welcome');
-      // Use a small delay to ensure session is saved
-      setTimeout(() => {
+      
+      req.session.user = { username };
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error during signup:', err);
+          return res.redirect('/signup?error=server');
+        }
+        console.log('Session saved successfully during signup, redirecting to welcome');
         res.redirect('/welcome');
-      }, 100);
+      });
     });
   } catch (error) {
     console.error('Signup error:', error);
@@ -197,19 +204,21 @@ app.post('/login', async (req, res) => {
     }
     
     console.log('Login successful for username:', username);
-    req.session.user = { username };
-    
-    // Force session save and then redirect
-    req.session.save((err) => {
+    req.session.regenerate((err) => {
       if (err) {
-        console.error('Session save error:', err);
+        console.error('Session regeneration error during login:', err);
         return res.redirect('/login?error=server');
       }
-      console.log('Session saved successfully during login, redirecting to welcome');
-      // Use a small delay to ensure session is saved
-      setTimeout(() => {
+      
+      req.session.user = { username };
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.redirect('/login?error=server');
+        }
+        console.log('Session saved successfully during login, redirecting to welcome');
         res.redirect('/welcome');
-      }, 100);
+      });
     });
   } catch (error) {
     console.error('Login error:', error);
