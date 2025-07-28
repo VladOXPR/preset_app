@@ -1,89 +1,31 @@
-// MongoDB database for Vercel deployment
-const { MongoClient } = require('mongodb');
+// Vercel KV (Redis) database for persistent storage
+const { kv } = require('@vercel/kv');
 
-// MongoDB connection string (you'll need to set this as environment variable)
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/preset_app';
-
-let client;
-let db;
-let useInMemory = false; // Fallback flag
-
-// In-memory storage for fallback
-let users = [];
-let messages = [];
-
-// Check if database is connected
-function isConnected() {
-  return client && client.topology && client.topology.isConnected();
-}
-
-// Initialize database connection
-async function initDatabase() {
-  try {
-    console.log('Connecting to MongoDB...');
-    client = new MongoClient(MONGODB_URI);
-    await client.connect();
-    db = client.db();
-    console.log('Connected to MongoDB successfully');
-    
-    // Create indexes for better performance
-    await db.collection('users').createIndex({ username: 1 }, { unique: true });
-    await db.collection('messages').createIndex({ from_user: 1, to_user: 1 });
-    
-    console.log('Database indexes created');
-    useInMemory = false;
-  } catch (error) {
-    console.error('Failed to connect to MongoDB, using in-memory storage:', error);
-    useInMemory = true;
-  }
-}
-
-// User functions
+// Simple database functions using Vercel KV
 async function createUser(username, phone, password) {
   try {
-    if (useInMemory) {
-      // In-memory fallback
-      const existingUser = users.find(u => u.username === username);
-      if (existingUser) {
-        throw new Error('Username already exists');
-      }
-
-      const newUser = {
-        id: users.length + 1,
-        username,
-        phone,
-        password,
-        created_at: new Date()
-      };
-
-      users.push(newUser);
-      console.log('User created (in-memory):', username);
-      return newUser;
-    }
-
-    // MongoDB path
-    // Check if database is connected
-    if (!isConnected()) {
-      console.log('Database not connected, attempting to reconnect...');
-      await initDatabase();
-    }
-
+    console.log('Creating user:', username);
+    
     // Check if user already exists
-    const existingUser = await db.collection('users').findOne({ username });
+    const existingUser = await kv.get(`user:${username}`);
     if (existingUser) {
       throw new Error('Username already exists');
     }
 
     const newUser = {
+      id: Date.now().toString(),
       username,
       phone,
       password,
-      created_at: new Date()
+      created_at: new Date().toISOString()
     };
 
-    const result = await db.collection('users').insertOne(newUser);
-    console.log('User created:', username);
-    return { ...newUser, id: result.insertedId };
+    // Store user data
+    await kv.set(`user:${username}`, newUser);
+    await kv.sadd('users', username);
+    
+    console.log('User created successfully:', username);
+    return newUser;
   } catch (error) {
     console.error('Error creating user:', error);
     throw error;
@@ -92,20 +34,7 @@ async function createUser(username, phone, password) {
 
 async function getUserByUsername(username) {
   try {
-    if (useInMemory) {
-      // In-memory fallback
-      const user = users.find(u => u.username === username);
-      return user || null;
-    }
-
-    // MongoDB path
-    // Check if database is connected
-    if (!isConnected()) {
-      console.log('Database not connected, attempting to reconnect...');
-      await initDatabase();
-    }
-
-    const user = await db.collection('users').findOne({ username });
+    const user = await kv.get(`user:${username}`);
     return user;
   } catch (error) {
     console.error('Error getting user by username:', error);
@@ -115,21 +44,18 @@ async function getUserByUsername(username) {
 
 async function getAllUsers() {
   try {
-    if (useInMemory) {
-      // In-memory fallback
-      return users.map(u => ({ id: u.id, username: u.username, phone: u.phone, created_at: u.created_at }));
+    const usernames = await kv.smembers('users');
+    const users = [];
+    
+    for (const username of usernames) {
+      const user = await kv.get(`user:${username}`);
+      if (user) {
+        // Don't return password
+        const { password, ...userWithoutPassword } = user;
+        users.push(userWithoutPassword);
+      }
     }
-
-    // MongoDB path
-    // Check if database is connected
-    if (!isConnected()) {
-      console.log('Database not connected, attempting to reconnect...');
-      await initDatabase();
-    }
-
-    const users = await db.collection('users').find({}, { 
-      projection: { password: 0 } 
-    }).toArray();
+    
     return users;
   } catch (error) {
     console.error('Error getting all users:', error);
@@ -139,39 +65,40 @@ async function getAllUsers() {
 
 async function getUserById(id) {
   try {
-    // Check if database is connected
-    if (!isConnected()) {
-      console.log('Database not connected, attempting to reconnect...');
-      await initDatabase();
+    // Get all users and find by ID
+    const usernames = await kv.smembers('users');
+    for (const username of usernames) {
+      const user = await kv.get(`user:${username}`);
+      if (user && user.id === id) {
+        return user;
+      }
     }
-
-    const user = await db.collection('users').findOne({ _id: id });
-    return user;
+    return null;
   } catch (error) {
     console.error('Error getting user by ID:', error);
     throw error;
   }
 }
 
-// Message functions
 async function saveMessage(fromUser, toUser, text) {
   try {
-    // Check if database is connected
-    if (!isConnected()) {
-      console.log('Database not connected, attempting to reconnect...');
-      await initDatabase();
-    }
-
     const message = {
+      id: Date.now().toString(),
       from_user: fromUser,
       to_user: toUser,
       text,
-      timestamp: new Date()
+      timestamp: new Date().toISOString()
     };
 
-    const result = await db.collection('messages').insertOne(message);
+    // Store message
+    await kv.set(`message:${message.id}`, message);
+    
+    // Add to chat history for both users
+    await kv.lpush(`chat:${fromUser}:${toUser}`, message.id);
+    await kv.lpush(`chat:${toUser}:${fromUser}`, message.id);
+    
     console.log('Message saved:', { from: fromUser, to: toUser, text });
-    return { ...message, id: result.insertedId };
+    return message;
   } catch (error) {
     console.error('Error saving message:', error);
     throw error;
@@ -180,22 +107,21 @@ async function saveMessage(fromUser, toUser, text) {
 
 async function getChatHistory(user1, user2) {
   try {
-    // Check if database is connected
-    if (!isConnected()) {
-      console.log('Database not connected, attempting to reconnect...');
-      await initDatabase();
+    // Get message IDs for this chat
+    const messageIds = await kv.lrange(`chat:${user1}:${user2}`, 0, -1);
+    const messages = [];
+    
+    // Get actual message data
+    for (const messageId of messageIds) {
+      const message = await kv.get(`message:${messageId}`);
+      if (message) {
+        messages.push(message);
+      }
     }
-
-    const messages = await db.collection('messages')
-      .find({
-        $or: [
-          { from_user: user1, to_user: user2 },
-          { from_user: user2, to_user: user1 }
-        ]
-      })
-      .sort({ timestamp: 1 })
-      .toArray();
-
+    
+    // Sort by timestamp
+    messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    
     console.log('Chat history retrieved:', messages.length, 'messages');
     return messages;
   } catch (error) {
@@ -204,42 +130,51 @@ async function getChatHistory(user1, user2) {
   }
 }
 
-// Admin functions
 async function deleteUser(userId) {
   try {
-    // Check if database is connected
-    if (!isConnected()) {
-      console.log('Database not connected, attempting to reconnect...');
-      await initDatabase();
+    // Find user by ID
+    const usernames = await kv.smembers('users');
+    let userToDelete = null;
+    
+    for (const username of usernames) {
+      const user = await kv.get(`user:${username}`);
+      if (user && user.id === userId) {
+        userToDelete = user;
+        break;
+      }
     }
-
-    const user = await db.collection('users').findOne({ _id: userId });
-    if (!user) {
+    
+    if (!userToDelete) {
       throw new Error('User not found');
     }
 
     // Delete user
-    await db.collection('users').deleteOne({ _id: userId });
+    await kv.del(`user:${userToDelete.username}`);
+    await kv.srem('users', userToDelete.username);
     
     // Delete all messages from/to this user
-    await db.collection('messages').deleteMany({
-      $or: [
-        { from_user: user.username },
-        { to_user: user.username }
-      ]
-    });
+    const allUsernames = await kv.smembers('users');
+    for (const username of allUsernames) {
+      await kv.del(`chat:${userToDelete.username}:${username}`);
+      await kv.del(`chat:${username}:${userToDelete.username}`);
+    }
     
-    console.log('User deleted:', user.username);
-    return user;
+    console.log('User deleted:', userToDelete.username);
+    return userToDelete;
   } catch (error) {
     console.error('Error deleting user:', error);
     throw error;
   }
 }
 
+// Initialize database (no-op for Vercel KV)
+async function initDatabase() {
+  console.log('Vercel KV database initialized');
+}
+
 // Initialize database when module is loaded
 initDatabase()
-  .then(() => console.log('MongoDB database initialized'))
+  .then(() => console.log('Vercel KV database ready'))
   .catch(console.error);
 
 module.exports = {
