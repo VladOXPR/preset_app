@@ -10,9 +10,6 @@ const db = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Simple in-memory session store for Vercel
-const sessions = new Map();
-
 // Middleware setup
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static('public'));
@@ -20,29 +17,15 @@ app.use(express.static('public'));
 // Session configuration for Vercel
 app.use(session({
   secret: 'preset_secret_key_very_long_and_secure',
-  resave: false,
-  saveUninitialized: false,
+  resave: true,
+  saveUninitialized: true,
   cookie: {
     secure: false, // Set to false for HTTP, true for HTTPS
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax'
   },
-  name: 'preset_session',
-  store: {
-    get: (sessionId, callback) => {
-      const session = sessions.get(sessionId);
-      callback(null, session);
-    },
-    set: (sessionId, session, callback) => {
-      sessions.set(sessionId, session);
-      callback(null);
-    },
-    destroy: (sessionId, callback) => {
-      sessions.delete(sessionId);
-      callback(null);
-    }
-  }
+  name: 'preset_session'
 }));
 
 // Session debugging middleware
