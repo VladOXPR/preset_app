@@ -6,6 +6,16 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/preset
 
 let client;
 let db;
+let useInMemory = false; // Fallback flag
+
+// In-memory storage for fallback
+let users = [];
+let messages = [];
+
+// Check if database is connected
+function isConnected() {
+  return client && client.topology && client.topology.isConnected();
+}
 
 // Initialize database connection
 async function initDatabase() {
@@ -21,15 +31,43 @@ async function initDatabase() {
     await db.collection('messages').createIndex({ from_user: 1, to_user: 1 });
     
     console.log('Database indexes created');
+    useInMemory = false;
   } catch (error) {
-    console.error('Failed to connect to MongoDB:', error);
-    throw error;
+    console.error('Failed to connect to MongoDB, using in-memory storage:', error);
+    useInMemory = true;
   }
 }
 
 // User functions
 async function createUser(username, phone, password) {
   try {
+    if (useInMemory) {
+      // In-memory fallback
+      const existingUser = users.find(u => u.username === username);
+      if (existingUser) {
+        throw new Error('Username already exists');
+      }
+
+      const newUser = {
+        id: users.length + 1,
+        username,
+        phone,
+        password,
+        created_at: new Date()
+      };
+
+      users.push(newUser);
+      console.log('User created (in-memory):', username);
+      return newUser;
+    }
+
+    // MongoDB path
+    // Check if database is connected
+    if (!isConnected()) {
+      console.log('Database not connected, attempting to reconnect...');
+      await initDatabase();
+    }
+
     // Check if user already exists
     const existingUser = await db.collection('users').findOne({ username });
     if (existingUser) {
@@ -54,6 +92,19 @@ async function createUser(username, phone, password) {
 
 async function getUserByUsername(username) {
   try {
+    if (useInMemory) {
+      // In-memory fallback
+      const user = users.find(u => u.username === username);
+      return user || null;
+    }
+
+    // MongoDB path
+    // Check if database is connected
+    if (!isConnected()) {
+      console.log('Database not connected, attempting to reconnect...');
+      await initDatabase();
+    }
+
     const user = await db.collection('users').findOne({ username });
     return user;
   } catch (error) {
@@ -64,6 +115,18 @@ async function getUserByUsername(username) {
 
 async function getAllUsers() {
   try {
+    if (useInMemory) {
+      // In-memory fallback
+      return users.map(u => ({ id: u.id, username: u.username, phone: u.phone, created_at: u.created_at }));
+    }
+
+    // MongoDB path
+    // Check if database is connected
+    if (!isConnected()) {
+      console.log('Database not connected, attempting to reconnect...');
+      await initDatabase();
+    }
+
     const users = await db.collection('users').find({}, { 
       projection: { password: 0 } 
     }).toArray();
@@ -76,6 +139,12 @@ async function getAllUsers() {
 
 async function getUserById(id) {
   try {
+    // Check if database is connected
+    if (!isConnected()) {
+      console.log('Database not connected, attempting to reconnect...');
+      await initDatabase();
+    }
+
     const user = await db.collection('users').findOne({ _id: id });
     return user;
   } catch (error) {
@@ -87,6 +156,12 @@ async function getUserById(id) {
 // Message functions
 async function saveMessage(fromUser, toUser, text) {
   try {
+    // Check if database is connected
+    if (!isConnected()) {
+      console.log('Database not connected, attempting to reconnect...');
+      await initDatabase();
+    }
+
     const message = {
       from_user: fromUser,
       to_user: toUser,
@@ -105,6 +180,12 @@ async function saveMessage(fromUser, toUser, text) {
 
 async function getChatHistory(user1, user2) {
   try {
+    // Check if database is connected
+    if (!isConnected()) {
+      console.log('Database not connected, attempting to reconnect...');
+      await initDatabase();
+    }
+
     const messages = await db.collection('messages')
       .find({
         $or: [
@@ -126,6 +207,12 @@ async function getChatHistory(user1, user2) {
 // Admin functions
 async function deleteUser(userId) {
   try {
+    // Check if database is connected
+    if (!isConnected()) {
+      console.log('Database not connected, attempting to reconnect...');
+      await initDatabase();
+    }
+
     const user = await db.collection('users').findOne({ _id: userId });
     if (!user) {
       throw new Error('User not found');

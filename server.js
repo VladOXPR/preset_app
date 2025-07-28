@@ -112,22 +112,37 @@ app.post('/signup', async (req, res) => {
 // Admin user creation - handles new user creation from admin panel
 app.post('/newuser', async (req, res) => {
   try {
+    console.log('Admin user creation request:', req.body);
     const { phone, username, password, password2 } = req.body;
-    if (!phone || !username || !password || !password2 || password !== password2) {
+    
+    // Validate input
+    if (!phone || !username || !password || !password2) {
+      console.log('Missing required fields:', { phone, username, password: !!password, password2: !!password2 });
       return res.redirect('/newuser?error=invalid');
     }
     
+    if (password !== password2) {
+      console.log('Passwords do not match');
+      return res.redirect('/newuser?error=invalid');
+    }
+    
+    console.log('Checking if user exists:', username);
     // Check if user already exists
     const existingUser = await db.getUserByUsername(username);
     if (existingUser) {
+      console.log('User already exists:', username);
       return res.redirect('/newuser?error=exists');
     }
     
+    console.log('Creating new user:', username);
     const hash = bcrypt.hashSync(password, 10);
-    await db.createUser(username, phone, hash);
+    const newUser = await db.createUser(username, phone, hash);
+    console.log('User created successfully:', newUser);
+    
     res.redirect('/admin');
   } catch (error) {
     console.error('New user creation error:', error);
+    console.error('Error stack:', error.stack);
     res.redirect('/newuser?error=server');
   }
 });
