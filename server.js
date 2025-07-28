@@ -10,6 +10,9 @@ const db = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Simple in-memory session store for Vercel
+const sessions = new Map();
+
 // Middleware setup
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static('public'));
@@ -25,7 +28,21 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax'
   },
-  name: 'preset_session'
+  name: 'preset_session',
+  store: {
+    get: (sessionId, callback) => {
+      const session = sessions.get(sessionId);
+      callback(null, session);
+    },
+    set: (sessionId, session, callback) => {
+      sessions.set(sessionId, session);
+      callback(null);
+    },
+    destroy: (sessionId, callback) => {
+      sessions.delete(sessionId);
+      callback(null);
+    }
+  }
 }));
 
 // Session debugging middleware
@@ -106,21 +123,35 @@ app.get('/logout', (req, res) => {
 // User registration - handles new user signup
 app.post('/signup', async (req, res) => {
   try {
+    console.log('Signup attempt:', req.body);
     const { phone, username, password, password2 } = req.body;
+    
     if (!phone || !username || !password || !password2 || password !== password2) {
+      console.log('Signup validation failed');
       return res.redirect('/signup?error=invalid');
     }
     
     // Check if user already exists
     const existingUser = await db.getUserByUsername(username);
     if (existingUser) {
+      console.log('Signup failed - user already exists:', username);
       return res.redirect('/signup?error=exists');
     }
     
+    console.log('Creating new user:', username);
     const hash = bcrypt.hashSync(password, 10);
     await db.createUser(username, phone, hash);
+    
+    console.log('User created successfully, setting session');
     req.session.user = { username };
-    res.redirect('/welcome');
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error during signup:', err);
+        return res.redirect('/signup?error=server');
+      }
+      console.log('Session saved successfully during signup');
+      res.redirect('/welcome');
+    });
   } catch (error) {
     console.error('Signup error:', error);
     res.redirect('/signup?error=server');
@@ -205,13 +236,27 @@ app.get('/api/session', (req, res) => {
 // API endpoints for frontend data
 app.get('/me', async (req, res) => {
   try {
-    console.log('Session:', req.session);
-    if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+    console.log('GET /me - Session ID:', req.sessionID);
+    console.log('GET /me - Session data:', req.session);
+    console.log('GET /me - Session user:', req.session.user);
+    
+    if (!req.session.user) {
+      console.log('GET /me - No session user, returning 401');
+      return res.status(401).json({ error: 'Not logged in' });
+    }
+    
     const user = await db.getUserByUsername(req.session.user.username);
-    console.log('User from DB:', user);
+    console.log('GET /me - User from DB:', user);
+    
+    if (!user) {
+      console.log('GET /me - User not found in DB, clearing session');
+      req.session.destroy();
+      return res.status(401).json({ error: 'User not found' });
+    }
+    
     res.json({ username: user.username, phone: user.phone });
   } catch (error) {
-    console.error('Get user error:', error);
+    console.error('GET /me - Error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -219,12 +264,24 @@ app.get('/me', async (req, res) => {
 // Get list of all users (for welcome page)
 app.get('/users', async (req, res) => {
   try {
-    if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+    console.log('GET /users - Session ID:', req.sessionID);
+    console.log('GET /users - Session data:', req.session);
+    console.log('GET /users - Session user:', req.session.user);
+    
+    if (!req.session.user) {
+      console.log('GET /users - No session user, returning 401');
+      return res.status(401).json({ error: 'Not logged in' });
+    }
+    
     const users = await db.getAllUsers();
+    console.log('GET /users - All users from DB:', users);
+    
     const filteredUsers = users.filter(u => u.username !== req.session.user.username);
+    console.log('GET /users - Filtered users:', filteredUsers);
+    
     res.json(filteredUsers);
   } catch (error) {
-    console.error('Get users error:', error);
+    console.error('GET /users - Error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
