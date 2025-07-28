@@ -1,7 +1,7 @@
 // Import required modules
 const express = require('express');
 const bodyParser = require('body-parser');
-const session = require('express-session');
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const db = require('./database');
@@ -10,31 +10,30 @@ const db = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// JWT secret key
+const JWT_SECRET = 'preset_jwt_secret_key_very_long_and_secure';
+
 // Middleware setup
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static('public'));
 
-// Session configuration for Vercel
-app.use(session({
-  secret: 'preset_secret_key_very_long_and_secure',
-  resave: true,
-  saveUninitialized: true,
-  cookie: {
-    secure: false, // Set to false for HTTP, true for HTTPS
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax',
-    path: '/'
-  },
-  name: 'preset_session'
-}));
-
-// Session debugging middleware
-app.use((req, res, next) => {
-  console.log('Session ID:', req.sessionID);
-  console.log('Session data:', req.session);
-  next();
-});
+// JWT middleware to verify tokens
+function verifyToken(req, res, next) {
+  const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
 
 // Health check endpoint for Vercel
 app.get('/api/health', (req, res) => {
@@ -76,17 +75,23 @@ app.get('/signup', (req, res) => {
 });
 
 app.get('/welcome', (req, res) => {
-  // Check if user is logged in
-  console.log('Welcome page access - Session ID:', req.sessionID);
-  console.log('Welcome page access - Session data:', req.session);
-  console.log('Welcome page access - Session user:', req.session.user);
+  // Check if user has valid JWT token
+  const token = req.cookies?.token;
   
-  if (!req.session.user) {
-    console.log('Unauthorized access to welcome page, redirecting to login');
+  if (!token) {
+    console.log('No JWT token found, redirecting to login');
     return res.redirect('/login');
   }
-  console.log('User accessing welcome page:', req.session.user.username);
-  res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('User accessing welcome page:', decoded.username);
+    res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
+  } catch (error) {
+    console.log('Invalid JWT token, redirecting to login');
+    res.clearCookie('token');
+    res.redirect('/login');
+  }
 });
 
 app.get('/chat', (req, res) => {
@@ -103,9 +108,8 @@ app.get('/newuser', (req, res) => {
 
 // Authentication routes
 app.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/login');
-  });
+  res.clearCookie('token');
+  res.redirect('/login');
 });
 
 // User registration - handles new user signup
@@ -130,23 +134,20 @@ app.post('/signup', async (req, res) => {
     const hash = bcrypt.hashSync(password, 10);
     await db.createUser(username, phone, hash);
     
-    console.log('User created successfully, regenerating session');
-    req.session.regenerate((err) => {
-      if (err) {
-        console.error('Session regeneration error during signup:', err);
-        return res.redirect('/signup?error=server');
-      }
-      
-      req.session.user = { username };
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error during signup:', err);
-          return res.redirect('/signup?error=server');
-        }
-        console.log('Session saved successfully during signup, redirecting to welcome');
-        res.redirect('/welcome');
-      });
+    console.log('User created successfully, generating JWT token');
+    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '24h' });
+    
+    // Set JWT token as HTTP-only cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false, // Set to true for HTTPS
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax',
+      path: '/'
     });
+    
+    console.log('JWT token set, redirecting to welcome');
+    res.redirect('/welcome');
   } catch (error) {
     console.error('Signup error:', error);
     res.redirect('/signup?error=server');
@@ -204,22 +205,19 @@ app.post('/login', async (req, res) => {
     }
     
     console.log('Login successful for username:', username);
-    req.session.regenerate((err) => {
-      if (err) {
-        console.error('Session regeneration error during login:', err);
-        return res.redirect('/login?error=server');
-      }
-      
-      req.session.user = { username };
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-          return res.redirect('/login?error=server');
-        }
-        console.log('Session saved successfully during login, redirecting to welcome');
-        res.redirect('/welcome');
-      });
+    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '24h' });
+    
+    // Set JWT token as HTTP-only cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false, // Set to true for HTTPS
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax',
+      path: '/'
     });
+    
+    console.log('JWT token set, redirecting to welcome');
+    res.redirect('/welcome');
   } catch (error) {
     console.error('Login error:', error);
     res.redirect('/login?error=server');
@@ -238,35 +236,55 @@ app.get('/api/session', (req, res) => {
 
 // Test endpoint to check if user is logged in
 app.get('/api/test-auth', (req, res) => {
-  if (req.session.user) {
+  const token = req.cookies?.token;
+  
+  if (!token) {
+    return res.json({ loggedIn: false });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
     res.json({ 
       loggedIn: true, 
-      username: req.session.user.username,
-      sessionID: req.sessionID 
+      username: decoded.username
     });
-  } else {
+  } catch (error) {
+    res.clearCookie('token');
     res.json({ loggedIn: false });
   }
 });
 
-// API endpoints for frontend data
-app.get('/me', async (req, res) => {
+// JWT token check endpoint
+app.get('/api/token', (req, res) => {
+  const token = req.cookies?.token;
+  
+  if (!token) {
+    return res.json({ hasToken: false });
+  }
+  
   try {
-    console.log('GET /me - Session ID:', req.sessionID);
-    console.log('GET /me - Session data:', req.session);
-    console.log('GET /me - Session user:', req.session.user);
+    const decoded = jwt.verify(token, JWT_SECRET);
+    res.json({ 
+      hasToken: true, 
+      username: decoded.username,
+      expiresIn: decoded.exp 
+    });
+  } catch (error) {
+    res.clearCookie('token');
+    res.json({ hasToken: false, error: 'Invalid token' });
+  }
+});
+
+// API endpoints for frontend data
+app.get('/me', verifyToken, async (req, res) => {
+  try {
+    console.log('GET /me - User from token:', req.user);
     
-    if (!req.session.user) {
-      console.log('GET /me - No session user, returning 401');
-      return res.status(401).json({ error: 'Not logged in' });
-    }
-    
-    const user = await db.getUserByUsername(req.session.user.username);
+    const user = await db.getUserByUsername(req.user.username);
     console.log('GET /me - User from DB:', user);
     
     if (!user) {
-      console.log('GET /me - User not found in DB, clearing session');
-      req.session.destroy();
+      console.log('GET /me - User not found in DB');
       return res.status(401).json({ error: 'User not found' });
     }
     
@@ -278,21 +296,14 @@ app.get('/me', async (req, res) => {
 });
 
 // Get list of all users (for welcome page)
-app.get('/users', async (req, res) => {
+app.get('/users', verifyToken, async (req, res) => {
   try {
-    console.log('GET /users - Session ID:', req.sessionID);
-    console.log('GET /users - Session data:', req.session);
-    console.log('GET /users - Session user:', req.session.user);
-    
-    if (!req.session.user) {
-      console.log('GET /users - No session user, returning 401');
-      return res.status(401).json({ error: 'Not logged in' });
-    }
+    console.log('GET /users - User from token:', req.user);
     
     const users = await db.getAllUsers();
     console.log('GET /users - All users from DB:', users);
     
-    const filteredUsers = users.filter(u => u.username !== req.session.user.username);
+    const filteredUsers = users.filter(u => u.username !== req.user.username);
     console.log('GET /users - Filtered users:', filteredUsers);
     
     res.json(filteredUsers);
