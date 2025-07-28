@@ -127,13 +127,18 @@ app.post('/signup', async (req, res) => {
     
     console.log('User created successfully, setting session');
     req.session.user = { username };
+    
+    // Force session save and then redirect
     req.session.save((err) => {
       if (err) {
         console.error('Session save error during signup:', err);
         return res.redirect('/signup?error=server');
       }
-      console.log('Session saved successfully during signup');
-      res.redirect('/welcome');
+      console.log('Session saved successfully during signup, redirecting to welcome');
+      // Use a small delay to ensure session is saved
+      setTimeout(() => {
+        res.redirect('/welcome');
+      }, 100);
     });
   } catch (error) {
     console.error('Signup error:', error);
@@ -193,13 +198,18 @@ app.post('/login', async (req, res) => {
     
     console.log('Login successful for username:', username);
     req.session.user = { username };
+    
+    // Force session save and then redirect
     req.session.save((err) => {
       if (err) {
         console.error('Session save error:', err);
         return res.redirect('/login?error=server');
       }
-      console.log('Session saved successfully');
-      res.redirect('/welcome');
+      console.log('Session saved successfully during login, redirecting to welcome');
+      // Use a small delay to ensure session is saved
+      setTimeout(() => {
+        res.redirect('/welcome');
+      }, 100);
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -212,8 +222,22 @@ app.get('/api/session', (req, res) => {
   res.json({
     sessionID: req.sessionID,
     session: req.session,
-    user: req.session.user
+    user: req.session.user,
+    timestamp: new Date().toISOString()
   });
+});
+
+// Test endpoint to check if user is logged in
+app.get('/api/test-auth', (req, res) => {
+  if (req.session.user) {
+    res.json({ 
+      loggedIn: true, 
+      username: req.session.user.username,
+      sessionID: req.sessionID 
+    });
+  } else {
+    res.json({ loggedIn: false });
+  }
 });
 
 // API endpoints for frontend data
