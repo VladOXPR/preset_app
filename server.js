@@ -13,15 +13,27 @@ const PORT = process.env.PORT || 3000;
 // Middleware setup
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static('public'));
+
+// Session configuration for Vercel
 app.use(session({
-  secret: 'preset_secret',
-  resave: true,
-  saveUninitialized: true,
+  secret: 'preset_secret_key_very_long_and_secure',
+  resave: false,
+  saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
+    secure: false, // Set to false for HTTP, true for HTTPS
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax'
+  },
+  name: 'preset_session'
 }));
+
+// Session debugging middleware
+app.use((req, res, next) => {
+  console.log('Session ID:', req.sessionID);
+  console.log('Session data:', req.session);
+  next();
+});
 
 // Health check endpoint for Vercel
 app.get('/api/health', (req, res) => {
@@ -63,6 +75,12 @@ app.get('/signup', (req, res) => {
 });
 
 app.get('/welcome', (req, res) => {
+  // Check if user is logged in
+  if (!req.session.user) {
+    console.log('Unauthorized access to welcome page, redirecting to login');
+    return res.redirect('/login');
+  }
+  console.log('User accessing welcome page:', req.session.user.username);
   res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
 });
 
@@ -150,19 +168,38 @@ app.post('/newuser', async (req, res) => {
 // User login - authenticates existing users
 app.post('/login', async (req, res) => {
   try {
+    console.log('Login attempt:', req.body);
     const { username, password } = req.body;
     const user = await db.getUserByUsername(username);
     
     if (!user || !bcrypt.compareSync(password, user.password)) {
+      console.log('Login failed for username:', username);
       return res.redirect('/login?error=invalid');
     }
     
+    console.log('Login successful for username:', username);
     req.session.user = { username };
-    res.redirect('/welcome');
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.redirect('/login?error=server');
+      }
+      console.log('Session saved successfully');
+      res.redirect('/welcome');
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.redirect('/login?error=server');
   }
+});
+
+// Session check endpoint
+app.get('/api/session', (req, res) => {
+  res.json({
+    sessionID: req.sessionID,
+    session: req.session,
+    user: req.session.user
+  });
 });
 
 // API endpoints for frontend data

@@ -1,6 +1,6 @@
 window.onload = function() {
   fetch('/me').then(r => {
-    if (r.status !== 200) { window.location = '/login.html'; return; }
+    if (r.status !== 200) { window.location = '/login'; return; }
     return r.json();
   }).then(data => {
     if (!data) return;
