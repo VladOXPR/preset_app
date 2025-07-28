@@ -32,7 +32,7 @@ function loadUsers() {
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = 'Delete User';
         deleteBtn.className = 'primary user-card-btn delete-btn';
-        deleteBtn.onclick = () => deleteUser(u.username);
+        deleteBtn.onclick = () => deleteUser(u.id);
         card.appendChild(name);
         card.appendChild(phone);
         card.appendChild(document.createElement('br'));
@@ -42,12 +42,12 @@ function loadUsers() {
     });
 }
 
-function deleteUser(username) {
-  if (confirm(`Are you sure you want to delete user "${username}"?`)) {
+function deleteUser(userId) {
+  if (confirm(`Are you sure you want to delete this user?`)) {
     fetch('/admin/delete-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'username=' + encodeURIComponent(username)
+      body: 'userId=' + encodeURIComponent(userId)
     })
     .then(r => r.json())
     .then(res => {

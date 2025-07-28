@@ -1,6 +1,7 @@
 // Import required modules
 const express = require('express');
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const path = require('path');
@@ -15,6 +16,7 @@ const JWT_SECRET = 'preset_jwt_secret_key_very_long_and_secure';
 
 // Middleware setup
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
 app.use(express.static('public'));
 
 // JWT middleware to verify tokens
@@ -314,14 +316,13 @@ app.get('/users', verifyToken, async (req, res) => {
 });
 
 // Chat functionality - send new message
-app.post('/chat/send', async (req, res) => {
+app.post('/chat/send', verifyToken, async (req, res) => {
   try {
-    console.log('Session in send:', req.session);
-    if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+    console.log('Chat send - User from token:', req.user);
     const { to, text } = req.body;
     if (!to || !text) return res.status(400).json({ error: 'Missing fields' });
     
-    const from = req.session.user.username;
+    const from = req.user.username;
     console.log('Sending message from:', from, 'to:', to);
     await db.saveMessage(from, to, text);
     res.json({ success: true });
@@ -332,14 +333,13 @@ app.post('/chat/send', async (req, res) => {
 });
 
 // Chat functionality - get chat history between two users
-app.get('/chat/history', async (req, res) => {
+app.get('/chat/history', verifyToken, async (req, res) => {
   try {
-    console.log('Session in history:', req.session);
-    if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+    console.log('Chat history - User from token:', req.user);
     const { user } = req.query;
     if (!user) return res.status(400).json({ error: 'Missing user' });
     
-    const me = req.session.user.username;
+    const me = req.user.username;
     console.log('Getting chat history for:', me, 'with:', user);
     const messages = await db.getChatHistory(me, user);
     console.log('Messages from DB:', messages);
@@ -356,18 +356,25 @@ app.get('/admin/users', async (req, res) => {
     const users = await db.getAllUsers();
     res.json(users);
   } catch (error) {
-    console.error('Get all users error:', error);
+    console.error('Get admin users error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 app.post('/admin/delete-user', async (req, res) => {
   try {
-    const { username } = req.body;
-    if (!username) return res.status(400).json({ error: 'Username required' });
+    console.log('Admin delete user request:', req.body);
+    const { userId } = req.body;
     
-    await db.deleteUser(username);
-    res.json({ success: true });
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+    
+    console.log('Deleting user with ID:', userId);
+    const deletedUser = await db.deleteUser(userId);
+    console.log('User deleted successfully:', deletedUser);
+    
+    res.json({ success: true, deletedUser });
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ error: 'Server error' });
