@@ -42,6 +42,28 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Test database endpoint
+app.get('/api/test-db', async (req, res) => {
+  try {
+    console.log('Testing database connection...');
+    const users = await db.getAllUsers();
+    console.log('Database test - Users found:', users.length);
+    res.json({ 
+      status: 'ok', 
+      users_count: users.length,
+      sample_user: users[0] || null,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Database test error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Explicit static file routes for Vercel
 app.get('/style.css', (req, res) => {
   res.setHeader('Content-Type', 'text/css');
@@ -304,9 +326,12 @@ app.get('/users', verifyToken, async (req, res) => {
     
     const users = await db.getAllUsers();
     console.log('GET /users - All users from DB:', users);
+    console.log('GET /users - Users count:', users.length);
+    console.log('GET /users - First user sample:', users[0]);
     
     const filteredUsers = users.filter(u => u.username !== req.user.username);
     console.log('GET /users - Filtered users:', filteredUsers);
+    console.log('GET /users - Filtered count:', filteredUsers.length);
     
     res.json(filteredUsers);
   } catch (error) {
@@ -353,7 +378,11 @@ app.get('/chat/history', verifyToken, async (req, res) => {
 // Admin panel endpoints
 app.get('/admin/users', async (req, res) => {
   try {
+    console.log('GET /admin/users - Starting request');
     const users = await db.getAllUsers();
+    console.log('GET /admin/users - Users from DB:', users);
+    console.log('GET /admin/users - Users count:', users.length);
+    console.log('GET /admin/users - First user sample:', users[0]);
     res.json(users);
   } catch (error) {
     console.error('Get admin users error:', error);
