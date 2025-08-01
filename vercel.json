@@ -68,6 +68,10 @@
       "dest": "/public/js/admin.js"
     },
     {
+      "src": "/haptics.js",
+      "dest": "/public/js/haptics.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "server.js"
     }
