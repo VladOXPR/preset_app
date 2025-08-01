@@ -494,6 +494,21 @@ app.get('/admin/users', async (req, res) => {
   }
 });
 
+// Admin panel endpoints with full user details (including passwords)
+app.get('/admin/users-full', async (req, res) => {
+  try {
+    console.log('GET /admin/users-full - Starting request');
+    const users = await db.getAllUsersWithPasswords();
+    console.log('GET /admin/users-full - Users from DB:', users);
+    console.log('GET /admin/users-full - Users count:', users.length);
+    console.log('GET /admin/users-full - First user sample:', users[0]);
+    res.json(users);
+  } catch (error) {
+    console.error('Get admin users full error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.post('/admin/delete-user', async (req, res) => {
   try {
     console.log('Admin delete user request:', req.body);

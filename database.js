@@ -232,6 +232,40 @@ async function getAllUsers() {
   }
 }
 
+async function getAllUsersWithPasswords() {
+  try {
+    if (dbType === 'neon') {
+      const users = await sql`
+        SELECT id, username, phone, password, bio, created_at FROM users
+      `;
+      // Ensure all users have a bio field, even if NULL in database
+      return users.map(user => ({
+        ...user,
+        bio: user.bio || ''
+      }));
+    } else {
+      // JSON file implementation
+      const fs = require('fs');
+      const path = require('path');
+      const USERS_FILE = path.join(__dirname, 'data', 'users.json');
+      
+      const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+      // Return users with password field for admin panel
+      return users.map(user => ({
+        id: user.id,
+        username: user.username,
+        phone: user.phone,
+        password: user.password,
+        bio: user.bio || '',
+        created_at: user.created_at
+      }));
+    }
+  } catch (error) {
+    console.error('Error getting all users with passwords:', error);
+    throw error;
+  }
+}
+
 async function getUserById(id) {
   try {
     if (dbType === 'neon') {
@@ -404,6 +438,7 @@ module.exports = {
   createUser,
   getUserByUsername,
   getAllUsers,
+  getAllUsersWithPasswords,
   getUserById,
   saveMessage,
   getChatHistory,

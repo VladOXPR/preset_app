@@ -8,7 +8,7 @@ window.onload = function() {
 };
 
 function loadUsers() {
-  fetch('/admin/users')
+  fetch('/admin/users-full')
     .then(r => {
       if (r.status !== 200) {
         console.error('Failed to load users');
@@ -24,18 +24,21 @@ function loadUsers() {
       users.forEach(u => {
         const card = document.createElement('div');
         card.className = 'user-card';
-        const name = document.createElement('div');
-        name.className = 'user-card-name';
-        name.textContent = u.username;
-        const bio = document.createElement('div');
-        bio.className = 'user-card-bio';
-        bio.textContent = u.bio || 'No bio available';
+        
+        // Create user details in the specified format
+        const userDetails = document.createElement('div');
+        userDetails.className = 'user-card-details';
+        userDetails.innerHTML = `
+          <div><strong>Username:</strong> ${u.username}</div>
+          <div><strong>Phonenumber:</strong> ${u.phone}</div>
+        `;
+        
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = 'Delete User';
         deleteBtn.className = 'primary user-card-btn delete-btn';
         deleteBtn.onclick = () => deleteUser(u.id);
-        card.appendChild(name);
-        card.appendChild(bio);
+        
+        card.appendChild(userDetails);
         card.appendChild(document.createElement('br'));
         card.appendChild(deleteBtn);
         userList.appendChild(card);

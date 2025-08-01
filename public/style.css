@@ -198,22 +198,37 @@ a.secondary:hover, button.secondary:hover {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  font-size: 28px;
   box-sizing: border-box;
 }
 .user-card-name {
   font-size: 15px;
   font-weight: 400;
-  margin-bottom: 0px;
+  margin-bottom: 10px;
 }
 .user-card-bio {
   font-size: 15px;
   font-weight: 400;
-  margin-bottom: 32px;
   color: #B0D2FF;
   max-width: 200px;
   word-wrap: break-word;
   overflow-wrap: break-word;
+}
+
+.user-card-details {
+  font-size: 15px;
+  font-weight: 400;
+  margin-bottom: 32px;
+  color: #fff;
+  line-height: 1.5;
+}
+
+.user-card-details div {
+  margin-bottom: 8px;
+}
+
+.user-card-details strong {
+  color: #fff;
+  font-weight: normal;
 }
 .user-card-btn {
   background: #fff;
@@ -294,8 +309,26 @@ a.secondary:hover, button.secondary:hover {
   transition: background 0.2s, color 0.2s;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
+
+.logout-bottom .primary {
+  background: #fff;
+  color: #000;
+  border: none;
+  border-radius: 999px;
+  padding: 15px 48px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
 .logout-bottom .secondary:hover {
   background: rgba(255,255,255,0.1);
+}
+
+.logout-bottom .primary:hover {
+  background: #eee;
 } 
 .chat-top {
   position: fixed;
