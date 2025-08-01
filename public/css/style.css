@@ -15,6 +15,12 @@ body {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+html {
+  height: -webkit-fill-available;
 }
 
 /* Allow text selection in input fields */
@@ -54,6 +60,14 @@ textarea {
   color: #fff;
   margin-bottom: 1.5rem;
   box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+  outline: none;
+  border-color: #B0D2FF;
+  box-shadow: 0 0 0 2px rgba(176, 210, 255, 0.2);
 }
 
 textarea {
@@ -183,13 +197,14 @@ a.secondary:hover, button.secondary:hover {
   width: 90vw;
   max-width: 700px;
   font-size: 15px;
-  padding: 16px;
+  padding: 0px 16px;
   margin-left: 16px;
   border-radius: 999px;
-  border: 2px solid #fff;
+  border: 2px solid #4D4D4D;
   background: #000;
-  color: #fff;
+  color: #B0D2FF;
   outline: none;
+  height: 40px;
 }
 .send-btn {
   margin-left: 12px;
@@ -202,7 +217,6 @@ a.secondary:hover, button.secondary:hover {
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
-  height: 56px;
   display: flex;
   align-items: center;
   transition: background 0.2s, color 0.2s;

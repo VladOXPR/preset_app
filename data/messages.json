@@ -54,5 +54,12 @@
     "to_user": "John",
     "text": "how are you?",
     "timestamp": "2025-08-01T03:03:18.748Z"
+  },
+  {
+    "id": 9,
+    "from_user": "Vlad",
+    "to_user": "Jovan",
+    "text": "huhuhuhu",
+    "timestamp": "2025-08-01T05:48:36.999Z"
   }
 ]
