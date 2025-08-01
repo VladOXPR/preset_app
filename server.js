@@ -118,7 +118,7 @@ app.get('/logout', (req, res) => {
 app.post('/signup', async (req, res) => {
   try {
     console.log('Signup attempt:', req.body);
-    const { phone, username, password, password2 } = req.body;
+    const { phone, username, password, password2, bio } = req.body;
     
     if (!phone || !username || !password || !password2 || password !== password2) {
       console.log('Signup validation failed');
@@ -134,7 +134,7 @@ app.post('/signup', async (req, res) => {
     
     console.log('Creating new user:', username);
     const hash = bcrypt.hashSync(password, 10);
-    await db.createUser(username, phone, hash);
+    await db.createUser(username, phone, hash, bio);
     
     console.log('User created successfully, generating JWT token');
     const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '24h' });
@@ -160,7 +160,7 @@ app.post('/signup', async (req, res) => {
 app.post('/newuser', async (req, res) => {
   try {
     console.log('Admin user creation request:', req.body);
-    const { phone, username, password, password2 } = req.body;
+    const { phone, username, password, password2, bio } = req.body;
     
     // Validate input
     if (!phone || !username || !password || !password2) {
@@ -183,7 +183,7 @@ app.post('/newuser', async (req, res) => {
     
     console.log('Creating new user:', username);
     const hash = bcrypt.hashSync(password, 10);
-    const newUser = await db.createUser(username, phone, hash);
+    const newUser = await db.createUser(username, phone, hash, bio);
     console.log('User created successfully:', newUser);
     
     res.redirect('/admin');
