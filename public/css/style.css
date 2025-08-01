@@ -144,6 +144,7 @@ a.secondary:hover, button.secondary:hover {
   backdrop-filter: blur(7px);
   z-index: 101;
   padding-top: 0;
+  padding-bottom: 25px;
 }
 #chatArea {
   flex: 1 1 auto;
@@ -282,7 +283,7 @@ a.secondary:hover, button.secondary:hover {
   background: rgba(0,0,0,0.1);
   backdrop-filter: blur(10px);
   z-index: 100;
-  padding-bottom: 0;
+  padding-bottom: 25px;
   gap: 16px;
 }
 .delete-btn {
