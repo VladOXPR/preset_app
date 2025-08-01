@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Add New User</title>
+  <link rel="stylesheet" href="../css/style.css">
+  
+  <!-- Favicon and iOS icons -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2">
+  <link rel="manifest" href="/site.webmanifest?v=2">
+  
+  <!-- iOS home screen meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Preset App">
+</head>
+<body>
+  <div class="container">
+    <h1>Add New User</h1>
+    <form action="/newuser" method="POST">
+      <label for="phone">Phone number</label>
+      <input type="text" id="phone" name="phone" required>
+      <label for="username">Create username</label>
+      <input type="text" id="username" name="username" required>
+      <label for="bio">Tell me about yourself</label>
+      <textarea id="bio" name="bio" maxlength="50" placeholder="Tell us about yourself (max 50 characters)" required></textarea>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required>
+      <label for="password2">Re type password</label>
+      <input type="password" id="password2" name="password2" required>
+      <div class="button-row">
+        <button type="submit" class="primary">Add</button>
+        <a href="/admin" class="secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</body>
+</html> 

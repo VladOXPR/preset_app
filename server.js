@@ -171,22 +171,22 @@ app.get('/api/migrate', async (req, res) => {
 // Explicit static file routes for Vercel
 app.get('/style.css', (req, res) => {
   res.setHeader('Content-Type', 'text/css');
-  res.sendFile(path.join(__dirname, 'public', 'style.css'));
+  res.sendFile(path.join(__dirname, 'public', 'css', 'style.css'));
 });
 
 app.get('/welcome.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.join(__dirname, 'public', 'welcome.js'));
+  res.sendFile(path.join(__dirname, 'public', 'js', 'welcome.js'));
 });
 
 app.get('/chat.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.join(__dirname, 'public', 'chat.js'));
+  res.sendFile(path.join(__dirname, 'public', 'js', 'chat.js'));
 });
 
 app.get('/admin.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.join(__dirname, 'public', 'admin.js'));
+  res.sendFile(path.join(__dirname, 'public', 'js', 'admin.js'));
 });
 
 // Static page routes - serve HTML files
@@ -195,11 +195,11 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+  res.sendFile(path.join(__dirname, 'public', 'html', 'login.html'));
 });
 
 app.get('/signup', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'signup.html'));
+  res.sendFile(path.join(__dirname, 'public', 'html', 'signup.html'));
 });
 
 app.get('/welcome', (req, res) => {
@@ -214,7 +214,7 @@ app.get('/welcome', (req, res) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     console.log('User accessing welcome page:', decoded.username);
-    res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
+    res.sendFile(path.join(__dirname, 'public', 'html', 'welcome.html'));
   } catch (error) {
     console.log('Invalid JWT token, redirecting to login');
     res.clearCookie('token');
@@ -223,15 +223,15 @@ app.get('/welcome', (req, res) => {
 });
 
 app.get('/chat', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+  res.sendFile(path.join(__dirname, 'public', 'html', 'chat.html'));
 });
 
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  res.sendFile(path.join(__dirname, 'public', 'html', 'admin.html'));
 });
 
 app.get('/newuser', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'newuser.html'));
+  res.sendFile(path.join(__dirname, 'public', 'html', 'newuser.html'));
 });
 
 // Authentication routes

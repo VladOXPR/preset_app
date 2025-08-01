@@ -49,7 +49,23 @@
     },
     {
       "src": "/test-favicon.html",
-      "dest": "/public/test-favicon.html"
+      "dest": "/public/html/test-favicon.html"
+    },
+    {
+      "src": "/style.css",
+      "dest": "/public/css/style.css"
+    },
+    {
+      "src": "/welcome.js",
+      "dest": "/public/js/welcome.js"
+    },
+    {
+      "src": "/chat.js",
+      "dest": "/public/js/chat.js"
+    },
+    {
+      "src": "/admin.js",
+      "dest": "/public/js/admin.js"
     },
     {
       "src": "/(.*)",

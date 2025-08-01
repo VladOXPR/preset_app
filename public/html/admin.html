@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Log in</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Admin Panel</title>
+  <link rel="stylesheet" href="../css/style.css">
   
   <!-- Favicon and iOS icons -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
@@ -20,17 +20,15 @@
 </head>
 <body>
   <div class="container">
-    <h1>Log in</h1>
-    <form action="/login" method="POST">
-      <label for="username">Username</label>
-      <input type="text" id="username" name="username" required>
-      <label for="password">Password</label>
-      <input type="password" id="password" name="password" required>
-      <div class="button-row">
-        <button type="submit" class="primary">Log in</button>
-        <a href="/signup" class="secondary">Sign up</a>
-      </div>
-    </form>
+    <div class="welcome-top">
+      <h1>Admin Panel</h1>
+    </div>
+    <div id="user-list"></div>
+    <div class="logout-bottom">
+      <a href="/logout" class="secondary">Log out</a>
+      <a href="#" class="primary" id="addUserBtn">Add User</a>
+    </div>
   </div>
+  <script src="../js/admin.js"></script>
 </body>
 </html> 
