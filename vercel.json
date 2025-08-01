@@ -4,9 +4,53 @@
     {
       "src": "server.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/favicon.ico",
+      "dest": "/public/favicon.ico"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "dest": "/public/apple-touch-icon.png"
+    },
+    {
+      "src": "/favicon-16x16.png",
+      "dest": "/public/favicon-16x16.png"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "dest": "/public/favicon-32x32.png"
+    },
+    {
+      "src": "/favicon-new.png",
+      "dest": "/public/favicon-new.png"
+    },
+    {
+      "src": "/favicon-new-16.png",
+      "dest": "/public/favicon-new-16.png"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "dest": "/public/icon-192x192.png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "dest": "/public/icon-512x512.png"
+    },
+    {
+      "src": "/site.webmanifest",
+      "dest": "/public/site.webmanifest"
+    },
+    {
+      "src": "/test-favicon.html",
+      "dest": "/public/test-favicon.html"
+    },
     {
       "src": "/(.*)",
       "dest": "server.js"
