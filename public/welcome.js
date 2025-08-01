@@ -11,6 +11,7 @@ window.onload = function() {
     return r.json();
   }).then(users => {
     if (!users) return;
+    console.log('Users data received:', users);
     const userList = document.getElementById('user-list');
     userList.innerHTML = '';
     users.forEach(u => {

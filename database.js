@@ -205,7 +205,11 @@ async function getAllUsers() {
       const users = await sql`
         SELECT id, username, phone, bio, created_at FROM users
       `;
-      return users;
+      // Ensure all users have a bio field, even if NULL in database
+      return users.map(user => ({
+        ...user,
+        bio: user.bio || ''
+      }));
     } else {
       // JSON file implementation
       const fs = require('fs');

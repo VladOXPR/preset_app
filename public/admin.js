@@ -18,6 +18,7 @@ function loadUsers() {
     })
     .then(users => {
       if (!users) return;
+      console.log('Admin users data received:', users);
       const userList = document.getElementById('user-list');
       userList.innerHTML = '';
       users.forEach(u => {
