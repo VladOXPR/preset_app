@@ -2,10 +2,6 @@ window.onload = function() {
   loadUsers();
 
   document.getElementById('addUserBtn').addEventListener('click', function() {
-    // Haptic feedback for navigation
-    if (window.haptics) {
-      haptics.navigation();
-    }
     // Redirect to new user creation page
     window.location.href = '/newuser';
   });
@@ -52,10 +48,6 @@ function loadUsers() {
 
 function deleteUser(userId) {
   if (confirm(`Are you sure you want to delete this user?`)) {
-    // Haptic feedback for delete action
-    if (window.haptics) {
-      haptics.heavy();
-    }
     fetch('/admin/delete-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -64,16 +56,8 @@ function deleteUser(userId) {
     .then(r => r.json())
     .then(res => {
       if (res.success) {
-        // Success haptic feedback
-        if (window.haptics) {
-          haptics.success();
-        }
         loadUsers(); // Reload the user list
       } else {
-        // Error haptic feedback
-        if (window.haptics) {
-          haptics.error();
-        }
         alert('Failed to delete user: ' + res.error);
       }
     })

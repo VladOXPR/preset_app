@@ -27,11 +27,6 @@ window.onload = function() {
       chatBtn.textContent = 'Text me';
       chatBtn.href = `/chat?user=${encodeURIComponent(u.username)}`;
       chatBtn.className = 'primary user-card-btn';
-      chatBtn.addEventListener('click', function() {
-        if (window.haptics) {
-          haptics.navigation();
-        }
-      });
       card.appendChild(name);
       card.appendChild(bio);
       card.appendChild(document.createElement('br'));

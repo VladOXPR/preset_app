@@ -189,11 +189,6 @@ app.get('/admin.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'js', 'admin.js'));
 });
 
-app.get('/haptics.js', (req, res) => {
-  res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.join(__dirname, 'public', 'js', 'haptics.js'));
-});
-
 // Static page routes - serve HTML files
 app.get('/', (req, res) => {
   res.redirect('/login');

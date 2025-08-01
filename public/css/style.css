@@ -26,47 +26,6 @@ input, textarea {
   touch-action: manipulation;
   font-size: 16px !important; /* Prevents zoom on iOS */
 }
-
-/* Visual haptic feedback fallback */
-.haptic-feedback {
-  transform: scale(0.98);
-  transition: transform 0.1s ease;
-}
-
-.haptic-feedback:active {
-  transform: scale(0.95);
-}
-
-/* Button press animation */
-button:active, .primary:active, .secondary:active, .chat-btn:active, 
-.user-card-btn:active, .delete-btn:active, .back-btn:active, .send-btn:active {
-  transform: scale(0.95);
-  transition: transform 0.1s ease;
-}
-
-/* iOS-specific improvements */
-@supports (-webkit-touch-callout: none) {
-  /* iOS Safari specific styles */
-  button, .primary, .secondary, .chat-btn, .user-card-btn, .delete-btn, .back-btn, .send-btn {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-  
-  /* Enhanced touch feedback for iOS */
-  button:active, .primary:active, .secondary:active, .chat-btn:active, 
-  .user-card-btn:active, .delete-btn:active, .back-btn:active, .send-btn:active {
-    transform: scale(0.92);
-    transition: transform 0.05s ease;
-  }
-  
-  /* iOS input improvements */
-  input, textarea {
-    -webkit-appearance: none;
-    border-radius: 12px;
-  }
-}
 .container {
   max-width: 400px;
   margin: 0 auto 0 auto;

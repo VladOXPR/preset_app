@@ -44,11 +44,6 @@ window.onload = function() {
 
   function sendMessage() {
     if (!input.value.trim()) return;
-    
-    // Haptic feedback for sending message
-    if (window.haptics) {
-      haptics.message();
-    }
     fetch('/chat/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -57,17 +52,8 @@ window.onload = function() {
     .then(r => r.json())
     .then(res => {
       if (res.success) {
-        // Success haptic feedback
-        if (window.haptics) {
-          haptics.success();
-        }
         input.value = '';
         loadHistory();
-      } else {
-        // Error haptic feedback
-        if (window.haptics) {
-          haptics.error();
-        }
       }
     });
   }
