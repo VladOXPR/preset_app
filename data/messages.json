@@ -33,5 +33,26 @@
     "to_user": "Vlad",
     "text": "I want to be friends with you",
     "timestamp": "2025-08-01T02:56:30.421Z"
+  },
+  {
+    "id": 6,
+    "from_user": "Vlad",
+    "to_user": "Jovan",
+    "text": "hi",
+    "timestamp": "2025-08-01T03:03:06.895Z"
+  },
+  {
+    "id": 7,
+    "from_user": "Vlad",
+    "to_user": "John",
+    "text": "hello",
+    "timestamp": "2025-08-01T03:03:15.782Z"
+  },
+  {
+    "id": 8,
+    "from_user": "Vlad",
+    "to_user": "John",
+    "text": "how are you?",
+    "timestamp": "2025-08-01T03:03:18.748Z"
   }
 ]
