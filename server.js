@@ -102,8 +102,8 @@ app.get('/api/check-schema', async (req, res) => {
   }
 });
 
-// Migrate database endpoint
-app.post('/api/migrate', async (req, res) => {
+// Migrate database endpoint (GET version for browser access)
+app.get('/api/migrate', async (req, res) => {
   try {
     if (!process.env.DATABASE_URL) {
       return res.status(500).json({ error: 'DATABASE_URL not found' });
