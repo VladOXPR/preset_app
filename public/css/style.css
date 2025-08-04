@@ -267,6 +267,26 @@ a.secondary:hover, button.secondary:hover {
   color: #fff;
   font-weight: normal;
 }
+
+.message-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+.message-circle {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #D9D9D9;
+}
+
+.message-text {
+  font-size: 15px;
+  font-weight: 400;
+  color: #fff;
+}
 .user-card-btn {
   background: #fff;
   color: #000;

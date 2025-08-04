@@ -529,6 +529,30 @@ app.post('/admin/delete-user', async (req, res) => {
   }
 });
 
+// Check for unread messages from a specific user
+app.get('/messages/unread', verifyToken, async (req, res) => {
+  try {
+    console.log('GET /messages/unread - User from token:', req.user);
+    const { from } = req.query;
+    if (!from) return res.status(400).json({ error: 'Missing from user' });
+    
+    const me = req.user.username;
+    console.log('Checking unread messages from:', from, 'to:', me);
+    
+    // Get messages from the other user to me
+    const messages = await db.getChatHistory(from, me);
+    console.log('Messages from DB:', messages);
+    
+    // Check if there are any messages from this user
+    const hasMessages = messages && messages.length > 0;
+    
+    res.json({ hasMessages });
+  } catch (error) {
+    console.error('Get unread messages error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Start the server
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running at http://0.0.0.0:${PORT}`);
