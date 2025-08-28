@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "build": "bash vercel-build.sh",
     "migrate": "node add-bio-column.js",
     "dev": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"

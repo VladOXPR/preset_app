@@ -4,13 +4,53 @@
     {
       "src": "server.js",
       "use": "@vercel/node"
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/login",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/signup",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/home",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/admin",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/newuser",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/logout",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/css/(.*)",
+      "dest": "/public/css/$1"
+    },
+    {
+      "src": "/js/(.*)",
+      "dest": "/public/js/$1"
+    },
+    {
+      "src": "/html/(.*)",
+      "dest": "/public/html/$1"
+    },
     {
       "src": "/favicon.ico",
       "dest": "/public/favicon.ico"
@@ -48,27 +88,16 @@
       "dest": "/public/site.webmanifest"
     },
     {
-      "src": "/test-favicon.html",
-      "dest": "/public/html/test-favicon.html"
-    },
-    {
-      "src": "/style.css",
-      "dest": "/public/css/style.css"
-    },
-    {
-      "src": "/home.js",
-      "dest": "/public/js/home.js"
-    },
-    {
-
-    },
-    {
-      "src": "/admin.js",
-      "dest": "/public/js/admin.js"
-    },
-    {
       "src": "/(.*)",
-      "dest": "server.js"
+      "dest": "/server.js"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "server.js": {
+      "maxDuration": 30
+    }
+  }
 }
