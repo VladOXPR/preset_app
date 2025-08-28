@@ -7,11 +7,11 @@
   <link rel="stylesheet" href="../css/style.css">
   
   <!-- Favicon and iOS icons -->
-  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2">
-  <link rel="manifest" href="/site.webmanifest?v=2">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-new.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-new-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
   
   <!-- iOS home screen meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,15 +21,33 @@
 </head>
 <body>
   <div class="container">
-    <div class="welcome-top">
-      <h1>Admin Panel</h1>
+    <!-- Password Protection Screen -->
+    <div id="password-screen" class="password-screen">
+      <div class="password-container">
+        <h1>Admin Access</h1>
+        <p>Enter password to access admin panel</p>
+        <div class="password-input-group">
+          <input type="password" id="admin-password" class="password-input" placeholder="Enter password">
+          <button id="submit-password" class="primary">Access Admin</button>
+        </div>
+        <div id="password-error" class="password-error" style="display: none;">Incorrect password</div>
+        <a href="/home" class="secondary">Back to Home</a>
+      </div>
     </div>
-    <div id="user-list"></div>
-    <div class="logout-bottom">
-      <a href="/logout" class="secondary">Log out</a>
-      <a href="#" class="primary" id="addUserBtn">Add User</a>
+    
+    <!-- Admin Content (Hidden until password is correct) -->
+    <div id="admin-content" class="admin-content" style="display: none;">
+      <div class="home-top">
+        <h1>Admin Panel</h1>
+      </div>
+      <div id="user-list"></div>
+      <div class="button-row">
+        <button id="addUserBtn" class="primary">Add New User</button>
+        <a href="/home" class="secondary">Back to Home</a>
+      </div>
     </div>
   </div>
+  <script src="../js/config.js"></script>
   <script src="../js/admin.js"></script>
 </body>
 </html> 

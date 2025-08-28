@@ -1,6 +1,6 @@
 # JSON Database for Local Development
 
-This project now uses a JSON-based database for local development instead of SQLite or Neon PostgreSQL. This makes it much easier to develop and test locally without needing external database services.
+This project uses a JSON-based database for local development instead of SQLite or Neon PostgreSQL. This makes it much easier to develop and test locally without needing external database services.
 
 ## How it Works
 

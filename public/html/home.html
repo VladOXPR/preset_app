@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Welcome</title>
+  <link rel="stylesheet" href="../css/style.css">
+  
+  <!-- Favicon and iOS icons -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-new.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-new-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+  <!-- iOS home screen meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Preset App">
+  <meta name="theme-color" content="#000000">
+</head>
+<body>
+      <div class="container">
+      <div class="welcome-top">
+        <div class="summary-stats">
+          <div class="stat-item">
+            <div class="stat-value" id="total-revenue">$0</div>
+            <div class="stat-label">Total revenue</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="total-rents">0</div>
+            <div class="stat-label">Total rents</div>
+          </div>
+        </div>
+        
+        <!-- Date Range Selector Panel -->
+        <div class="date-range-panel">
+          <div class="date-inputs">
+            <div class="date-input-group">
+              <label>Start Date</label>
+              <input type="date" id="start-date" class="date-input">
+            </div>
+            <div class="date-input-group">
+              <label>End Date</label>
+              <input type="date" id="end-date" class="date-input">
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Station List Section -->
+      <div class="station-section">
+        <h2></h2>
+        <div id="station-list">
+          <!-- Station list will be populated here -->
+        </div>
+      </div>
+      
+      <div class="logout-bottom">
+        <a href="/logout" class="secondary">Log out</a>
+      </div>
+    </div>
+      <script src="../js/config.js"></script>
+    <script src="../js/home.js"></script>
+</body>
+</html> 

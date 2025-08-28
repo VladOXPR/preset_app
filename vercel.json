@@ -56,12 +56,11 @@
       "dest": "/public/css/style.css"
     },
     {
-      "src": "/welcome.js",
-      "dest": "/public/js/welcome.js"
+      "src": "/home.js",
+      "dest": "/public/js/home.js"
     },
     {
-      "src": "/chat.js",
-      "dest": "/public/js/chat.js"
+
     },
     {
       "src": "/admin.js",

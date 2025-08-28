@@ -1,11 +1,11 @@
 # Preset App
 
-A chat application built with Express.js and SQLite, featuring user authentication and real-time messaging.
+A station management application built with Express.js and SQLite, featuring user authentication and station data display.
 
 ## Features
 
 - User registration and login
-- Real-time chat between users
+- Station data display and management
 - Session management
 - SQLite database storage
 
@@ -49,11 +49,10 @@ A chat application built with Express.js and SQLite, featuring user authenticati
 └── public/            # Static files
     ├── login.html     # Login page
     ├── signup.html    # Signup page
-    ├── welcome.html   # Welcome page
-    ├── chat.html      # Chat page
+    ├── home.html      # Home page
+    
     ├── style.css      # Styles
-    ├── welcome.js     # Welcome page logic
-    └── chat.js        # Chat page logic
+    └── home.js        # Home page logic
 ```
 
 ## Database Schema
@@ -65,12 +64,7 @@ A chat application built with Express.js and SQLite, featuring user authenticati
 - `password` (TEXT - hashed)
 - `created_at` (DATETIME)
 
-### Messages Table
-- `id` (INTEGER PRIMARY KEY)
-- `from_user` (TEXT)
-- `to_user` (TEXT)
-- `text` (TEXT)
-- `timestamp` (DATETIME)
+
 
 ## Important Notes
 

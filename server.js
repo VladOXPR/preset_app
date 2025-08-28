@@ -7,6 +7,14 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 const db = require('./database');
 
+// Add fetch for Node.js (if not using Node 18+)
+let fetch;
+if (typeof globalThis.fetch === 'undefined') {
+  fetch = require('node-fetch');
+} else {
+  fetch = globalThis.fetch;
+}
+
 // Initialize Express app and configuration
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,6 +24,7 @@ const JWT_SECRET = 'preset_jwt_secret_key_very_long_and_secure';
 
 // Middleware setup
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json()); // Add JSON parser for API requests
 app.use(cookieParser());
 app.use(express.static('public'));
 
@@ -41,6 +50,25 @@ function verifyToken(req, res, next) {
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Shared function to fetch stations from ChargeNow API
+async function fetchChargeNowStations() {
+  const myHeaders = new Headers();
+  myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
+  
+  const requestOptions = {
+    method: 'GET',
+    headers: myHeaders,
+    redirect: 'follow'
+  };
+  
+  console.log('Making API call to ChargeNow: /cabinet/getAllDevice');
+  const response = await fetch("https://developer.chargenow.top/cdb-open-api/v1/cabinet/getAllDevice", requestOptions);
+  const result = await response.text();
+  
+  console.log('ChargeNow API response status:', response.status);
+  return result;
+}
 
 // Test database endpoint
 app.get('/api/test-db', async (req, res) => {
@@ -174,15 +202,12 @@ app.get('/style.css', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'css', 'style.css'));
 });
 
-app.get('/welcome.js', (req, res) => {
+app.get('/home.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.join(__dirname, 'public', 'js', 'welcome.js'));
+  res.sendFile(path.join(__dirname, 'public', 'js', 'home.js'));
 });
 
-app.get('/chat.js', (req, res) => {
-  res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.join(__dirname, 'public', 'js', 'chat.js'));
-});
+
 
 app.get('/admin.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
@@ -202,7 +227,7 @@ app.get('/signup', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'html', 'signup.html'));
 });
 
-app.get('/welcome', (req, res) => {
+app.get('/home', (req, res) => {
   // Check if user has valid JWT token
   const token = req.cookies?.token;
   
@@ -213,8 +238,8 @@ app.get('/welcome', (req, res) => {
   
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    console.log('User accessing welcome page:', decoded.username);
-    res.sendFile(path.join(__dirname, 'public', 'html', 'welcome.html'));
+    console.log('User accessing home page:', decoded.username);
+    res.sendFile(path.join(__dirname, 'public', 'html', 'home.html'));
   } catch (error) {
     console.log('Invalid JWT token, redirecting to login');
     res.clearCookie('token');
@@ -222,9 +247,7 @@ app.get('/welcome', (req, res) => {
   }
 });
 
-app.get('/chat', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'html', 'chat.html'));
-});
+
 
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'html', 'admin.html'));
@@ -244,7 +267,7 @@ app.get('/logout', (req, res) => {
 app.post('/signup', async (req, res) => {
   try {
     console.log('Signup attempt:', req.body);
-    const { phone, username, password, password2, bio } = req.body;
+    const { phone, username, password, password2, stationIds } = req.body;
     
     if (!phone || !username || !password || !password2 || password !== password2) {
       console.log('Signup validation failed');
@@ -260,7 +283,9 @@ app.post('/signup', async (req, res) => {
     
     console.log('Creating new user:', username);
     const hash = bcrypt.hashSync(password, 10);
-    await db.createUser(username, phone, hash, bio);
+    // Parse station IDs from comma-separated string or use empty array
+    const stationIdsArray = stationIds ? stationIds.split(',').map(id => id.trim()).filter(id => id) : [];
+    await db.createUser(username, phone, hash, stationIdsArray);
     
     console.log('User created successfully, generating JWT token');
     const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '24h' });
@@ -274,8 +299,8 @@ app.post('/signup', async (req, res) => {
       path: '/'
     });
     
-    console.log('JWT token set, redirecting to welcome');
-    res.redirect('/welcome');
+    console.log('JWT token set, redirecting to home');
+    res.redirect('/home');
   } catch (error) {
     console.error('Signup error:', error);
     res.redirect('/signup?error=server');
@@ -286,7 +311,7 @@ app.post('/signup', async (req, res) => {
 app.post('/newuser', async (req, res) => {
   try {
     console.log('Admin user creation request:', req.body);
-    const { phone, username, password, password2, bio } = req.body;
+    const { phone, username, password, password2, stationIds } = req.body;
     
     // Validate input
     if (!phone || !username || !password || !password2) {
@@ -309,7 +334,9 @@ app.post('/newuser', async (req, res) => {
     
     console.log('Creating new user:', username);
     const hash = bcrypt.hashSync(password, 10);
-    const newUser = await db.createUser(username, phone, hash, bio);
+    // Parse station IDs from comma-separated string or use empty array
+    const stationIdsArray = stationIds ? stationIds.split(',').map(id => id.trim()).filter(id => id) : [];
+    const newUser = await db.createUser(username, phone, hash, stationIdsArray);
     console.log('User created successfully:', newUser);
     
     res.redirect('/admin');
@@ -344,8 +371,8 @@ app.post('/login', async (req, res) => {
       path: '/'
     });
     
-    console.log('JWT token set, redirecting to welcome');
-    res.redirect('/welcome');
+    console.log('JWT token set, redirecting to home');
+    res.redirect('/home');
   } catch (error) {
     console.error('Login error:', error);
     res.redirect('/login?error=server');
@@ -423,7 +450,7 @@ app.get('/me', verifyToken, async (req, res) => {
   }
 });
 
-// Get list of all users (for welcome page)
+// Get list of all users (for home page)
 app.get('/users', verifyToken, async (req, res) => {
   try {
     console.log('GET /users - User from token:', req.user);
@@ -444,40 +471,7 @@ app.get('/users', verifyToken, async (req, res) => {
   }
 });
 
-// Chat functionality - send new message
-app.post('/chat/send', verifyToken, async (req, res) => {
-  try {
-    console.log('Chat send - User from token:', req.user);
-    const { to, text } = req.body;
-    if (!to || !text) return res.status(400).json({ error: 'Missing fields' });
-    
-    const from = req.user.username;
-    console.log('Sending message from:', from, 'to:', to);
-    await db.saveMessage(from, to, text);
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Send message error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
 
-// Chat functionality - get chat history between two users
-app.get('/chat/history', verifyToken, async (req, res) => {
-  try {
-    console.log('Chat history - User from token:', req.user);
-    const { user } = req.query;
-    if (!user) return res.status(400).json({ error: 'Missing user' });
-    
-    const me = req.user.username;
-    console.log('Getting chat history for:', me, 'with:', user);
-    const messages = await db.getChatHistory(me, user);
-    console.log('Messages from DB:', messages);
-    res.json(messages);
-  } catch (error) {
-    console.error('Get chat history error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
 
 // Admin panel endpoints
 app.get('/admin/users', async (req, res) => {
@@ -509,6 +503,34 @@ app.get('/admin/users-full', async (req, res) => {
   }
 });
 
+// Endpoint to update user's station assignments
+app.post('/admin/update-user-stations', async (req, res) => {
+  try {
+    console.log('Admin update user stations request:', req.body);
+    const { userId, stationIds } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+    
+    // Parse station IDs from comma-separated string or use empty array
+    const stationIdsArray = stationIds ? stationIds.split(',').map(id => id.trim()).filter(id => id) : [];
+    
+    console.log('Updating stations for user ID:', userId, 'with stations:', stationIdsArray);
+    const updatedUser = await db.updateUserStations(userId, stationIdsArray);
+    
+    if (updatedUser) {
+      console.log('User stations updated successfully:', updatedUser.username);
+      res.json({ success: true, updatedUser });
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (error) {
+    console.error('Update user stations error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.post('/admin/delete-user', async (req, res) => {
   try {
     console.log('Admin delete user request:', req.body);
@@ -529,27 +551,380 @@ app.post('/admin/delete-user', async (req, res) => {
   }
 });
 
-// Check for unread messages from a specific user
-app.get('/messages/unread', verifyToken, async (req, res) => {
+
+
+
+
+// Make initial API call when server starts
+console.log('Making initial API call to ChargeNow...');
+fetchChargeNowStations()
+  .then(result => {
+    console.log('Device list received:', result);
+    console.log('Initial API call completed successfully');
+  })
+  .catch(error => {
+    console.error('Initial API call failed:', error);
+  });
+
+
+
+// Endpoint to get station data for the home page (filtered by user permissions)
+app.get('/api/stations', verifyToken, async (req, res) => {
   try {
-    console.log('GET /messages/unread - User from token:', req.user);
-    const { from } = req.query;
-    if (!from) return res.status(400).json({ error: 'Missing from user' });
+    console.log('Fetching stations for user:', req.user.username);
     
-    const me = req.user.username;
-    console.log('Checking unread messages from:', from, 'to:', me);
+    // Get user's station permissions
+    const user = await db.getUserByUsername(req.user.username);
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
     
-    // Get messages from the other user to me
-    const messages = await db.getChatHistory(from, me);
-    console.log('Messages from DB:', messages);
+    console.log('=== STATION FILTERING DEBUG ===');
+    console.log('Request user:', req.user.username);
+    console.log('User data retrieved:', {
+      username: user.username,
+      station_ids: user.station_ids,
+      station_ids_type: typeof user.station_ids,
+      station_ids_length: Array.isArray(user.station_ids) ? user.station_ids.length : 'not array'
+    });
     
-    // Check if there are any messages from this user
-    const hasMessages = messages && messages.length > 0;
+    // Debug: Check if station_ids contains the expected value
+    console.log('Expected station ID for Parlay: BJH09881');
+    console.log('User station_ids contains BJH09881:', user.station_ids.includes('BJH09881'));
+    console.log('User station_ids array:', JSON.stringify(user.station_ids));
+    console.log('=== END DEBUG ===');
     
-    res.json({ hasMessages });
+    const result = await fetchChargeNowStations();
+    
+    let formattedData;
+    try {
+      formattedData = JSON.parse(result);
+    } catch (e) {
+      formattedData = result;
+    }
+    
+    // Filter stations based on user permissions
+    let filteredStations = [];
+    
+    // Check if the API response has the expected structure
+    console.log('API response structure:', {
+      hasData: !!formattedData.data,
+      dataType: typeof formattedData.data,
+      isArray: Array.isArray(formattedData.data),
+      dataLength: Array.isArray(formattedData.data) ? formattedData.data.length : 'not array'
+    });
+    
+    // Extract the stations array from the API response
+    let stationsArray = [];
+    if (formattedData && formattedData.data && Array.isArray(formattedData.data)) {
+      stationsArray = formattedData.data;
+    } else if (Array.isArray(formattedData)) {
+      stationsArray = formattedData;
+    }
+    
+    console.log('Stations array to filter:', {
+      length: stationsArray.length,
+      sampleStation: stationsArray[0] ? {
+        pCabinetid: stationsArray[0].pCabinetid,
+        id: stationsArray[0].id
+      } : 'no stations'
+    });
+    
+    if (stationsArray.length > 0) {
+      console.log('User station permissions:', user.station_ids);
+      console.log('User station permissions type:', typeof user.station_ids);
+      console.log('User station permissions length:', user.station_ids ? user.station_ids.length : 'undefined');
+      
+      if (user.station_ids && user.station_ids.length > 0) {
+        // Filter to only show stations the user has access to
+        filteredStations = stationsArray.filter(station => {
+          const stationId = station.pCabinetid || station.id;
+          console.log(`Checking station: ${stationId} (type: ${typeof stationId}) against user permissions: ${JSON.stringify(user.station_ids)}`);
+          
+          // Check for exact match first
+          let hasAccess = user.station_ids.includes(stationId);
+          
+          // If no exact match, try case-insensitive comparison
+          if (!hasAccess) {
+            hasAccess = user.station_ids.some(permittedId => 
+              permittedId.toString().toLowerCase() === stationId.toString().toLowerCase()
+            );
+          }
+          
+          console.log(`Station ${stationId} access: ${hasAccess}`);
+          return hasAccess;
+        });
+        console.log(`Filtered stations: ${filteredStations.length} out of ${stationsArray.length}`);
+        console.log('Filtered station IDs:', filteredStations.map(s => s.pCabinetid || s.id));
+        
+        // Fetch order data for each filtered station
+        console.log('Fetching order data for filtered stations...');
+        
+        // Get date range from query parameters or use default (last month)
+        const queryStartDate = req.query.startDate;
+        const queryEndDate = req.query.endDate;
+        
+        let sTime, eTime;
+        if (queryStartDate && queryEndDate) {
+          // Use custom date range from frontend
+          const startDate = new Date(queryStartDate + 'T00:00:00');
+          const endDate = new Date(queryEndDate + 'T23:59:59');
+          sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
+          eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
+          console.log(`Using custom date range: ${sTime} to ${eTime}`);
+        } else {
+          // Use default date range (last month)
+          const endDate = new Date();
+          const startDate = new Date();
+          startDate.setMonth(startDate.getMonth() - 1);
+          sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
+          eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
+          console.log(`Using default date range: ${sTime} to ${eTime}`);
+        }
+        
+        for (let station of filteredStations) {
+          try {
+            const stationId = station.pCabinetid || station.id;
+            console.log(`Fetching orders for station: ${stationId}`);
+            
+            const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=100&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
+            
+            const myHeaders = new Headers();
+            myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
+            
+            const requestOptions = {
+              method: 'GET',
+              headers: myHeaders,
+              redirect: 'follow'
+            };
+            
+            const orderResponse = await fetch(orderListUrl, requestOptions);
+            const orderResult = await orderResponse.text();
+            
+            let orderData;
+            try {
+              orderData = JSON.parse(orderResult);
+            } catch (e) {
+              orderData = { code: -1, msg: 'Failed to parse order data' };
+            }
+            
+            // Add order data to station
+            station.orderData = {
+              totalRecords: orderData.page?.total || 0,
+              totalRevenue: 0,
+              success: orderData.code === 0
+            };
+            
+            // Calculate total revenue from all records
+            if (orderData.page?.records && Array.isArray(orderData.page.records)) {
+              station.orderData.totalRevenue = orderData.page.records.reduce((sum, record) => {
+                return sum + (parseFloat(record.settledAmount) || 0);
+              }, 0);
+            }
+            
+            console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
+            
+          } catch (error) {
+            console.error(`Error fetching orders for station ${station.pCabinetid}:`, error);
+            station.orderData = {
+              totalRecords: 0,
+              totalRevenue: 0,
+              success: false,
+              error: error.message
+            };
+          }
+        }
+        
+      } else {
+        console.log('User has no station permissions, showing no stations');
+        filteredStations = [];
+      }
+    } else {
+      console.log('No stations found in API response');
+    }
+    
+    res.json({ 
+      success: true, 
+      data: filteredStations,
+      userPermissions: user.station_ids,
+      totalStations: Array.isArray(formattedData) ? formattedData.length : 0,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    console.error('Get unread messages error:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Error fetching stations:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Test endpoint to debug station filtering
+app.get('/api/debug-stations', async (req, res) => {
+  try {
+    console.log('Debug endpoint called');
+    
+    // Simulate the station filtering logic
+    const testUser = {
+      username: 'Parlay',
+      station_ids: ['BJH09881']
+    };
+    
+    const testStations = [
+      { pCabinetid: 'BJH09881', name: 'Station 1' },
+      { pCabinetid: 'DTN00872', name: 'Station 2' },
+      { pCabinetid: 'DTN00970', name: 'Station 3' }
+    ];
+    
+    console.log('Test user:', testUser);
+    console.log('Test stations:', testStations);
+    
+    const filtered = testStations.filter(station => {
+      const stationId = station.pCabinetid || station.id;
+      return testUser.station_ids.includes(stationId);
+    });
+    
+    console.log('Filtered result:', filtered);
+    
+    res.json({
+      testUser,
+      testStations,
+      filtered,
+      filteringLogic: 'station.pCabinetid in user.station_ids'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test endpoint to check user data from database
+app.get('/api/debug-user/:username', async (req, res) => {
+  try {
+    const username = req.params.username;
+    console.log('Debug user endpoint called for:', username);
+    
+    const user = await db.getUserByUsername(username);
+    console.log('User data retrieved:', user);
+    
+    res.json({
+      username,
+      userData: user,
+      station_ids: user ? user.station_ids : null,
+      station_ids_type: user ? typeof user.station_ids : 'user not found',
+      station_ids_length: user && Array.isArray(user.station_ids) ? user.station_ids.length : 'not array'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test endpoint to get order list for a specific station
+app.get('/api/test-orders/:stationId', async (req, res) => {
+  try {
+    const stationId = req.params.stationId;
+    console.log('Testing order list API for station:', stationId);
+    
+    const myHeaders = new Headers();
+    myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
+    
+    const requestOptions = {
+      method: 'GET',
+      headers: myHeaders,
+      redirect: 'follow'
+    };
+    
+    // Set date range for the last month
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 1);
+    
+    const sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
+    const eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
+    
+    const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=100&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
+    
+    console.log('Making API call to order list:', orderListUrl);
+    
+    const response = await fetch(orderListUrl, requestOptions);
+    const result = await response.text();
+    
+    console.log('Order list API response status:', response.status);
+    console.log('Order list API response:', result);
+    
+    // Parse the response as JSON for better structure
+    let parsedData;
+    try {
+      parsedData = JSON.parse(result);
+    } catch (e) {
+      parsedData = { rawResponse: result, parseError: e.message };
+    }
+    
+    // Set proper JSON headers and return formatted response
+    res.setHeader('Content-Type', 'application/json');
+    
+    // Create a cleaner response structure
+    const responseData = {
+      success: true,
+      stationId: stationId,
+      url: orderListUrl,
+      status: response.status,
+      responseSummary: {
+        message: parsedData.msg || 'No message',
+        code: parsedData.code || 'No code',
+        totalRecords: parsedData.page?.total || 0,
+        currentPage: parsedData.page?.current || 1,
+        pageSize: parsedData.page?.size || 10
+      },
+      sampleRecord: parsedData.page?.records?.[0] ? {
+        orderId: parsedData.page.records[0].pOrderid,
+        batteryId: parsedData.page.records[0].pBatteryid,
+        amount: parsedData.page.records[0].settledAmount,
+        duration: parsedData.page.records[0].billingDuration,
+        borrowTime: parsedData.page.records[0].pBorrowtime,
+        returnTime: parsedData.page.records[0].pGhtime,
+        shopName: parsedData.page.records[0].pShopName
+      } : null,
+      totalRecords: parsedData.page?.records?.length || 0,
+      parsedData: parsedData,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Return properly formatted JSON
+    res.status(200).json(responseData);
+  } catch (error) {
+    console.error('Order list API call failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Endpoint to manually trigger the API call
+app.get('/api/test-chargenow', async (req, res) => {
+  try {
+    console.log('Manual API call triggered');
+    
+    console.log('Making API call to ChargeNow via shared function');
+    const result = await fetchChargeNowStations();
+    
+    console.log('Response result:', result);
+    
+    res.json({ 
+      success: true, 
+      data: result,
+      status: response.status,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Manual API call failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 

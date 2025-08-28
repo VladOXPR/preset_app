@@ -39,7 +39,7 @@ function resetDatabase() {
       username: "admin",
       phone: "+1234567890",
       password: bcrypt.hashSync("password", 10),
-      bio: "Platform administrator and support specialist",
+      station_ids: ["ST001", "ST002", "ST003", "ST004", "ST005"],
       created_at: "2024-01-01T00:00:00.000Z"
     },
     {
@@ -47,7 +47,7 @@ function resetDatabase() {
       username: "john_doe",
       phone: "+1987654321",
       password: bcrypt.hashSync("password", 10),
-      bio: "Software engineer and coffee enthusiast",
+      station_ids: ["ST001", "ST002"],
       created_at: "2024-01-02T10:30:00.000Z"
     },
     {
@@ -55,7 +55,7 @@ function resetDatabase() {
       username: "jane_smith",
       phone: "+1555123456",
       password: bcrypt.hashSync("password", 10),
-      bio: "UX designer and creative thinker",
+      station_ids: ["ST003", "ST004"],
       created_at: "2024-01-03T14:15:00.000Z"
     },
     {
@@ -63,7 +63,7 @@ function resetDatabase() {
       username: "bob_wilson",
       phone: "+1777888999",
       password: bcrypt.hashSync("password", 10),
-      bio: "Project manager and team leader",
+      station_ids: ["ST005"],
       created_at: "2024-01-04T09:45:00.000Z"
     },
     {
@@ -71,7 +71,7 @@ function resetDatabase() {
       username: "alice_brown",
       phone: "+1666777888",
       password: bcrypt.hashSync("password", 10),
-      bio: "Marketing specialist and social media expert",
+      station_ids: ["ST001", "ST003", "ST005"],
       created_at: "2024-01-05T16:20:00.000Z"
     }
   ];
@@ -198,7 +198,7 @@ function showStats() {
   });
 }
 
-function addUser(username, phone, password) {
+function addUser(username, phone, password, stationIds = []) {
   const users = readJsonFile(USERS_FILE);
   
   // Check if user exists
@@ -212,17 +212,36 @@ function addUser(username, phone, password) {
     username,
     phone,
     password: bcrypt.hashSync(password, 10),
+    station_ids: stationIds,
     created_at: new Date().toISOString()
   };
   
   users.push(newUser);
   writeJsonFile(USERS_FILE, users);
-  console.log(`✅ User "${username}" created successfully`);
+  console.log(`✅ User "${username}" created successfully with ${stationIds.length} stations`);
 }
 
 function clearMessages() {
   writeJsonFile(MESSAGES_FILE, []);
   console.log('🗑️  All messages cleared');
+}
+
+function deleteUser(userId) {
+  const users = readJsonFile(USERS_FILE);
+  
+  // Find user to delete
+  const userToDelete = users.find(user => user.id === parseInt(userId));
+  if (!userToDelete) {
+    console.log(`❌ User with ID ${userId} not found`);
+    return;
+  }
+  
+  // Delete user
+  const filteredUsers = users.filter(user => user.id !== parseInt(userId));
+  
+  // Write updated data
+  writeJsonFile(USERS_FILE, filteredUsers);
+  console.log(`✅ User "${userToDelete.username}" deleted successfully`);
 }
 
 // Command line interface
@@ -239,13 +258,25 @@ switch (command) {
     const username = process.argv[3];
     const phone = process.argv[4];
     const password = process.argv[5];
+    const stationIds = process.argv[6] ? process.argv[6].split(',') : [];
     
     if (!username || !phone || !password) {
-      console.log('Usage: node db-manager.js add-user <username> <phone> <password>');
+      console.log('Usage: node db-manager.js add-user <username> <phone> <password> [stationIds]');
+      console.log('Example: node db-manager.js add-user john +1234567890 password ST001,ST002');
       process.exit(1);
     }
     
-    addUser(username, phone, password);
+    addUser(username, phone, password, stationIds);
+    break;
+  case 'delete-user':
+    const deleteUserId = process.argv[3];
+    
+    if (!deleteUserId) {
+      console.log('Usage: node db-manager.js delete-user <userId>');
+      process.exit(1);
+    }
+    
+    deleteUser(deleteUserId);
     break;
   case 'clear-messages':
     clearMessages();
@@ -254,14 +285,15 @@ switch (command) {
     console.log('📋 JSON Database Manager');
     console.log('');
     console.log('Commands:');
-    console.log('  reset           - Reset database with demo data');
-    console.log('  stats           - Show database statistics');
-    console.log('  add-user        - Add a new user');
-    console.log('  clear-messages  - Clear all messages');
+console.log('  reset           - Reset database with demo data');
+console.log('  stats           - Show database statistics');
+console.log('  add-user        - Add a new user');
+console.log('  delete-user     - Delete a user by ID');
+console.log('  clear-messages  - Clear all messages');
     console.log('');
     console.log('Examples:');
-    console.log('  node db-manager.js reset');
-    console.log('  node db-manager.js stats');
-    console.log('  node db-manager.js add-user testuser +1234567890 mypassword');
-    console.log('  node db-manager.js clear-messages');
+console.log('  node db-manager.js reset');
+console.log('  node db-manager.js stats');
+console.log('  node db-manager.js add-user testuser +1234567890 mypassword ST001,ST002');
+console.log('  node db-manager.js clear-messages');
 } 

@@ -17,7 +17,6 @@ if (process.env.DATABASE_URL) {
   // Database file paths
   const DATA_DIR = path.join(__dirname, 'data');
   const USERS_FILE = path.join(DATA_DIR, 'users.json');
-  const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
   
   // Ensure data directory exists
   if (!fs.existsSync(DATA_DIR)) {
@@ -28,9 +27,6 @@ if (process.env.DATABASE_URL) {
   function initJsonFiles() {
     if (!fs.existsSync(USERS_FILE)) {
       fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2));
-    }
-    if (!fs.existsSync(MESSAGES_FILE)) {
-      fs.writeFileSync(MESSAGES_FILE, JSON.stringify([], null, 2));
     }
   }
   
@@ -86,28 +82,19 @@ async function initDatabase() {
     console.log(`Initializing ${dbType} database...`);
     
     if (dbType === 'neon') {
-      // Create users table for Neon with bio field
+      // Create users table for Neon with station_ids field instead of bio
       await sql`
         CREATE TABLE IF NOT EXISTS users (
           id SERIAL PRIMARY KEY,
           username VARCHAR(255) UNIQUE NOT NULL,
           phone VARCHAR(20) NOT NULL,
           password VARCHAR(255) NOT NULL,
-          bio TEXT DEFAULT '',
+          station_ids TEXT DEFAULT '[]',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `;
       
-      // Create messages table for Neon
-      await sql`
-        CREATE TABLE IF NOT EXISTS messages (
-          id SERIAL PRIMARY KEY,
-          from_user VARCHAR(255) NOT NULL,
-          to_user VARCHAR(255) NOT NULL,
-          text TEXT NOT NULL,
-          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `;
+
     }
     
     console.log('Database tables created successfully');
@@ -118,7 +105,7 @@ async function initDatabase() {
 }
 
 // User functions
-async function createUser(username, phone, password, bio = '') {
+async function createUser(username, phone, password, stationIds = []) {
   try {
     console.log('Creating user:', username);
     
@@ -132,10 +119,11 @@ async function createUser(username, phone, password, bio = '') {
         throw new Error('Username already exists');
       }
 
-      // Create new user
+      // Create new user with station_ids as JSON string
+      const stationIdsJson = JSON.stringify(stationIds);
       const newUser = await sql`
-        INSERT INTO users (username, phone, password, bio)
-        VALUES (${username}, ${phone}, ${password}, ${bio})
+        INSERT INTO users (username, phone, password, station_ids)
+        VALUES (${username}, ${phone}, ${password}, ${stationIdsJson})
         RETURNING *
       `;
       
@@ -161,7 +149,7 @@ async function createUser(username, phone, password, bio = '') {
         username,
         phone,
         password,
-        bio: bio || '',
+        station_ids: stationIds || [],
         created_at: new Date().toISOString()
       };
       
@@ -183,7 +171,17 @@ async function getUserByUsername(username) {
       const users = await sql`
         SELECT * FROM users WHERE username = ${username}
       `;
-      return users.length > 0 ? users[0] : null;
+      if (users.length > 0) {
+        const user = users[0];
+        // Parse station_ids from JSON string
+        try {
+          user.station_ids = JSON.parse(user.station_ids || '[]');
+        } catch (e) {
+          user.station_ids = [];
+        }
+        return user;
+      }
+      return null;
     } else {
       // JSON file implementation
       const fs = require('fs');
@@ -191,7 +189,12 @@ async function getUserByUsername(username) {
       const USERS_FILE = path.join(__dirname, 'data', 'users.json');
       
       const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-      return users.find(user => user.username === username) || null;
+      const user = users.find(user => user.username === username);
+      if (user) {
+        // Ensure station_ids is always an array
+        user.station_ids = user.station_ids || [];
+      }
+      return user || null;
     }
   } catch (error) {
     console.error('Error getting user by username:', error);
@@ -203,12 +206,18 @@ async function getAllUsers() {
   try {
     if (dbType === 'neon') {
       const users = await sql`
-        SELECT id, username, phone, bio, created_at FROM users
+        SELECT id, username, phone, station_ids, created_at FROM users
       `;
-      // Ensure all users have a bio field, even if NULL in database
+      // Parse station_ids from JSON string and ensure it's always an array
       return users.map(user => ({
         ...user,
-        bio: user.bio || ''
+        station_ids: (() => {
+          try {
+            return JSON.parse(user.station_ids || '[]');
+          } catch (e) {
+            return [];
+          }
+        })()
       }));
     } else {
       // JSON file implementation
@@ -222,7 +231,7 @@ async function getAllUsers() {
         id: user.id,
         username: user.username,
         phone: user.phone,
-        bio: user.bio || '',
+        station_ids: user.station_ids || [],
         created_at: user.created_at
       }));
     }
@@ -236,12 +245,18 @@ async function getAllUsersWithPasswords() {
   try {
     if (dbType === 'neon') {
       const users = await sql`
-        SELECT id, username, phone, password, bio, created_at FROM users
+        SELECT id, username, phone, password, station_ids, created_at FROM users
       `;
-      // Ensure all users have a bio field, even if NULL in database
+      // Parse station_ids from JSON string and ensure it's always an array
       return users.map(user => ({
         ...user,
-        bio: user.bio || ''
+        station_ids: (() => {
+          try {
+            return JSON.parse(user.station_ids || '[]');
+          } catch (e) {
+            return [];
+          }
+        })()
       }));
     } else {
       // JSON file implementation
@@ -256,7 +271,7 @@ async function getAllUsersWithPasswords() {
         username: user.username,
         phone: user.phone,
         password: user.password,
-        bio: user.bio || '',
+        station_ids: user.station_ids || [],
         created_at: user.created_at
       }));
     }
@@ -272,7 +287,17 @@ async function getUserById(id) {
       const users = await sql`
         SELECT * FROM users WHERE id = ${id}
       `;
-      return users.length > 0 ? users[0] : null;
+      if (users.length > 0) {
+        const user = users[0];
+        // Parse station_ids from JSON string
+        try {
+          user.station_ids = JSON.parse(user.station_ids || '[]');
+        } catch (e) {
+          user.station_ids = [];
+        }
+        return user;
+      }
+      return null;
     } else {
       // JSON file implementation
       const fs = require('fs');
@@ -280,7 +305,12 @@ async function getUserById(id) {
       const USERS_FILE = path.join(__dirname, 'data', 'users.json');
       
       const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-      return users.find(user => user.id === parseInt(id)) || null;
+      const user = users.find(user => user.id === parseInt(id));
+      if (user) {
+        // Ensure station_ids is always an array
+        user.station_ids = user.station_ids || [];
+      }
+      return user || null;
     }
   } catch (error) {
     console.error('Error getting user by ID:', error);
@@ -288,78 +318,49 @@ async function getUserById(id) {
   }
 }
 
-async function saveMessage(fromUser, toUser, text) {
+// Function to update user's station assignments
+async function updateUserStations(userId, stationIds) {
   try {
     if (dbType === 'neon') {
-      const message = await sql`
-        INSERT INTO messages (from_user, to_user, text)
-        VALUES (${fromUser}, ${toUser}, ${text})
+      const stationIdsJson = JSON.stringify(stationIds);
+      const result = await sql`
+        UPDATE users 
+        SET station_ids = ${stationIdsJson}
+        WHERE id = ${userId}
         RETURNING *
       `;
       
-      console.log('Message saved:', { from: fromUser, to: toUser, text });
-      return message[0];
+      if (result.length > 0) {
+        const user = result[0];
+        // Parse station_ids from JSON string
+        try {
+          user.station_ids = JSON.parse(user.station_ids || '[]');
+        } catch (e) {
+          user.station_ids = [];
+        }
+        return user;
+      }
+      return null;
     } else {
       // JSON file implementation
       const fs = require('fs');
       const path = require('path');
-      const MESSAGES_FILE = path.join(__dirname, 'data', 'messages.json');
+      const USERS_FILE = path.join(__dirname, 'data', 'users.json');
       
-      const messages = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
+      const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+      const userIndex = users.findIndex(user => user.id === parseInt(userId));
       
-      const newMessage = {
-        id: messages.length > 0 ? Math.max(...messages.map(m => m.id)) + 1 : 1,
-        from_user: fromUser,
-        to_user: toUser,
-        text,
-        timestamp: new Date().toISOString()
-      };
+      if (userIndex === -1) {
+        throw new Error('User not found');
+      }
       
-      messages.push(newMessage);
-      fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
+      users[userIndex].station_ids = stationIds || [];
+      fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
       
-      console.log('Message saved:', { from: fromUser, to: toUser, text });
-      return newMessage;
+      return users[userIndex];
     }
   } catch (error) {
-    console.error('Error saving message:', error);
-    throw error;
-  }
-}
-
-async function getChatHistory(user1, user2) {
-  try {
-    if (dbType === 'neon') {
-      const messages = await sql`
-        SELECT * FROM messages 
-        WHERE (from_user = ${user1} AND to_user = ${user2})
-           OR (from_user = ${user2} AND to_user = ${user1})
-        ORDER BY timestamp ASC
-      `;
-      
-      console.log('Chat history retrieved:', messages.length, 'messages');
-      return messages;
-    } else {
-      // JSON file implementation
-      const fs = require('fs');
-      const path = require('path');
-      const MESSAGES_FILE = path.join(__dirname, 'data', 'messages.json');
-      
-      const messages = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
-      
-      const chatMessages = messages.filter(message => 
-        (message.from_user === user1 && message.to_user === user2) ||
-        (message.from_user === user2 && message.to_user === user1)
-      );
-      
-      // Sort by timestamp
-      chatMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      
-      console.log('Chat history retrieved:', chatMessages.length, 'messages');
-      return chatMessages;
-    }
-  } catch (error) {
-    console.error('Error getting chat history:', error);
+    console.error('Error updating user stations:', error);
     throw error;
   }
 }
@@ -396,10 +397,8 @@ async function deleteUser(userId) {
       const fs = require('fs');
       const path = require('path');
       const USERS_FILE = path.join(__dirname, 'data', 'users.json');
-      const MESSAGES_FILE = path.join(__dirname, 'data', 'messages.json');
       
       const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-      const messages = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
       
       // Find user to delete
       const userToDelete = users.find(user => user.id === parseInt(userId));
@@ -407,18 +406,11 @@ async function deleteUser(userId) {
         throw new Error('User not found');
       }
       
-      // Delete all messages from/to this user
-      const filteredMessages = messages.filter(message => 
-        message.from_user !== userToDelete.username && 
-        message.to_user !== userToDelete.username
-      );
-      
       // Delete user
       const filteredUsers = users.filter(user => user.id !== parseInt(userId));
       
       // Write updated data
       fs.writeFileSync(USERS_FILE, JSON.stringify(filteredUsers, null, 2));
-      fs.writeFileSync(MESSAGES_FILE, JSON.stringify(filteredMessages, null, 2));
       
       console.log('User deleted:', userToDelete.username);
       return userToDelete;
@@ -440,7 +432,6 @@ module.exports = {
   getAllUsers,
   getAllUsersWithPasswords,
   getUserById,
-  saveMessage,
-  getChatHistory,
+  updateUserStations,
   deleteUser
 }; 

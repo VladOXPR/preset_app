@@ -1,7 +1,7 @@
 {
   "name": "Preset App",
   "short_name": "Preset",
-  "description": "A modern chat application",
+  "description": "A modern station management application",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

@@ -1,34 +1,25 @@
 [
   {
     "id": 1,
-    "username": "Vlad",
+    "username": "DePaul University",
     "phone": "7739460236",
-    "password": "$2b$10$icaZdDK2yTgaTH8G.6M2VOVMgCOsnslJTH5L1cx8JwdGSaxFoa6C6",
-    "bio": "Software developer and tech enthusiast",
-    "created_at": "2025-08-01T02:26:35.769Z"
+    "password": "$2b$10$48FYALR82GhcgkDqpf2wiuQYEmdXSxeeAXOqDEdK3raCvSY.zpEdG",
+    "station_ids": [
+      "DTN00872",
+      "DTN00970",
+      "DTN00971"
+    ],
+    "created_at": "2025-08-21T17:43:06.023Z",
+    "station_titles": {}
   },
   {
     "id": 2,
-    "username": "Jovan",
+    "username": "Parlay",
     "phone": "7739460236",
-    "password": "$2b$10$7LHKi5GR6im3LxFaYDS.3O4VeQRGtUP7W30u7zpfTyu4hHfC.m4pC",
-    "bio": "Creative designer and problem solver",
-    "created_at": "2025-08-01T02:26:46.848Z"
-  },
-  {
-    "id": 3,
-    "username": "Nick",
-    "phone": "7739460236",
-    "password": "$2b$10$YYiP2MvhZBshBPdIfk/6POPZSynoQ6Go1GHXUO0rruwHutwtNl2c6",
-    "bio": "Hello, my name is Nick and I love music!",
-    "created_at": "2025-08-01T02:35:48.569Z"
-  },
-  {
-    "id": 4,
-    "username": "John",
-    "phone": "7739460236",
-    "password": "$2b$10$1kMR4k1lk/pXc8I/qSED1OlLKV.ow0pAnMX0dHbBD7i7GpLE.miLq",
-    "bio": "hello I am john, I love coding and creating",
-    "created_at": "2025-08-01T02:52:00.751Z"
+    "password": "$2b$10$bzCF.xIEjgp5DsVcy3irCOiN5cbhVpXzJ32DC1VG0V1bWKl3raJIq",
+    "station_ids": [
+      "BJH09881"
+    ],
+    "created_at": "2025-08-23T18:41:12.148Z"
   }
 ]
