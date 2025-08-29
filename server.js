@@ -315,8 +315,23 @@ app.get('/home', (req, res) => {
       </div>
     </div>
     
-    <div class="logout-bottom">
-      <a href="/logout" class="secondary">Log out</a>
+    <!-- Menu Icon -->
+    <div class="menu-icon" id="menu-icon">
+      <div class="hamburger-lines">
+        <div class="hamburger-line"></div>
+        <div class="hamburger-line"></div>
+        <div class="hamburger-line"></div>
+      </div>
+      <div class="menu-x">×</div>
+    </div>
+    
+    <!-- Full Screen Overlay -->
+    <div class="menu-overlay" id="menu-overlay">
+      <div class="menu-items">
+        <a href="/logout" class="menu-item logout">Logout</a>
+        <a href="https://battery.cuub.tech/map.html" class="menu-item" target="_blank">Map</a>
+        <a href="https://cuub.tech/" class="menu-item" target="_blank">Website</a>
+      </div>
     </div>
   </div>
   <script src="/js/config.js"></script>

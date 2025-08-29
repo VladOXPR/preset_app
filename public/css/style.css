@@ -264,6 +264,123 @@ a.secondary:hover, button.secondary:hover {
 .send-btn:hover {
   background: #eee;
 } 
+/* Menu Icon */
+.menu-icon {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  z-index: 1000;
+}
+
+.hamburger-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 5px;
+  transition: opacity 0.2s ease;
+}
+
+.hamburger-line {
+  width: 20px;
+  height: 3px;
+  background: #ffffff;
+  border-radius: 0;
+}
+
+.menu-x {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: 300;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* Menu Icon States */
+.menu-icon.active .hamburger-lines {
+  opacity: 0;
+}
+
+.menu-icon.active .menu-x {
+  opacity: 1;
+}
+
+/* Full Screen Overlay */
+.menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(30px);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 20vh;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.menu-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+
+
+/* Menu Items */
+.menu-items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.menu-item {
+  color: #CCCCCC;
+  text-decoration: none;
+  font-size: 40px;
+  font-weight: 700;
+  transition: color 0.2s ease;
+  padding: 10px 20px;
+  border-radius: 8px;
+  width: 160px;
+  text-align: left;
+}
+
+.menu-item:hover {
+  color: #41B3FF;
+}
+
+.menu-item.logout {
+  color: #CCCCCC;
+  font-size: 40px;
+  font-weight: 700;
+}
+
+.menu-item.logout:hover {
+  color: #41B3FF;
+}
+
+/* Legacy logout-bottom styles (kept for other pages) */
 .logout-bottom {
   position: fixed;
   left: 0;

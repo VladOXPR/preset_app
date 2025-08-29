@@ -27,6 +27,9 @@ window.onload = function() {
         
         // Initialize summary stats
         updateSummaryStats();
+        
+        // Initialize menu functionality
+        initializeMenu();
 };
 
 function initializeDateInputs() {
@@ -204,6 +207,41 @@ function updateSummaryStats() {
   // Update the summary display
   document.getElementById('take-home').textContent = `$${takeHome}`;
   document.getElementById('total-revenue').textContent = `$${Math.round(totalRevenue)}`;
+}
+
+// Menu functionality
+function initializeMenu() {
+  const menuIcon = document.getElementById('menu-icon');
+  const menuOverlay = document.getElementById('menu-overlay');
+  
+  // Toggle menu when hamburger icon is clicked
+  menuIcon.addEventListener('click', function() {
+    if (menuIcon.classList.contains('active')) {
+      // If menu is open, close it
+      menuIcon.classList.remove('active');
+      menuOverlay.classList.remove('active');
+    } else {
+      // If menu is closed, open it
+      menuIcon.classList.add('active');
+      menuOverlay.classList.add('active');
+    }
+  });
+  
+  // Close menu when clicking outside menu items
+  menuOverlay.addEventListener('click', function(e) {
+    if (e.target === menuOverlay) {
+      menuIcon.classList.remove('active');
+      menuOverlay.classList.remove('active');
+    }
+  });
+  
+  // Close menu with Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && menuOverlay.classList.contains('active')) {
+      menuIcon.classList.remove('active');
+      menuOverlay.classList.remove('active');
+    }
+  });
 }
 
  

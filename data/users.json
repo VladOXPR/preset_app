@@ -1,9 +1,9 @@
 [
   {
     "id": 1,
-    "username": "DePaul University",
+    "username": "DePaul",
     "phone": "7739460236",
-    "password": "$2b$10$48FYALR82GhcgkDqpf2wiuQYEmdXSxeeAXOqDEdK3raCvSY.zpEdG",
+    "password": "$2b$10$wgvs3/WcYm1Ml9puqR02aO3fvH9l8OrZqOgxaRdGxRmF6OxyL9oOK",
     "station_ids": [
       "DTN00872",
       "DTN00970",
@@ -31,5 +31,19 @@
       "BJH09883"
     ],
     "created_at": "2025-08-29T04:02:12.715Z"
+  },
+  {
+    "id": 4,
+    "username": "CUUB",
+    "phone": "7739460236",
+    "password": "$2b$10$wxu8r9Qh3oxWhQto8hZbROT4ZklMvg3CKohrem86xQ/RjUrrYWJUi",
+    "station_ids": [
+      "DTN00971",
+      "DTN00970",
+      "DTN00872",
+      "BJH09883",
+      "BJH09881"
+    ],
+    "created_at": "2025-08-29T20:32:53.681Z"
   }
 ]
