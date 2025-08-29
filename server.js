@@ -152,19 +152,36 @@ app.get('/login', (req, res) => {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sign in</title>
   <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Favicon and iOS icons -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2">
+  <link rel="manifest" href="/site.webmanifest?v=2">
+  
+  <!-- iOS home screen meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Preset App">
+  <meta name="theme-color" content="#000000">
 </head>
 <body>
   <div class="container">
-    <h1>Login</h1>
+    <h1>Sign in</h1>
     <form action="/login" method="POST">
-      <input type="text" name="username" placeholder="Username" required>
-      <input type="password" name="password" placeholder="Password" required>
-      <button type="submit">Login</button>
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" required>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required>
+      <div class="button-row">
+        <button type="submit" class="primary">Sign in</button>
+        <a href="/signup" class="secondary">Create new account</a>
+      </div>
     </form>
-    <a href="/signup">Sign up</a>
   </div>
 </body>
 </html>
@@ -178,22 +195,42 @@ app.get('/signup', (req, res) => {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign Up</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sign up</title>
   <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Favicon and iOS icons -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2">
+  <link rel="manifest" href="/site.webmanifest?v=2">
+  
+  <!-- iOS home screen meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Preset App">
+  <meta name="theme-color" content="#000000">
 </head>
 <body>
   <div class="container">
-    <h1>Sign Up</h1>
+    <h1>Sign up</h1>
     <form action="/signup" method="POST">
-      <input type="text" name="phone" placeholder="Phone" required>
-      <input type="text" name="username" placeholder="Username" required>
-      <input type="password" name="password" placeholder="Password" required>
-      <input type="password" name="password2" placeholder="Confirm Password" required>
-      <input type="text" name="stationIds" placeholder="Station IDs (comma-separated)">
-      <button type="submit">Sign Up</button>
+      <label for="phone">Phone</label>
+      <input type="text" id="phone" name="phone" required>
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" required>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required>
+      <label for="password2">Confirm Password</label>
+      <input type="password" id="password2" name="password2" required>
+      <label for="stationIds">Station IDs (comma-separated)</label>
+      <input type="text" id="stationIds" name="stationIds">
+      <div class="button-row">
+        <button type="submit" class="primary">Sign up</button>
+        <a href="/login" class="secondary">Sign in</a>
+      </div>
     </form>
-    <a href="/login">Login</a>
   </div>
 </body>
 </html>
@@ -279,29 +316,49 @@ app.get('/admin', (req, res) => {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Admin Panel</title>
   <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Favicon and iOS icons -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-new.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-new-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+  <!-- iOS home screen meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Preset App">
+  <meta name="theme-color" content="#000000">
 </head>
 <body>
   <div class="container">
-    <div id="password-screen">
-      <h1>Admin Access</h1>
-      <form id="password-form">
-        <input type="password" id="admin-password" placeholder="Enter admin password" required>
-        <button type="submit">Access Admin</button>
-      </form>
-      <div id="password-error" style="display: none; color: red;"></div>
-      <a href="/home">Back to Home</a>
+    <!-- Password Protection Screen -->
+    <div id="password-screen" class="password-screen">
+      <div class="password-container">
+        <h1>Admin Access</h1>
+        <p>Enter password to access admin panel</p>
+        <div class="password-input-group">
+          <input type="password" id="admin-password" class="password-input" placeholder="Enter password">
+          <button id="submit-password" class="primary">Access Admin</button>
+        </div>
+        <div id="password-error" class="password-error" style="display: none;">Incorrect password</div>
+        <a href="/home" class="secondary">Back to Home</a>
+      </div>
     </div>
     
-    <div id="admin-content" style="display: none;">
-      <h1>Admin Panel</h1>
-      <div id="users-list">
-        <!-- Users will be loaded here -->
+    <!-- Admin Content (Hidden until password is correct) -->
+    <div id="admin-content" class="admin-content" style="display: none;">
+      <div class="home-top">
+        <h1>Admin Panel</h1>
       </div>
-      <a href="/newuser">Create New User</a>
-      <a href="/home">Back to Home</a>
+      <div id="user-list"></div>
+      <div class="button-row">
+        <button id="addUserBtn" class="primary">Add New User</button>
+        <a href="/home" class="secondary">Back to Home</a>
+      </div>
     </div>
   </div>
   <script src="/js/config.js"></script>
@@ -318,22 +375,42 @@ app.get('/newuser', (req, res) => {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Create New User</title>
   <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Favicon and iOS icons -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-new.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-new-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+  <!-- iOS home screen meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Preset App">
+  <meta name="theme-color" content="#000000">
 </head>
 <body>
   <div class="container">
     <h1>Create New User</h1>
     <form action="/newuser" method="POST">
-      <input type="text" name="phone" placeholder="Phone" required>
-      <input type="text" name="username" placeholder="Username" required>
-      <input type="password" name="password" placeholder="Password" required>
-      <input type="password" name="password2" placeholder="Confirm Password" required>
-      <input type="text" name="stationIds" placeholder="Station IDs (comma-separated)">
-      <button type="submit">Create User</button>
+      <label for="phone">Phone</label>
+      <input type="text" id="phone" name="phone" required>
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" required>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required>
+      <label for="password2">Confirm Password</label>
+      <input type="password" id="password2" name="password2" required>
+      <label for="stationIds">Station IDs (comma-separated)</label>
+      <input type="text" id="stationIds" name="stationIds">
+      <div class="button-row">
+        <button type="submit" class="primary">Create User</button>
+        <a href="/admin" class="secondary">Back to Admin</a>
+      </div>
     </form>
-    <a href="/admin">Back to Admin</a>
   </div>
 </body>
 </html>
