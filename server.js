@@ -1,3 +1,6 @@
+// Load environment variables
+require('dotenv').config({ path: '.env.local' });
+
 // Import required modules
 const express = require('express');
 const bodyParser = require('body-parser');

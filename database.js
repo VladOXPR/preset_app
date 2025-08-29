@@ -82,7 +82,7 @@ async function initDatabase() {
     console.log(`Initializing ${dbType} database...`);
     
     if (dbType === 'neon') {
-      // Create users table for Neon with station_ids field instead of bio
+      // Create users table for Neon with station_ids and station_titles fields
       await sql`
         CREATE TABLE IF NOT EXISTS users (
           id SERIAL PRIMARY KEY,
@@ -90,11 +90,10 @@ async function initDatabase() {
           phone VARCHAR(20) NOT NULL,
           password VARCHAR(255) NOT NULL,
           station_ids TEXT DEFAULT '[]',
+          station_titles TEXT DEFAULT '{}',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `;
-      
-
     }
     
     console.log('Database tables created successfully');
@@ -105,7 +104,7 @@ async function initDatabase() {
 }
 
 // User functions
-async function createUser(username, phone, password, stationIds = []) {
+async function createUser(username, phone, password, stationIds = [], stationTitles = {}) {
   try {
     console.log('Creating user:', username);
     
@@ -119,11 +118,12 @@ async function createUser(username, phone, password, stationIds = []) {
         throw new Error('Username already exists');
       }
 
-      // Create new user with station_ids as JSON string
+      // Create new user with station_ids and station_titles as JSON strings
       const stationIdsJson = JSON.stringify(stationIds);
+      const stationTitlesJson = JSON.stringify(stationTitles);
       const newUser = await sql`
-        INSERT INTO users (username, phone, password, station_ids)
-        VALUES (${username}, ${phone}, ${password}, ${stationIdsJson})
+        INSERT INTO users (username, phone, password, station_ids, station_titles)
+        VALUES (${username}, ${phone}, ${password}, ${stationIdsJson}, ${stationTitlesJson})
         RETURNING *
       `;
       
@@ -150,6 +150,7 @@ async function createUser(username, phone, password, stationIds = []) {
         phone,
         password,
         station_ids: stationIds || [],
+        station_titles: stationTitles || {},
         created_at: new Date().toISOString()
       };
       
@@ -173,11 +174,16 @@ async function getUserByUsername(username) {
       `;
       if (users.length > 0) {
         const user = users[0];
-        // Parse station_ids from JSON string
+        // Parse station_ids and station_titles from JSON strings
         try {
           user.station_ids = JSON.parse(user.station_ids || '[]');
         } catch (e) {
           user.station_ids = [];
+        }
+        try {
+          user.station_titles = JSON.parse(user.station_titles || '{}');
+        } catch (e) {
+          user.station_titles = {};
         }
         return user;
       }
@@ -191,8 +197,9 @@ async function getUserByUsername(username) {
       const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
       const user = users.find(user => user.username === username);
       if (user) {
-        // Ensure station_ids is always an array
+        // Ensure station_ids and station_titles are always arrays/objects
         user.station_ids = user.station_ids || [];
+        user.station_titles = user.station_titles || {};
       }
       return user || null;
     }
@@ -206,9 +213,9 @@ async function getAllUsers() {
   try {
     if (dbType === 'neon') {
       const users = await sql`
-        SELECT id, username, phone, station_ids, created_at FROM users
+        SELECT id, username, phone, station_ids, station_titles, created_at FROM users
       `;
-      // Parse station_ids from JSON string and ensure it's always an array
+      // Parse station_ids and station_titles from JSON strings
       return users.map(user => ({
         ...user,
         station_ids: (() => {
@@ -216,6 +223,13 @@ async function getAllUsers() {
             return JSON.parse(user.station_ids || '[]');
           } catch (e) {
             return [];
+          }
+        })(),
+        station_titles: (() => {
+          try {
+            return JSON.parse(user.station_titles || '{}');
+          } catch (e) {
+            return {};
           }
         })()
       }));
@@ -232,6 +246,7 @@ async function getAllUsers() {
         username: user.username,
         phone: user.phone,
         station_ids: user.station_ids || [],
+        station_titles: user.station_titles || {},
         created_at: user.created_at
       }));
     }
@@ -245,9 +260,9 @@ async function getAllUsersWithPasswords() {
   try {
     if (dbType === 'neon') {
       const users = await sql`
-        SELECT id, username, phone, password, station_ids, created_at FROM users
+        SELECT id, username, phone, password, station_ids, station_titles, created_at FROM users
       `;
-      // Parse station_ids from JSON string and ensure it's always an array
+      // Parse station_ids and station_titles from JSON strings
       return users.map(user => ({
         ...user,
         station_ids: (() => {
@@ -255,6 +270,13 @@ async function getAllUsersWithPasswords() {
             return JSON.parse(user.station_ids || '[]');
           } catch (e) {
             return [];
+          }
+        })(),
+        station_titles: (() => {
+          try {
+            return JSON.parse(user.station_titles || '{}');
+          } catch (e) {
+            return {};
           }
         })()
       }));
@@ -272,6 +294,7 @@ async function getAllUsersWithPasswords() {
         phone: user.phone,
         password: user.password,
         station_ids: user.station_ids || [],
+        station_titles: user.station_titles || {},
         created_at: user.created_at
       }));
     }
@@ -289,11 +312,16 @@ async function getUserById(id) {
       `;
       if (users.length > 0) {
         const user = users[0];
-        // Parse station_ids from JSON string
+        // Parse station_ids and station_titles from JSON strings
         try {
           user.station_ids = JSON.parse(user.station_ids || '[]');
         } catch (e) {
           user.station_ids = [];
+        }
+        try {
+          user.station_titles = JSON.parse(user.station_titles || '{}');
+        } catch (e) {
+          user.station_titles = {};
         }
         return user;
       }
@@ -307,8 +335,9 @@ async function getUserById(id) {
       const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
       const user = users.find(user => user.id === parseInt(id));
       if (user) {
-        // Ensure station_ids is always an array
+        // Ensure station_ids and station_titles are always arrays/objects
         user.station_ids = user.station_ids || [];
+        user.station_titles = user.station_titles || {};
       }
       return user || null;
     }
@@ -332,11 +361,16 @@ async function updateUserStations(userId, stationIds) {
       
       if (result.length > 0) {
         const user = result[0];
-        // Parse station_ids from JSON string
+        // Parse station_ids and station_titles from JSON strings
         try {
           user.station_ids = JSON.parse(user.station_ids || '[]');
         } catch (e) {
           user.station_ids = [];
+        }
+        try {
+          user.station_titles = JSON.parse(user.station_titles || '{}');
+        } catch (e) {
+          user.station_titles = {};
         }
         return user;
       }
