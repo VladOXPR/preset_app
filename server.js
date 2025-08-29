@@ -54,6 +54,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Root route - redirect to login
+app.get('/', (req, res) => {
+  res.redirect('/login');
+});
+
 // Shared function to fetch stations from ChargeNow API
 async function fetchChargeNowStations() {
   const myHeaders = new Headers();
