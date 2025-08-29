@@ -548,6 +548,31 @@ a.secondary:hover, button.secondary:hover {
   min-width: 0;
   box-sizing: border-box;
   transition: border-color 0.2s ease;
+  
+  /* iOS Safari specific styling */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  
+  /* Remove default iOS Safari styling */
+  -webkit-border-radius: 8px;
+  -moz-border-radius: 8px;
+  border-radius: 8px;
+  
+  /* Ensure consistent font rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  /* Remove default iOS Safari shadows and highlights */
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  box-shadow: none;
+  
+  /* Remove default iOS Safari focus styles */
+  -webkit-tap-highlight-color: transparent;
+  
+  /* Ensure consistent text color */
+  -webkit-text-fill-color: #ffffff;
 }
 
 /* Remove border radius on touching corners and adjust borders for connected appearance */
@@ -555,23 +580,81 @@ a.secondary:hover, button.secondary:hover {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
   border-right: none;
+  
+  /* iOS Safari specific */
+  -webkit-border-top-right-radius: 0;
+  -webkit-border-bottom-right-radius: 0;
+  -moz-border-radius-topright: 0;
+  -moz-border-radius-bottomright: 0;
 }
 
 .date-input-group:last-child .date-input {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
   border-left: none;
+  
+  /* iOS Safari specific */
+  -webkit-border-top-left-radius: 0;
+  -webkit-border-bottom-left-radius: 0;
+  -moz-border-radius-topleft: 0;
+  -moz-border-radius-bottomleft: 0;
 }
 
 /* Add black border where inputs touch */
 .date-input-group:first-child .date-input {
   border-right: 1px solid #000;
+  
+  /* iOS Safari specific */
+  -webkit-border-right: 1px solid #000;
+  -moz-border-right: 1px solid #000;
 }
 
 .date-input:focus {
   outline: none;
   border-color: #009FFD;
   box-shadow: 0 0 0 2px rgba(0, 159, 253, 0.2);
+  
+  /* iOS Safari focus overrides */
+  -webkit-box-shadow: 0 0 0 2px rgba(0, 159, 253, 0.2);
+  -moz-box-shadow: 0 0 0 2px rgba(0, 159, 253, 0.2);
+}
+
+/* iOS Safari date input calendar icon styling */
+.date-input::-webkit-calendar-picker-indicator {
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  filter: invert(1) brightness(0.8);
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.date-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.date-input::-webkit-calendar-picker-indicator:focus {
+  opacity: 1;
+  outline: none;
+}
+
+/* Firefox date input calendar icon styling */
+.date-input::-moz-calendar-picker-indicator {
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  filter: invert(1) brightness(0.8);
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.date-input::-moz-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.date-input::-moz-calendar-picker-indicator:focus {
+  opacity: 1;
+  outline: none;
 }
 
 /* Responsive breakpoints for date range panel */
@@ -594,10 +677,63 @@ a.secondary:hover, button.secondary:hover {
   .date-input {
     font-size: 16px; /* Prevents zoom on iOS */
     width: 100%;
+    /* Prevent zoom on focus */
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   
   .welcome-top {
     max-width: calc(100% - 32px); /* Account for container padding on mobile */
+  }
+}
+
+/* Prevent pinch and zoom on all devices */
+html, body {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS Safari specific overrides */
+@supports (-webkit-touch-callout: none) {
+  .date-input {
+    /* Ensure consistent appearance on iOS Safari */
+    -webkit-appearance: none;
+    appearance: none;
+    
+    /* Remove default iOS Safari styling */
+    background: #1E1E1E;
+    border: 1px solid #1E1E1E;
+    
+    /* Ensure proper text rendering */
+    -webkit-text-fill-color: #ffffff;
+    color: #ffffff;
+    
+    /* Remove default iOS Safari shadows */
+    -webkit-box-shadow: none;
+    box-shadow: none;
+    
+    /* Ensure proper border radius */
+    -webkit-border-radius: 8px;
+    border-radius: 8px;
+  }
+  
+  .date-input:focus {
+    /* iOS Safari focus state */
+    -webkit-box-shadow: 0 0 0 2px rgba(0, 159, 253, 0.2);
+    box-shadow: 0 0 0 2px rgba(0, 159, 253, 0.2);
+  }
+  
+  /* iOS Safari calendar picker styling */
+  .date-input::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(0.8);
+    opacity: 0.7;
   }
 }
 
