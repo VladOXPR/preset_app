@@ -43,7 +43,7 @@ input, textarea {
 @media (max-width: 480px) {
   .container {
     max-width: 100%;
-    padding: 60px 16px;
+    padding: 60px 25px;
   }
 }
 
@@ -138,13 +138,18 @@ button.primary, a.primary {
   background: #fff;
   color: #000;
   border: none;
-  border-radius: 999px;
-  padding: 15px 48px;
+  border-radius: 30px;
+  padding: 16px 24px;
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
   text-decoration: none;
   transition: background 0.2s, color 0.2s;
+  height: 54px; /* Match input height: 16px padding top + 16px padding bottom + font size + border */
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 button.primary:hover, a.primary:hover {
   background: #eee;
@@ -153,8 +158,8 @@ a.secondary, button.secondary {
   background: transparent;
   color: #fff;
   border: 2px solid #fff;
-  border-radius: 999px;
-  padding: 16px 30px;
+  border-radius: 30px;
+  padding: 16px 24px;
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
@@ -163,6 +168,8 @@ a.secondary, button.secondary {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 54px; /* Match input height: 16px padding top + 16px padding bottom + font size + border */
+  box-sizing: border-box;
 }
 a.secondary:hover, button.secondary:hover {
   background: #222;
