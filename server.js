@@ -29,7 +29,9 @@ const JWT_SECRET = 'preset_jwt_secret_key_very_long_and_secure';
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json()); // Add JSON parser for API requests
 app.use(cookieParser());
-app.use(express.static('public'));
+
+// Serve static files from public directory - place this early for better performance
+app.use(express.static(path.join(__dirname, 'public')));
 
 // JWT middleware to verify tokens
 function verifyToken(req, res, next) {
@@ -136,26 +138,7 @@ app.get('/api/check-schema', async (req, res) => {
   }
 });
 
-// Explicit static file routes for Vercel
-app.get('/style.css', (req, res) => {
-  res.setHeader('Content-Type', 'text/css');
-  res.sendFile(path.join(__dirname, 'public', 'css', 'style.css'));
-});
-
-app.get('/home.js', (req, res) => {
-  res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.join(__dirname, 'public', 'js', 'home.js'));
-});
-
-
-
-app.get('/admin.js', (req, res) => {
-  res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.join(__dirname, 'public', 'js', 'admin.js'));
-});
-
-// Serve static files from public directory
-app.use(express.static(path.join(__dirname, 'public')));
+// Static files are served by express.static middleware above
 
 // Static page routes - serve HTML files
 app.get('/', (req, res) => {
