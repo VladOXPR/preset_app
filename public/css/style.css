@@ -303,26 +303,27 @@ a.secondary:hover, button.secondary:hover {
   height: 200px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
+  justify-content: space-between;
+  align-items: left;
   background: rgba(0,0,0,0.2);
   backdrop-filter: blur(7px);
   z-index: 101;
   padding-top: 20px;
+  padding-bottom: 20px;
   gap: 20px;
   box-sizing: border-box;
 }
 .summary-stats {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: end;
   width: 100%;
   max-width: 300px;
   gap: 40px;
 }
 
 .stat-item {
-  text-align: center;
+  text-align: start;
   flex: 1;
 }
 
@@ -332,6 +333,12 @@ a.secondary:hover, button.secondary:hover {
   color: #ffffff;
   margin: 0 0 8px 0;
   line-height: 1;
+}
+
+/* Special styling for take home value */
+#take-home {
+  font-size: 50px;
+  color: #BFFF87;
 }
 
 .stat-label {
@@ -565,7 +572,6 @@ a.secondary:hover, button.secondary:hover {
 /* Responsive breakpoints for date range panel */
 @media (max-width: 480px) {
   .date-range-panel {
-    padding: 16px;
     gap: 16px;
     width: 100%; /* Use full width of welcome-top container */
   }

@@ -160,7 +160,7 @@ function displayStations(stationsData) {
         </div>
         <div class="station-footer">
           <div class="revenue-section">
-            <div class="revenue-amount">$${totalRevenue.toFixed(2)}</div>
+            <div class="revenue-amount">$${Math.round(totalRevenue)}</div>
             <div class="revenue-label">Revenue</div>
           </div>
           <div class="rents-section">
@@ -198,9 +198,12 @@ function updateSummaryStats() {
     }
   });
   
+  // Calculate take home as 20% of total revenue, rounded up
+  const takeHome = Math.ceil(totalRevenue * 0.2);
+  
   // Update the summary display
-  document.getElementById('total-revenue').textContent = `$${totalRevenue.toFixed(2)}`;
-  document.getElementById('total-rents').textContent = totalRents;
+  document.getElementById('take-home').textContent = `$${takeHome}`;
+  document.getElementById('total-revenue').textContent = `$${Math.round(totalRevenue)}`;
 }
 
  

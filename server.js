@@ -286,16 +286,16 @@ app.get('/home', (req, res) => {
 <body>
   <div class="container">
     <div class="welcome-top">
-      <div class="summary-stats">
-        <div class="stat-item">
-          <div class="stat-value" id="total-revenue">$0</div>
-          <div class="stat-label">Total revenue</div>
+              <div class="summary-stats">
+          <div class="stat-item">
+            <div class="stat-value" id="take-home">$0</div>
+            <div class="stat-label">Take home</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="total-revenue">$0</div>
+            <div class="stat-label">Total revenue</div>
+          </div>
         </div>
-        <div class="stat-item">
-          <div class="stat-value" id="total-rents">0</div>
-          <div class="stat-label">Total rents</div>
-        </div>
-      </div>
       
       <div class="date-range-panel">
         <div class="date-inputs">
