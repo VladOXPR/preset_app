@@ -700,6 +700,24 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* iOS Home Screen App Status Bar Styling */
+@supports (-webkit-touch-callout: none) {
+  /* When added to home screen, ensure status bar area is black */
+  body {
+    background-color: #000000;
+  }
+  
+  /* Ensure the top area matches the app theme */
+  .welcome-top {
+    background: rgba(0,0,0,0.9) !important;
+  }
+  
+  /* iOS status bar area padding */
+  .container {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
 /* iOS Safari specific overrides */
 @supports (-webkit-touch-callout: none) {
   .date-input {

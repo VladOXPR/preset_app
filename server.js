@@ -165,7 +165,7 @@ app.get('/login', (req, res) => {
   
   <!-- iOS home screen meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Preset App">
   <meta name="theme-color" content="#000000">
 </head>
@@ -220,7 +220,7 @@ app.get('/signup', (req, res) => {
   
   <!-- iOS home screen meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Preset App">
   <meta name="theme-color" content="#000000">
 </head>
@@ -351,7 +351,7 @@ app.get('/admin', (req, res) => {
   
   <!-- iOS home screen meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Preset App">
   <meta name="theme-color" content="#000000">
 </head>
@@ -410,7 +410,7 @@ app.get('/newuser', (req, res) => {
   
   <!-- iOS home screen meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Preset App">
   <meta name="theme-color" content="#000000">
 </head>
