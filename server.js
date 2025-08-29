@@ -187,6 +187,10 @@ app.get('/login', (req, res) => {
           <input type="text" id="username" name="username" required>
           <label for="password">Password</label>
           <input type="password" id="password" name="password" required>
+          <div class="remember-me">
+            <input type="checkbox" id="remember-me" name="remember-me">
+            <label for="remember-me">Keep me signed in</label>
+          </div>
           <div class="button-row">
             <button type="submit" class="primary">Sign in</button>
             <a href="/signup" class="secondary">Sign up</a>
@@ -195,6 +199,7 @@ app.get('/login', (req, res) => {
       </div>
     </div>
   </div>
+  <script src="/js/remember-me.js"></script>
 </body>
 </html>
   `);
@@ -249,8 +254,8 @@ app.get('/signup', (req, res) => {
           <label for="stationIds">Station IDs (comma-separated)</label>
           <input type="text" id="stationIds" name="stationIds">
           <div class="button-row">
-            <button type="submit" class="primary">Sign up</button>
-            <a href="/login" class="secondary">Sign in</a>
+            <button type="submit" class="primary">Submit</button>
+            <a href="/login" class="secondary">Back to sign in</a>
           </div>
         </form>
       </div>
@@ -273,8 +278,9 @@ app.get('/home', (req, res) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     console.log('User accessing home page:', decoded.username);
+    console.log('Username type:', typeof decoded.username);
     res.setHeader('Content-Type', 'text/html');
-    res.send(`
+    const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -284,7 +290,7 @@ app.get('/home', (req, res) => {
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <div class="container">
+  <div class="container" data-username="${decoded.username}" data-usertype="${decoded.userType}">
     <div class="welcome-top">
               <div class="summary-stats">
           <div class="stat-item">
@@ -334,11 +340,14 @@ app.get('/home', (req, res) => {
       </div>
     </div>
   </div>
+
   <script src="/js/config.js"></script>
   <script src="/js/home.js"></script>
 </body>
 </html>
-    `);
+    `;
+    
+    res.send(htmlContent);
   } catch (error) {
     console.log('Invalid JWT token, redirecting to login');
     res.clearCookie('token');
@@ -556,8 +565,8 @@ app.post('/login', async (req, res) => {
       return res.redirect('/login?error=invalid');
     }
     
-    console.log('Login successful for username:', username);
-    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '24h' });
+          console.log('Login successful for username:', username);
+      const token = jwt.sign({ username, userType: user.userType }, JWT_SECRET, { expiresIn: '24h' });
     
     // Set JWT token as HTTP-only cookie
     res.cookie('token', token, {

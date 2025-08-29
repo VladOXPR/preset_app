@@ -201,8 +201,32 @@ function updateSummaryStats() {
     }
   });
   
-  // Calculate take home as 20% of total revenue, rounded up
-  const takeHome = Math.ceil(totalRevenue * 0.2);
+  // Calculate take home based on user account type
+  let takeHomePercentage = 0.2; // Default 20% for most users
+  
+  // Get username and userType from data attributes
+  const container = document.querySelector('.container');
+  const currentUsername = container ? container.getAttribute('data-username') : null;
+  const currentUserType = container ? container.getAttribute('data-usertype') : null;
+  
+  // Debug: Log current user info
+  console.log('Current username:', currentUsername);
+  console.log('Current userType:', currentUserType);
+  console.log('UserType type:', typeof currentUserType);
+  
+  // Distributor gets 80% take home, Host gets 20%
+  if (currentUserType === 'Distributor') {
+    takeHomePercentage = 0.8;
+    console.log('Distributor user detected - using 80% take home');
+  } else if (currentUserType === 'Host') {
+    takeHomePercentage = 0.2;
+    console.log('Host user detected - using 20% take home');
+  } else {
+    console.log('Unknown user type - using default 20% take home');
+  }
+  
+  console.log('Take home percentage:', takeHomePercentage);
+  const takeHome = Math.ceil(totalRevenue * takeHomePercentage);
   
   // Update the summary display
   document.getElementById('take-home').textContent = `$${takeHome}`;

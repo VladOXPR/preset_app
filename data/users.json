@@ -4,6 +4,7 @@
     "username": "DePaul",
     "phone": "7739460236",
     "password": "$2b$10$wgvs3/WcYm1Ml9puqR02aO3fvH9l8OrZqOgxaRdGxRmF6OxyL9oOK",
+    "userType": "Host",
     "station_ids": [
       "DTN00872",
       "DTN00970",
@@ -17,6 +18,7 @@
     "username": "Parlay",
     "phone": "7739460236",
     "password": "$2b$10$bzCF.xIEjgp5DsVcy3irCOiN5cbhVpXzJ32DC1VG0V1bWKl3raJIq",
+    "userType": "Host",
     "station_ids": [
       "BJH09881"
     ],
@@ -27,6 +29,7 @@
     "username": "Kellys",
     "phone": "1",
     "password": "$2b$10$g/MSKIA96sxtkuCN57YNau6B82bPEf8pAq8pulR7VOIcX.lUZSXmu",
+    "userType": "Host",
     "station_ids": [
       "BJH09883"
     ],
@@ -37,6 +40,7 @@
     "username": "CUUB",
     "phone": "7739460236",
     "password": "$2b$10$wxu8r9Qh3oxWhQto8hZbROT4ZklMvg3CKohrem86xQ/RjUrrYWJUi",
+    "userType": "Distributor",
     "station_ids": [
       "DTN00971",
       "DTN00970",
