@@ -338,7 +338,12 @@ a.secondary:hover, button.secondary:hover {
 /* Special styling for take home value */
 #take-home {
   font-size: 50px;
-  color: #BFFF87;
+  color: #ffffff;
+}
+
+/* Special styling for total revenue value */
+#total-revenue {
+  color: #CCCCCC;
 }
 
 .stat-label {
