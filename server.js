@@ -1,9 +1,5 @@
-// Load environment variables
-// For local development, load from .env.local
-// For Vercel production, use environment variables directly
-if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config({ path: '.env.local' });
-}
+// Load environment variables for local development
+require('dotenv').config({ path: '.env.local' });
 
 // Import required modules
 const express = require('express');
@@ -99,102 +95,39 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// Check database schema endpoint
+// Database schema check endpoint (JSON-based)
 app.get('/api/check-schema', async (req, res) => {
   try {
-    if (!process.env.DATABASE_URL) {
-      return res.status(500).json({ error: 'DATABASE_URL not found' });
+    console.log('🔍 Checking JSON database schema...');
+    
+    const fs = require('fs');
+    const path = require('path');
+    const USERS_FILE = path.join(__dirname, 'data', 'users.json');
+    
+    if (!fs.existsSync(USERS_FILE)) {
+      return res.json({ 
+        status: 'success', 
+        table: 'users',
+        database: 'JSON',
+        message: 'No users file found',
+        timestamp: new Date().toISOString()
+      });
     }
-
-    console.log('🔍 Checking database schema...');
-    const { neon } = require('@neondatabase/serverless');
-    const sql = neon(process.env.DATABASE_URL);
-
-    // Get all columns from users table
-    const columns = await sql`
-      SELECT column_name, data_type, is_nullable, column_default
-      FROM information_schema.columns 
-      WHERE table_name = 'users'
-      ORDER BY ordinal_position
-    `;
-
-    console.log('📊 Current users table structure:', columns);
+    
+    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+    const sampleUser = users[0] || {};
     
     res.json({ 
       status: 'success', 
       table: 'users',
-      columns: columns,
+      database: 'JSON',
+      userCount: users.length,
+      sampleFields: Object.keys(sampleUser),
       timestamp: new Date().toISOString()
     });
     
   } catch (error) {
     console.error('❌ Schema check failed:', error);
-    res.status(500).json({ 
-      status: 'error', 
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-// Migrate database endpoint (GET version for browser access)
-app.get('/api/migrate', async (req, res) => {
-  try {
-    if (!process.env.DATABASE_URL) {
-      return res.status(500).json({ error: 'DATABASE_URL not found' });
-    }
-
-    console.log('🔄 Starting Neon database migration...');
-    const { neon } = require('@neondatabase/serverless');
-    const sql = neon(process.env.DATABASE_URL);
-
-    // Check if bio column exists
-    console.log('📋 Checking if bio column exists...');
-    const columnCheck = await sql`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'users' AND column_name = 'bio'
-    `;
-
-    if (columnCheck.length > 0) {
-      console.log('✅ Bio column already exists in users table.');
-      return res.json({ 
-        status: 'success', 
-        message: 'Bio column already exists',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // Add bio column
-    console.log('➕ Adding bio column to users table...');
-    await sql`
-      ALTER TABLE users 
-      ADD COLUMN bio TEXT DEFAULT ''
-    `;
-    
-    console.log('✅ Bio column added successfully!');
-    
-    // Verify the column was added
-    const verify = await sql`
-      SELECT column_name, data_type, column_default
-      FROM information_schema.columns 
-      WHERE table_name = 'users' AND column_name = 'bio'
-    `;
-    
-    if (verify.length > 0) {
-      console.log('🔍 Verification successful');
-      res.json({ 
-        status: 'success', 
-        message: 'Bio column added successfully',
-        column: verify[0],
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      throw new Error('Column verification failed');
-    }
-    
-  } catch (error) {
-    console.error('❌ Migration failed:', error);
     res.status(500).json({ 
       status: 'error', 
       error: error.message,
@@ -396,13 +329,13 @@ app.get('/api/session', (req, res) => {
   });
 });
 
-// Debug endpoint for Vercel deployment
+// Debug endpoint for deployment
 app.get('/api/debug-vercel', async (req, res) => {
   try {
     res.json({
-      environment: process.env.NODE_ENV,
-      hasDatabaseUrl: !!process.env.DATABASE_URL,
-      databaseUrl: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
+      environment: process.env.NODE_ENV || 'development',
+      database: 'JSON',
+      status: 'JSON database active',
       timestamp: new Date().toISOString(),
       serverTime: new Date().toISOString()
     });
