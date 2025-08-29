@@ -170,18 +170,30 @@ app.get('/login', (req, res) => {
   <meta name="theme-color" content="#000000">
 </head>
 <body>
-  <div class="container">
-    <h1>Sign in</h1>
-    <form action="/login" method="POST">
-      <label for="username">Username</label>
-      <input type="text" id="username" name="username" required>
-      <label for="password">Password</label>
-      <input type="password" id="password" name="password" required>
-      <div class="button-row">
-        <button type="submit" class="primary">Sign in</button>
-        <a href="/signup" class="secondary">Sign up</a>
+  <div class="login-split-container">
+    <!-- Left side - Blue background with payment image -->
+    <div class="login-left">
+      <div class="payment-image-container">
+        <img src="/payment-illustration.png" alt="Contactless Payment" class="payment-image">
       </div>
-    </form>
+    </div>
+    
+    <!-- Right side - Login form -->
+    <div class="login-right">
+      <div class="login-form-container">
+        <h1>Sign in</h1>
+        <form action="/login" method="POST">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required>
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required>
+          <div class="button-row">
+            <button type="submit" class="primary">Sign in</button>
+            <a href="/signup" class="secondary">Sign up</a>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </body>
 </html>
@@ -213,24 +225,36 @@ app.get('/signup', (req, res) => {
   <meta name="theme-color" content="#000000">
 </head>
 <body>
-  <div class="container">
-    <h1>Sign up</h1>
-    <form action="/signup" method="POST">
-      <label for="phone">Phone</label>
-      <input type="text" id="phone" name="phone" required>
-      <label for="username">Username</label>
-      <input type="text" id="username" name="username" required>
-      <label for="password">Password</label>
-      <input type="password" id="password" name="password" required>
-      <label for="password2">Confirm Password</label>
-      <input type="password" id="password2" name="password2" required>
-      <label for="stationIds">Station IDs (comma-separated)</label>
-      <input type="text" id="stationIds" name="stationIds">
-      <div class="button-row">
-        <button type="submit" class="primary">Sign up</button>
-        <a href="/login" class="secondary">Sign in</a>
+  <div class="login-split-container">
+    <!-- Left side - Blue background with payment image -->
+    <div class="login-left">
+      <div class="payment-image-container">
+        <img src="/payment-illustration.png" alt="Contactless Payment" class="payment-image">
       </div>
-    </form>
+    </div>
+    
+    <!-- Right side - Signup form -->
+    <div class="login-right">
+      <div class="login-form-container">
+        <h1>Sign up</h1>
+        <form action="/signup" method="POST">
+          <label for="phone">Phone</label>
+          <input type="text" id="phone" name="phone" required>
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required>
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required>
+          <label for="password2">Confirm Password</label>
+          <input type="password" id="password2" name="password2" required>
+          <label for="stationIds">Station IDs (comma-separated)</label>
+          <input type="text" id="stationIds" name="stationIds">
+          <div class="button-row">
+            <button type="submit" class="primary">Sign up</button>
+            <a href="/login" class="secondary">Sign in</a>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </body>
 </html>

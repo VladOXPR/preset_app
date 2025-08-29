@@ -5,6 +5,69 @@ html {
   -ms-text-size-adjust: 100%;
 }
 
+/* Split Screen Login Layout */
+.login-split-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.login-left {
+  flex: 1;
+  background: #0099FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.payment-image-container {
+  text-align: center;
+}
+
+.payment-image {
+  max-width: 80%;
+  height: auto;
+  max-height: 70vh;
+}
+
+.login-right {
+  flex: 1;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.login-form-container {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Mobile responsive - stack vertically on small screens */
+@media (max-width: 768px) {
+  .login-split-container {
+    flex-direction: column;
+  }
+  
+  .login-left {
+    flex: none;
+    height: 200px;
+    padding: 20px;
+  }
+  
+  .login-right {
+    flex: 1;
+    padding: 40px 20px;
+  }
+  
+  .payment-image {
+    max-width: 60%;
+    max-height: 150px;
+  }
+}
+
 body {
   background: #000;
   color: #fff;
