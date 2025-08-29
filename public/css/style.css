@@ -36,6 +36,21 @@ input, textarea {
   max-width: 400px;
   margin: 0 auto 0 auto;
   padding: 90px 24px;
+  box-sizing: border-box;
+}
+
+/* Responsive container adjustments */
+@media (max-width: 480px) {
+  .container {
+    max-width: 100%;
+    padding: 60px 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .container {
+    padding: 40px 12px;
+  }
 }
 h1 {
   font-size: 30px;
@@ -79,6 +94,22 @@ textarea {
   display: flex;
   gap: 24px;
   margin-top: 2.5rem;
+  flex-wrap: wrap;
+}
+
+/* Responsive button row */
+@media (max-width: 480px) {
+  .button-row {
+    gap: 16px;
+    margin-top: 2rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .button-row {
+    gap: 12px;
+    margin-top: 1.5rem;
+  }
 }
 button.primary, a.primary {
   background: #fff;
@@ -163,9 +194,11 @@ a.secondary:hover, button.secondary:hover {
 } 
 .welcome-top {
   position: fixed;
-  width: 400px;
+  width: 100%;
+  max-width: 352px; /* Match container content width (400px - 48px padding) */
   top: 0;
-  margin: 0 auto 0 auto;
+  left: 50%;
+  transform: translateX(-50%);
   height: 200px;
   display: flex;
   flex-direction: column;
@@ -176,6 +209,7 @@ a.secondary:hover, button.secondary:hover {
   z-index: 101;
   padding-top: 20px;
   gap: 20px;
+  box-sizing: border-box;
 }
 .summary-stats {
   display: flex;
@@ -352,11 +386,9 @@ a.secondary:hover, button.secondary:hover {
 .date-range-panel {
   border: none;
   border-radius: 16px;
-  padding: 20px;
   margin: 0;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 20px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
@@ -370,15 +402,17 @@ a.secondary:hover, button.secondary:hover {
 
 .date-inputs {
   display: flex;
-  gap: 20px;
-  flex: 1;
+  flex-wrap: wrap;
   justify-content: center;
+  width: 100%;
 }
 
 .date-input-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
 .date-input-group label {
@@ -390,21 +424,97 @@ a.secondary:hover, button.secondary:hover {
 }
 
 .date-input {
-  background: #2a2a2a;
-  border: 1px solid #4D4D4D;
+  background: #1E1E1E;
+  border: 1px solid #1E1E1E;
   border-radius: 8px;
   padding: 12px 16px;
   color: #ffffff;
   font-size: 14px;
   font-weight: 500;
-  min-width: 140px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   transition: border-color 0.2s ease;
+}
+
+/* Remove border radius on touching corners and adjust borders for connected appearance */
+.date-input-group:first-child .date-input {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+
+.date-input-group:last-child .date-input {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: none;
+}
+
+/* Add black border where inputs touch */
+.date-input-group:first-child .date-input {
+  border-right: 1px solid #000;
 }
 
 .date-input:focus {
   outline: none;
   border-color: #009FFD;
   box-shadow: 0 0 0 2px rgba(0, 159, 253, 0.2);
+}
+
+/* Responsive breakpoints for date range panel */
+@media (max-width: 480px) {
+  .date-range-panel {
+    padding: 16px;
+    gap: 16px;
+    width: 100%; /* Use full width of welcome-top container */
+  }
+  
+  .date-inputs {
+    flex-direction: row; /* Keep side by side on mobile */
+    width: 100%;
+  }
+  
+  .date-input-group {
+    flex: 1; /* Each input group takes equal space */
+    min-width: 0;
+  }
+  
+  .date-input {
+    font-size: 16px; /* Prevents zoom on iOS */
+    width: 100%;
+  }
+  
+  .welcome-top {
+    max-width: calc(100% - 32px); /* Account for container padding on mobile */
+  }
+}
+
+@media (max-width: 360px) {
+  .date-range-panel {
+    padding: 12px;
+    gap: 12px;
+    width: 100%; /* Use full width of welcome-top container */
+  }
+  
+  .date-inputs {
+    flex-direction: row; /* Keep side by side on small mobile */
+    width: 100%;
+  }
+  
+  .date-input-group {
+    flex: 1; /* Each input group takes equal space */
+    min-width: 0;
+  }
+  
+  .welcome-top {
+    max-width: calc(100% - 24px); /* Account for container padding on small mobile */
+  }
+}
+
+@media (max-width: 360px) {
+  .date-range-panel {
+    padding: 12px;
+  }
 }
 
 .apply-button {
