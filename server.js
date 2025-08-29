@@ -154,17 +154,67 @@ app.get('/admin.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'js', 'admin.js'));
 });
 
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Static page routes - serve HTML files
 app.get('/', (req, res) => {
   res.redirect('/login');
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'html', 'login.html'));
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Login</h1>
+    <form action="/login" method="POST">
+      <input type="text" name="username" placeholder="Username" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <button type="submit">Login</button>
+    </form>
+    <a href="/signup">Sign up</a>
+  </div>
+</body>
+</html>
+  `);
 });
 
 app.get('/signup', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'html', 'signup.html'));
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Sign Up</h1>
+    <form action="/signup" method="POST">
+      <input type="text" name="phone" placeholder="Phone" required>
+      <input type="text" name="username" placeholder="Username" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <input type="password" name="password2" placeholder="Confirm Password" required>
+      <input type="text" name="stationIds" placeholder="Station IDs (comma-separated)">
+      <button type="submit">Sign Up</button>
+    </form>
+    <a href="/login">Login</a>
+  </div>
+</body>
+</html>
+  `);
 });
 
 app.get('/home', (req, res) => {
@@ -179,7 +229,59 @@ app.get('/home', (req, res) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     console.log('User accessing home page:', decoded.username);
-    res.sendFile(path.join(__dirname, 'public', 'html', 'home.html'));
+    res.setHeader('Content-Type', 'text/html');
+    res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="welcome-top">
+      <div class="summary-stats">
+        <div class="stat-item">
+          <div class="stat-value" id="total-revenue">$0</div>
+          <div class="stat-label">Total revenue</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="total-rents">0</div>
+          <div class="stat-label">Total rents</div>
+        </div>
+      </div>
+      
+      <div class="date-range-panel">
+        <div class="date-inputs">
+          <div class="date-input-group">
+            <label>Start Date</label>
+            <input type="date" id="start-date" class="date-input">
+          </div>
+          <div class="date-input-group">
+            <label>End Date</label>
+            <input type="date" id="end-date" class="date-input">
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="station-section">
+      <div id="station-list">
+        <!-- Station list will be populated here -->
+      </div>
+    </div>
+    
+    <div class="logout-bottom">
+      <a href="/logout" class="secondary">Log out</a>
+    </div>
+  </div>
+  <script src="/js/config.js"></script>
+  <script src="/js/home.js"></script>
+</body>
+</html>
+    `);
   } catch (error) {
     console.log('Invalid JWT token, redirecting to login');
     res.clearCookie('token');
@@ -187,14 +289,72 @@ app.get('/home', (req, res) => {
   }
 });
 
-
-
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'html', 'admin.html'));
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <div id="password-screen">
+      <h1>Admin Access</h1>
+      <form id="password-form">
+        <input type="password" id="admin-password" placeholder="Enter admin password" required>
+        <button type="submit">Access Admin</button>
+      </form>
+      <div id="password-error" style="display: none; color: red;"></div>
+      <a href="/home">Back to Home</a>
+    </div>
+    
+    <div id="admin-content" style="display: none;">
+      <h1>Admin Panel</h1>
+      <div id="users-list">
+        <!-- Users will be loaded here -->
+      </div>
+      <a href="/newuser">Create New User</a>
+      <a href="/home">Back to Home</a>
+    </div>
+  </div>
+  <script src="/js/config.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
+  `);
 });
 
 app.get('/newuser', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'html', 'newuser.html'));
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create New User</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Create New User</h1>
+    <form action="/newuser" method="POST">
+      <input type="text" name="phone" placeholder="Phone" required>
+      <input type="text" name="username" placeholder="Username" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <input type="password" name="password2" placeholder="Confirm Password" required>
+      <input type="text" name="stationIds" placeholder="Station IDs (comma-separated)">
+      <button type="submit">Create User</button>
+    </form>
+    <a href="/admin">Back to Admin</a>
+  </div>
+</body>
+</html>
+  `);
 });
 
 // Authentication routes
