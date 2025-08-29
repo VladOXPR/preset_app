@@ -4,11 +4,12 @@ let dbType;
 
 // Check if we have a DATABASE_URL (Neon Postgres) or use JSON for local development
 if (process.env.DATABASE_URL) {
-  // Use Neon Postgres for production
+  // Use Neon Postgres for production/Vercel
   const { neon } = require('@neondatabase/serverless');
   sql = neon(process.env.DATABASE_URL);
   dbType = 'neon';
   console.log('Using Neon PostgreSQL database');
+  console.log('Environment:', process.env.NODE_ENV || 'development');
 } else {
   // Use JSON files for local development
   const fs = require('fs');

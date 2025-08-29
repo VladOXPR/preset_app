@@ -1,5 +1,9 @@
 // Load environment variables
-require('dotenv').config({ path: '.env.local' });
+// For local development, load from .env.local
+// For Vercel production, use environment variables directly
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({ path: '.env.local' });
+}
 
 // Import required modules
 const express = require('express');
@@ -390,6 +394,21 @@ app.get('/api/session', (req, res) => {
     user: req.session.user,
     timestamp: new Date().toISOString()
   });
+});
+
+// Debug endpoint for Vercel deployment
+app.get('/api/debug-vercel', async (req, res) => {
+  try {
+    res.json({
+      environment: process.env.NODE_ENV,
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      databaseUrl: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
+      timestamp: new Date().toISOString(),
+      serverTime: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Test endpoint to check if user is logged in
