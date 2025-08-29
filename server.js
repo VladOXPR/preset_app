@@ -169,7 +169,7 @@ app.get('/login', (req, res) => {
   <meta name="apple-mobile-web-app-title" content="Preset App">
   <meta name="theme-color" content="#000000">
 </head>
-<body>
+<body class="login-page">
   <div class="login-split-container">
     <!-- Left side - Blue background with payment image -->
     <div class="login-left">
@@ -224,7 +224,7 @@ app.get('/signup', (req, res) => {
   <meta name="apple-mobile-web-app-title" content="Preset App">
   <meta name="theme-color" content="#000000">
 </head>
-<body>
+<body class="signup-page">
   <div class="login-split-container">
     <!-- Left side - Blue background with payment image -->
     <div class="login-left">

@@ -716,6 +716,24 @@ html, body {
   .container {
     padding-top: env(safe-area-inset-top);
   }
+  
+  /* Login and Signup screens - make status bar area blue */
+  .login-split-container {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .login-left {
+    /* Extend blue background to cover iOS status bar area */
+    background: #0099FF;
+    padding-top: calc(40px + env(safe-area-inset-top));
+    margin-top: calc(-1 * env(safe-area-inset-top));
+  }
+  
+  /* Ensure the body background is blue for login/signup screens */
+  body.login-page,
+  body.signup-page {
+    background-color: #0099FF;
+  }
 }
 
 /* iOS Safari specific overrides */
