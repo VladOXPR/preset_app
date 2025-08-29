@@ -8,34 +8,6 @@
   ],
   "routes": [
     {
-      "src": "/login",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/signup",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/home",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/admin",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/newuser",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/logout",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/server.js"
-    },
-    {
       "src": "/(.*)",
       "dest": "/server.js"
     }
