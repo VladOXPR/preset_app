@@ -300,11 +300,9 @@ app.get('/home', (req, res) => {
       <div class="date-range-panel">
         <div class="date-inputs">
           <div class="date-input-group">
-            <label>Start Date</label>
             <input type="date" id="start-date" class="date-input">
           </div>
           <div class="date-input-group">
-            <label>End Date</label>
             <input type="date" id="end-date" class="date-input">
           </div>
         </div>
