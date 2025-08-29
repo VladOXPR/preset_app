@@ -179,7 +179,7 @@ app.get('/login', (req, res) => {
       <input type="password" id="password" name="password" required>
       <div class="button-row">
         <button type="submit" class="primary">Sign in</button>
-        <a href="/signup" class="secondary">Create new account</a>
+        <a href="/signup" class="secondary">Sign up</a>
       </div>
     </form>
   </div>

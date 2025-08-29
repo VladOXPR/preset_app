@@ -95,6 +95,15 @@ textarea {
   gap: 24px;
   margin-top: 2.5rem;
   flex-wrap: wrap;
+  width: 100%;
+}
+
+/* Make buttons in button-row equal width and span full container */
+.button-row button,
+.button-row a {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
 }
 
 /* Responsive button row */
@@ -102,6 +111,13 @@ textarea {
   .button-row {
     gap: 16px;
     margin-top: 2rem;
+    width: 100%;
+  }
+  
+  .button-row button,
+  .button-row a {
+    flex: 1;
+    min-width: 0;
   }
 }
 
@@ -109,6 +125,13 @@ textarea {
   .button-row {
     gap: 12px;
     margin-top: 1.5rem;
+    width: 100%;
+  }
+  
+  .button-row button,
+  .button-row a {
+    flex: 1;
+    min-width: 0;
   }
 }
 button.primary, a.primary {
