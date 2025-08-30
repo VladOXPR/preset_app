@@ -49,5 +49,17 @@
       "BJH09881"
     ],
     "created_at": "2025-08-29T20:32:53.681Z"
+  },
+  {
+    "id": 5,
+    "username": "Home",
+    "phone": "7739460236",
+    "password": "$2b$10$T2aOVf83LEuVxuF2NP2tzej2/snWznzakQ8lhtWO0NTnoVfS2LHry",
+    "station_ids": [
+      "DTA22033"
+    ],
+    "userType": "Distributor",
+    "station_titles": {},
+    "created_at": "2025-08-30T00:28:52.269Z"
   }
 ]

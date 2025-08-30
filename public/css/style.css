@@ -1277,3 +1277,42 @@ html, body {
 .remember-me:hover label {
   color: #ffffff;
 } 
+
+/* Pop out button styles for Distributor users */
+.pop-out-section {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.pop-out-btn {
+  background: #009FFD;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.pop-out-btn:hover {
+  background: #007ACC;
+  transform: translateY(-1px);
+}
+
+.pop-out-btn:disabled {
+  background: #666666;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pop-out-btn.success {
+  background: #4CAF50 !important;
+}
+
+.pop-out-btn.error {
+  background: #f44336 !important;
+} 

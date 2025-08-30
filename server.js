@@ -1149,6 +1149,87 @@ app.get('/api/test-chargenow', async (req, res) => {
   }
 });
 
+// Dispense battery endpoint for Distributor users
+app.post('/api/dispense-battery', verifyToken, async (req, res) => {
+  try {
+    const { stationId } = req.body;
+    
+    // Check if user is a Distributor
+    if (req.user.userType !== 'Distributor') {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Only Distributor users can dispense batteries',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    if (!stationId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Station ID is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    console.log(`Dispensing battery from station: ${stationId} for user: ${req.user.username}`);
+    
+    // Prepare the request to ChargeNow API
+    const myHeaders = new Headers();
+    myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
+    
+    const requestOptions = {
+      method: 'POST',
+      headers: myHeaders,
+      redirect: 'follow'
+    };
+    
+    // Make the API call to dispense battery
+    const dispenseUrl = `https://developer.chargenow.top/cdb-open-api/v1/cabinet/ejectByRepair?cabinetid=${stationId}&slotNum=1`;
+    console.log('Making dispense API call to:', dispenseUrl);
+    
+    const response = await fetch(dispenseUrl, requestOptions);
+    const result = await response.text();
+    
+    console.log('Dispense API response status:', response.status);
+    console.log('Dispense API response:', result);
+    
+    // Parse the response as JSON for better structure
+    let parsedData;
+    try {
+      parsedData = JSON.parse(result);
+    } catch (e) {
+      parsedData = { rawResponse: result, parseError: e.message };
+    }
+    
+    // Set proper JSON headers and return formatted response
+    res.setHeader('Content-Type', 'application/json');
+    
+    // Create a cleaner response structure
+    const responseData = {
+      success: true,
+      stationId: stationId,
+      url: dispenseUrl,
+      status: response.status,
+      responseSummary: {
+        message: parsedData.msg || 'No message',
+        code: parsedData.code || 'No code'
+      },
+      parsedData: parsedData,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Return properly formatted JSON
+    res.status(200).json(responseData);
+  } catch (error) {
+    console.error('Dispense battery API call failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Export the Express app for Vercel
 module.exports = app;
 

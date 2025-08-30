@@ -131,6 +131,11 @@ function displayStations(stationsData) {
   
   console.log('Processing stations:', stations);
   
+  // Get username and userType from data attributes
+  const container = document.querySelector('.container');
+  const currentUsername = container ? container.getAttribute('data-username') : null;
+  const currentUserType = container ? container.getAttribute('data-usertype') : null;
+  
   // Create the station list
   const stationHTML = stations.map((station, index) => {
     const stationId = station.pCabinetid || station.id || `Station ${index + 1}`;
@@ -170,6 +175,11 @@ function displayStations(stationsData) {
             <div class="rents-number">${totalRents}</div>
             <div class="rents-label">Rents</div>
           </div>
+          ${currentUserType === 'Distributor' ? `
+          <div class="pop-out-section">
+            <button class="pop-out-btn" onclick="dispenseBattery('${stationId}')">Pop out</button>
+          </div>
+          ` : ''}
         </div>
       </div>
     `;
@@ -266,6 +276,61 @@ function initializeMenu() {
       menuOverlay.classList.remove('active');
     }
   });
+}
+
+// Battery dispense functionality for Distributor users
+function dispenseBattery(stationId) {
+  console.log('Dispensing battery from station:', stationId);
+  
+  // Show loading state
+  const button = event.target;
+  const originalText = button.textContent;
+  button.textContent = 'Dispensing...';
+  button.disabled = true;
+  
+  // Make the API call to our backend endpoint
+  fetch('/api/dispense-battery', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ stationId: stationId })
+  })
+    .then(response => response.json())
+    .then(result => {
+      console.log('Dispense result:', result);
+      
+      if (result.success) {
+        // Show success message
+        button.textContent = 'Success!';
+        button.style.background = '#4CAF50';
+      } else {
+        // Show error message
+        button.textContent = 'Error!';
+        button.style.background = '#f44336';
+      }
+      
+      // Reset button after 2 seconds
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.disabled = false;
+        button.style.background = '';
+      }, 2000);
+    })
+    .catch(error => {
+      console.error('Dispense error:', error);
+      
+      // Show error message
+      button.textContent = 'Error!';
+      button.style.background = '#f44336';
+      
+      // Reset button after 2 seconds
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.disabled = false;
+        button.style.background = '';
+      }, 2000);
+    });
 }
 
  
