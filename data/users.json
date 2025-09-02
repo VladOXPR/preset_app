@@ -1,7 +1,7 @@
 [
   {
     "id": 1,
-    "username": "DePaul",
+    "username": "depaul",
     "phone": "7739460236",
     "password": "$2b$10$wgvs3/WcYm1Ml9puqR02aO3fvH9l8OrZqOgxaRdGxRmF6OxyL9oOK",
     "userType": "Host",
@@ -17,7 +17,7 @@
     "id": 2,
     "username": "Parlay",
     "phone": "7739460236",
-    "password": "$2b$10$bzCF.xIEjgp5DsVcy3irCOiN5cbhVpXzJ32DC1VG0V1bWKl3raJIq",
+    "password": "$2b$10$7gq7uiUnLiFp0.S7eHGH/uGrPsyNoS3nihWbl45aHV9D.IAXu2I0K",
     "userType": "Host",
     "station_ids": [
       "BJH09881"
@@ -28,7 +28,7 @@
     "id": 3,
     "username": "Kellys",
     "phone": "1",
-    "password": "$2b$10$g/MSKIA96sxtkuCN57YNau6B82bPEf8pAq8pulR7VOIcX.lUZSXmu",
+    "password": "$2b$10$saukLoGZv2c6/2p/ks/31O/TxBlaM6.sf1ybde1GezomfcaWMVRxm",
     "userType": "Host",
     "station_ids": [
       "BJH09883"

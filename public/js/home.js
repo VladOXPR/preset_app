@@ -304,10 +304,15 @@ function dispenseBattery(stationId) {
         // Show success message
         button.textContent = 'Success!';
         button.style.background = '#4CAF50';
+        console.log('✅ Battery dispensed successfully from station:', result.stationId);
+        console.log('📡 API Response:', result.apiMessage);
       } else {
         // Show error message
-        button.textContent = 'Error!';
+        button.textContent = 'Failed!';
         button.style.background = '#f44336';
+        console.log('❌ Battery dispense failed for station:', result.stationId);
+        console.log('📡 API Error:', result.apiMessage);
+        console.log('🔍 Full response:', result);
       }
       
       // Reset button after 2 seconds

@@ -18,6 +18,33 @@ if (typeof globalThis.fetch === 'undefined') {
   fetch = globalThis.fetch;
 }
 
+// Global variable to store latest station data
+let latestStationData = null;
+let lastFetchTime = null;
+
+// Function to fetch and update station data
+async function updateStationData() {
+  try {
+    console.log('🔄 Scheduled station data update started at:', new Date().toISOString());
+    
+    const result = await fetchChargeNowStations();
+    latestStationData = result;
+    lastFetchTime = new Date().toISOString();
+    
+    console.log('✅ Station data updated successfully at:', lastFetchTime);
+    console.log('📊 Data size:', result.length, 'characters');
+  } catch (error) {
+    console.error('❌ Scheduled station data update failed:', error.message);
+    // Keep previous data if update fails
+  }
+}
+
+// Initialize station data on server start
+updateStationData();
+
+// Schedule station data updates every minute (60000 ms)
+setInterval(updateStationData, 60000);
+
 // Initialize Express app and configuration
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -157,11 +184,11 @@ app.get('/login', (req, res) => {
   <link rel="stylesheet" href="/css/style.css">
   
   <!-- Favicon and iOS icons -->
-  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2">
-  <link rel="manifest" href="/site.webmanifest?v=2">
+  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png?v=2">
+  <link rel="manifest" href="/icons/site.webmanifest?v=2">
   
   <!-- iOS home screen meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -174,7 +201,7 @@ app.get('/login', (req, res) => {
     <!-- Left side - Blue background with payment image -->
     <div class="login-left">
       <div class="payment-image-container">
-        <img src="/payment-illustration.png" alt="Contactless Payment" class="payment-image">
+        <img src="/icons/payment-illustration.png" alt="Contactless Payment" class="payment-image">
       </div>
     </div>
     
@@ -217,11 +244,11 @@ app.get('/signup', (req, res) => {
   <link rel="stylesheet" href="/css/style.css">
   
   <!-- Favicon and iOS icons -->
-  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2">
-  <link rel="manifest" href="/site.webmanifest?v=2">
+  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png?v=2">
+  <link rel="manifest" href="/icons/site.webmanifest?v=2">
   
   <!-- iOS home screen meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -234,7 +261,7 @@ app.get('/signup', (req, res) => {
     <!-- Left side - Blue background with payment image -->
     <div class="login-left">
       <div class="payment-image-container">
-        <img src="/payment-illustration.png" alt="Contactless Payment" class="payment-image">
+        <img src="/icons/payment-illustration.png" alt="Contactless Payment" class="payment-image">
       </div>
     </div>
     
@@ -341,7 +368,7 @@ app.get('/home', (req, res) => {
     </div>
   </div>
 
-  <script src="/js/config.js"></script>
+  <script src="/js/deployment-manager.js"></script>
   <script src="/js/home.js"></script>
 </body>
 </html>
@@ -367,11 +394,11 @@ app.get('/admin', (req, res) => {
   <link rel="stylesheet" href="/css/style.css">
   
   <!-- Favicon and iOS icons -->
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-new.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-new-16.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-new.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-new-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+  <link rel="manifest" href="/icons/site.webmanifest">
   
   <!-- iOS home screen meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -407,7 +434,7 @@ app.get('/admin', (req, res) => {
       </div>
     </div>
   </div>
-  <script src="/js/config.js"></script>
+  <script src="/js/deployment-manager.js"></script>
   <script src="/js/admin.js"></script>
 </body>
 </html>
@@ -426,11 +453,11 @@ app.get('/newuser', (req, res) => {
   <link rel="stylesheet" href="/css/style.css">
   
   <!-- Favicon and iOS icons -->
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-new.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-new-16.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-new.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-new-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+  <link rel="manifest" href="/icons/site.webmanifest">
   
   <!-- iOS home screen meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -815,7 +842,15 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     console.log('User station_ids array:', JSON.stringify(user.station_ids));
     console.log('=== END DEBUG ===');
     
-    const result = await fetchChargeNowStations();
+    // Use cached station data if available, otherwise fetch new data
+    let result;
+    if (latestStationData && lastFetchTime) {
+      console.log('📋 Using cached station data from:', lastFetchTime);
+      result = latestStationData;
+    } else {
+      console.log('🔄 No cached data available, fetching fresh station data...');
+      result = await fetchChargeNowStations();
+    }
     
     let formattedData;
     try {
@@ -1186,33 +1221,53 @@ app.post('/api/dispense-battery', verifyToken, async (req, res) => {
     // Make the API call to dispense battery
     const dispenseUrl = `https://developer.chargenow.top/cdb-open-api/v1/cabinet/ejectByRepair?cabinetid=${stationId}&slotNum=1`;
     console.log('Making dispense API call to:', dispenseUrl);
+    console.log('Request headers:', Object.fromEntries(myHeaders.entries()));
     
     const response = await fetch(dispenseUrl, requestOptions);
     const result = await response.text();
     
     console.log('Dispense API response status:', response.status);
-    console.log('Dispense API response:', result);
+    console.log('Dispense API response headers:', Object.fromEntries(response.headers.entries()));
+    console.log('Dispense API response body:', result);
     
     // Parse the response as JSON for better structure
     let parsedData;
     try {
       parsedData = JSON.parse(result);
+      console.log('Successfully parsed dispense response as JSON');
     } catch (e) {
       parsedData = { rawResponse: result, parseError: e.message };
+      console.log('Failed to parse dispense response as JSON:', e.message);
     }
+    
+    // Check if the dispense was actually successful
+    const isSuccessful = parsedData.code === 0;
+    const actualMessage = parsedData.msg || 'No message from API';
+    
+    console.log('=== DISPENSE ANALYSIS ===');
+    console.log('Station ID:', stationId);
+    console.log('HTTP Status:', response.status);
+    console.log('API Response Code:', parsedData.code);
+    console.log('API Message:', actualMessage);
+    console.log('Is Successful:', isSuccessful);
+    console.log('Full API Response:', JSON.stringify(parsedData, null, 2));
+    console.log('=== END DISPENSE ANALYSIS ===');
     
     // Set proper JSON headers and return formatted response
     res.setHeader('Content-Type', 'application/json');
     
     // Create a cleaner response structure
     const responseData = {
-      success: true,
+      success: isSuccessful,
       stationId: stationId,
       url: dispenseUrl,
       status: response.status,
+      apiCode: parsedData.code,
+      apiMessage: actualMessage,
       responseSummary: {
-        message: parsedData.msg || 'No message',
-        code: parsedData.code || 'No code'
+        message: actualMessage,
+        code: parsedData.code || 'No code',
+        success: isSuccessful
       },
       parsedData: parsedData,
       timestamp: new Date().toISOString()
@@ -1224,6 +1279,51 @@ app.post('/api/dispense-battery', verifyToken, async (req, res) => {
     console.error('Dispense battery API call failed:', error);
     res.status(500).json({ 
       success: false, 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Endpoint to check station data cache status and manually refresh
+app.get('/api/station-cache-status', async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      hasCachedData: !!latestStationData,
+      lastFetchTime: lastFetchTime,
+      dataSize: latestStationData ? latestStationData.length : 0,
+      nextScheduledUpdate: new Date(Date.now() + 60000).toISOString(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting cache status:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Endpoint to manually trigger station data refresh
+app.post('/api/refresh-stations', async (req, res) => {
+  try {
+    console.log('🔄 Manual station data refresh triggered');
+    
+    await updateStationData();
+    
+    res.json({
+      success: true,
+      message: 'Station data refresh completed',
+      lastFetchTime: lastFetchTime,
+      dataSize: latestStationData ? latestStationData.length : 0,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Manual refresh failed:', error);
+    res.status(500).json({
+      success: false,
       error: error.message,
       timestamp: new Date().toISOString()
     });

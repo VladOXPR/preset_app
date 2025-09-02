@@ -1,8 +1,28 @@
+// ========================================
+// CUUB DASHBOARD - ADMIN PANEL
+// ========================================
+// This file handles the admin panel functionality including:
+// - Password-based authentication
+// - User management and viewing
+// - Admin interface controls
+
+// ========================================
+// CONFIGURATION
+// ========================================
+
 // Admin password - you can change this to whatever you want
 const ADMIN_PASSWORD = 'admin123';
 
+// ========================================
+// INITIALIZATION
+// ========================================
+
+/**
+ * Main initialization function that runs when the page loads
+ * Checks if admin is already authenticated and shows appropriate content
+ */
 window.onload = function() {
-  // Check if already authenticated
+  // Check if already authenticated from previous session
   if (localStorage.getItem('adminAuthenticated') === 'true') {
     showAdminContent();
   } else {
@@ -10,12 +30,23 @@ window.onload = function() {
   }
 };
 
+// ========================================
+// AUTHENTICATION FUNCTIONS
+// ========================================
+
+/**
+ * Displays the password entry screen and hides admin content
+ * Sets up event listeners for password submission
+ */
 function showPasswordScreen() {
+  // Show password screen, hide admin content
   document.getElementById('password-screen').style.display = 'flex';
   document.getElementById('admin-content').style.display = 'none';
   
   // Add event listeners for password submission
   document.getElementById('submit-password').addEventListener('click', checkPassword);
+  
+  // Allow Enter key to submit password
   document.getElementById('admin-password').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
       checkPassword();
@@ -23,143 +54,141 @@ function showPasswordScreen() {
   });
 }
 
-function showAdminContent() {
-  document.getElementById('password-screen').style.display = 'none';
-  document.getElementById('admin-content').style.display = 'block';
-  
-  // Load admin content
-  loadUsers();
-  
-  // Add event listeners for admin functionality
-  document.getElementById('addUserBtn').addEventListener('click', function() {
-    // Redirect to new user creation page
-    window.location.href = '/newuser';
-  });
-}
-
+/**
+ * Validates the entered admin password
+ * If correct: stores authentication and shows admin panel
+ * If incorrect: shows error message and clears input
+ */
 function checkPassword() {
   const password = document.getElementById('admin-password').value;
   const errorElement = document.getElementById('password-error');
   
   if (password === ADMIN_PASSWORD) {
-    // Correct password - store authentication and show admin content
+    // Correct password - authenticate and show admin content
     localStorage.setItem('adminAuthenticated', 'true');
     showAdminContent();
   } else {
-    // Wrong password - show error
+    // Wrong password - show error and reset input
     errorElement.style.display = 'block';
     document.getElementById('admin-password').value = '';
     document.getElementById('admin-password').focus();
   }
 }
 
-function loadUsers() {
-  // Use the remote API URL from config
-  const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
+// ========================================
+// ADMIN CONTENT MANAGEMENT
+// ========================================
+
+/**
+ * Displays the main admin panel content
+ * Hides password screen, loads user data, and sets up admin controls
+ */
+function showAdminContent() {
+  // Hide password screen, show admin content
+  document.getElementById('password-screen').style.display = 'none';
+  document.getElementById('admin-content').style.display = 'block';
   
-  fetch(apiUrl('/admin/users-full'))
-    .then(r => {
-      if (r.status !== 200) {
-        console.error('Failed to load users');
-        return;
-      }
-      return r.json();
-    })
-    .then(users => {
-      if (!users) return;
-      console.log('Admin users data received:', users);
-      const userList = document.getElementById('user-list');
-      userList.innerHTML = '';
-      users.forEach(u => {
-        const userItem = document.createElement('div');
-        userItem.className = 'admin-user-item';
-        
-        // Create user details
-        const userDetails = document.createElement('div');
-        userDetails.className = 'admin-user-details';
-        userDetails.innerHTML = `
-          <div><strong>Username:</strong> ${u.username}</div>
-          <div><strong>Phonenumber:</strong> ${u.phone}</div>
-          <div><strong>Station IDs:</strong> ${u.station_ids && u.station_ids.length > 0 ? u.station_ids.join(', ') : 'None assigned'}</div>
-        `;
-        
-        // Create station management section
-        const stationManagement = document.createElement('div');
-        stationManagement.className = 'station-management';
-        stationManagement.innerHTML = `
-          <input type="text" id="station-input-${u.id}" placeholder="Enter station IDs (comma-separated)" 
-                 value="${u.station_ids ? u.station_ids.join(', ') : ''}" class="station-input">
-          <button onclick="updateUserStations(${u.id})" class="secondary">Update Stations</button>
-        `;
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = 'Delete User';
-        deleteBtn.className = 'primary admin-delete-btn';
-        deleteBtn.onclick = () => deleteUser(u.id);
-        
-        userItem.appendChild(userDetails);
-        userItem.appendChild(document.createElement('br'));
-        userItem.appendChild(stationManagement);
-        userItem.appendChild(document.createElement('br'));
-        userItem.appendChild(deleteBtn);
-        userList.appendChild(userItem);
-      });
-    });
+  // Load and display user data
+  loadUsers();
+  
+  // Set up admin functionality buttons
+  setupAdminControls();
 }
 
-function updateUserStations(userId) {
-  // Use the remote API URL from config
-  const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
-  
-  const stationInput = document.getElementById(`station-input-${userId}`);
-  const stationIds = stationInput.value;
-  
-  if (!stationIds.trim()) {
-    alert('Please enter station IDs');
-    return;
-  }
-  
-  fetch(apiUrl('/admin/update-user-stations'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, stationIds })
-  })
-  .then(r => r.json())
-  .then(res => {
-    if (res.success) {
-      alert('User stations updated successfully!');
-      loadUsers(); // Reload the user list
-    } else {
-      alert('Failed to update user stations: ' + res.error);
-    }
-  })
-  .catch(err => {
-    console.error('Error updating user stations:', err);
-    alert('Error updating user stations');
+/**
+ * Sets up event listeners for admin panel controls
+ * Currently handles the "Add User" button redirect
+ */
+function setupAdminControls() {
+  document.getElementById('addUserBtn').addEventListener('click', function() {
+    // Redirect to new user creation page
+    window.location.href = '/newuser';
   });
 }
 
-function deleteUser(userId) {
-  // Use the remote API URL from config
+// ========================================
+// USER DATA MANAGEMENT
+// ========================================
+
+/**
+ * Fetches and displays all users in the admin panel
+ * Makes API call to get user data and renders it in the user list
+ */
+function loadUsers() {
+  // Get API configuration (handles both local and remote deployments)
   const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
   
-  if (confirm(`Are you sure you want to delete this user?`)) {
-    fetch(apiUrl('/admin/delete-user'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'userId=' + encodeURIComponent(userId)
-    })
-    .then(r => r.json())
-    .then(res => {
-      if (res.success) {
-        loadUsers(); // Reload the user list
-      } else {
-        alert('Failed to delete user: ' + res.error);
+  // Fetch users from admin endpoint
+  fetch(apiUrl('/admin/users-full'))
+    .then(response => {
+      if (response.status !== 200) {
+        console.error('Failed to load users - HTTP status:', response.status);
+        return;
       }
+      return response.json();
     })
-    .catch(err => {
-      console.error('Error deleting user:', err);
-      alert('Error deleting user');
+    .then(users => {
+      if (!users) return;
+      
+      console.log('Admin users data received:', users);
+      renderUserList(users);
+    })
+    .catch(error => {
+      console.error('Error loading users:', error);
     });
+}
+
+/**
+ * Renders the user list in the admin panel
+ * Creates HTML elements for each user with their details
+ * 
+ * @param {Array} users - Array of user objects from the API
+ */
+function renderUserList(users) {
+  const userList = document.getElementById('user-list');
+  userList.innerHTML = ''; // Clear existing content
+  
+  users.forEach(user => {
+    const userItem = createUserItem(user);
+    userList.appendChild(userItem);
+  });
+}
+
+/**
+ * Creates a single user item element for display
+ * Shows username, phone, user type, and assigned stations
+ * 
+ * @param {Object} user - User object with user data
+ * @returns {HTMLElement} - DOM element for the user item
+ */
+function createUserItem(user) {
+  const userItem = document.createElement('div');
+  userItem.className = 'admin-user-item';
+  
+  // Create user details section
+  const userDetails = document.createElement('div');
+  userDetails.className = 'admin-user-details';
+  userDetails.innerHTML = `
+    <div><strong>Username:</strong> ${user.username}</div>
+    <div><strong>Phone:</strong> ${user.phone}</div>
+    <div><strong>User Type:</strong> ${user.userType || 'Unknown'}</div>
+    <div><strong>Station IDs:</strong> ${formatStationIds(user.station_ids)}</div>
+  `;
+  
+  userItem.appendChild(userDetails);
+  return userItem;
+}
+
+/**
+ * Formats station IDs for display
+ * Joins multiple station IDs with commas or shows "None assigned" if empty
+ * 
+ * @param {Array} stationIds - Array of station ID strings
+ * @returns {string} - Formatted station IDs string
+ */
+function formatStationIds(stationIds) {
+  if (stationIds && stationIds.length > 0) {
+    return stationIds.join(', ');
   }
+  return 'None assigned';
 } 
