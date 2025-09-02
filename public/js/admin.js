@@ -176,6 +176,16 @@ function createUserItem(user) {
   `;
   
   userItem.appendChild(userDetails);
+  
+  // Add email button for Host users
+  if (user.userType === 'Host') {
+    const emailButton = document.createElement('button');
+    emailButton.className = 'admin-email-btn';
+    emailButton.textContent = 'Send Onboarding Email';
+    emailButton.onclick = () => sendOnboardingEmail(user.username);
+    userItem.appendChild(emailButton);
+  }
+  
   return userItem;
 }
 
@@ -191,4 +201,67 @@ function formatStationIds(stationIds) {
     return stationIds.join(', ');
   }
   return 'None assigned';
+}
+
+// ========================================
+// EMAIL FUNCTIONALITY
+// ========================================
+
+/**
+ * Sends onboarding email to a specific user
+ * Prompts for email address and sends the onboarding email
+ * 
+ * @param {string} username - Username to send email to
+ */
+function sendOnboardingEmail(username) {
+  const email = prompt(`Enter email address for ${username}:`);
+  
+  if (!email) {
+    alert('Email address is required');
+    return;
+  }
+  
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    alert('Please enter a valid email address');
+    return;
+  }
+  
+  // Show loading state
+  const button = event.target;
+  const originalText = button.textContent;
+  button.textContent = 'Sending...';
+  button.disabled = true;
+  
+  // Get API configuration
+  const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
+  
+  // Send email request
+  fetch(apiUrl('/api/send-onboarding-email'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ username, email })
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      alert(`Onboarding email sent successfully to ${email}`);
+      console.log('Email sent successfully:', result.messageId);
+    } else {
+      alert(`Failed to send email: ${result.error}`);
+      console.error('Email sending failed:', result.error);
+    }
+  })
+  .catch(error => {
+    alert('Error sending email. Please try again.');
+    console.error('Email sending error:', error);
+  })
+  .finally(() => {
+    // Reset button state
+    button.textContent = originalText;
+    button.disabled = false;
+  });
 } 
