@@ -212,7 +212,7 @@ function updateSummaryStats() {
   });
   
   // Calculate take home based on user account type
-  let takeHomePercentage = 0.2; // Default 20% for most users
+  let takeHomePercentage = 1.0; // Default 100% for most users
   
   // Get username and userType from data attributes
   const container = document.querySelector('.container');
@@ -224,13 +224,13 @@ function updateSummaryStats() {
   console.log('Current userType:', currentUserType);
   console.log('UserType type:', typeof currentUserType);
   
-  // Distributor gets 80% take home, Host gets 20%
+  // Distributor gets 80% take home, Host gets 100%
   if (currentUserType === 'Distributor') {
     takeHomePercentage = 0.8;
     console.log('Distributor user detected - using 80% take home');
   } else if (currentUserType === 'Host') {
-    takeHomePercentage = 0.2;
-    console.log('Host user detected - using 20% take home');
+    takeHomePercentage = 1.0;
+    console.log('Host user detected - using 100% take home');
   } else {
     console.log('Unknown user type - using default 20% take home');
   }
