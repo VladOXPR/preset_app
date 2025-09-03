@@ -1219,7 +1219,7 @@ app.post('/api/dispense-battery', verifyToken, async (req, res) => {
     };
     
     // Make the API call to dispense battery
-    const dispenseUrl = `https://developer.chargenow.top/cdb-open-api/v1/cabinet/ejectByRepair?cabinetid=${stationId}&slotNum=1`;
+    const dispenseUrl = `https://developer.chargenow.top/cdb-open-api/v1/cabinet/ejectByRepair?cabinetid=${stationId}&slotNum=0`;
     console.log('Making dispense API call to:', dispenseUrl);
     console.log('Request headers:', Object.fromEntries(myHeaders.entries()));
     
