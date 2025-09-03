@@ -407,7 +407,7 @@ a.secondary:hover, button.secondary:hover {
 .welcome-top {
   position: fixed;
   width: 100%;
-  max-width: 352px; /* Match container content width (400px - 48px padding) */
+  max-width: 340px; /* Match container content width (400px - 48px padding) */
   top: 0;
   left: 50%;
   transform: translateX(-50%);
@@ -598,31 +598,6 @@ a.secondary:hover, button.secondary:hover {
 
 .admin-delete-btn:hover {
   background: #aa2222;
-}
-
-.admin-email-btn {
-  background: #0099FF;
-  color: #fff;
-  border: none;
-  border-radius: 999px;
-  padding: 10px 48px;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  text-decoration: none;
-  margin-top: 10px;
-  margin-bottom: 0px;
-  transition: background 0.2s, color 0.2s;
-  align-self: flex-start;
-}
-
-.admin-email-btn:hover {
-  background: #0077CC;
-}
-
-.admin-email-btn:disabled {
-  background: #666;
-  cursor: not-allowed;
 }
 
 /* Station list styles */

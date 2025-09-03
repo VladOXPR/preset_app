@@ -280,6 +280,16 @@ function initializeMenu() {
 
 // Battery dispense functionality for Distributor users
 function dispenseBattery(stationId) {
+  console.log('Dispense request for station:', stationId);
+  
+  // Show confirmation dialog
+  const confirmed = confirm(`Are you sure you want to dispense all batteries for station ${stationId}?`);
+  
+  if (!confirmed) {
+    console.log('Dispense cancelled by user for station:', stationId);
+    return;
+  }
+  
   console.log('Dispensing battery from station:', stationId);
   
   // Show loading state
