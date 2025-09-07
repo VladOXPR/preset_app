@@ -242,6 +242,7 @@ app.get('/login', (req, res) => {
     </div>
   </div>
   <script src="/js/remember-me.js"></script>
+  <script src="/js/zoom-prevention.js"></script>
 </body>
 </html>
   `);
@@ -303,6 +304,7 @@ app.get('/signup', (req, res) => {
       </div>
     </div>
   </div>
+  <script src="/js/zoom-prevention.js"></script>
 </body>
 </html>
   `);
@@ -385,6 +387,7 @@ app.get('/home', (req, res) => {
 
   <script src="/js/deployment-manager.js"></script>
   <script src="/js/home.js"></script>
+  <script src="/js/zoom-prevention.js"></script>
 </body>
 </html>
     `;
@@ -451,6 +454,7 @@ app.get('/admin', (req, res) => {
   </div>
   <script src="/js/deployment-manager.js"></script>
   <script src="/js/admin.js"></script>
+  <script src="/js/zoom-prevention.js"></script>
 </body>
 </html>
   `);
@@ -500,6 +504,7 @@ app.get('/newuser', (req, res) => {
       </div>
     </form>
   </div>
+  <script src="/js/zoom-prevention.js"></script>
 </body>
 </html>
   `);
