@@ -4,31 +4,33 @@ html {
   -webkit-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
   -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
 }
 
-/* Additional zoom prevention for body and all elements */
-body, * {
+/* Additional zoom prevention for body */
+body {
   touch-action: manipulation;
   -webkit-touch-callout: none;
+}
+
+/* Allow interactive elements to work properly */
+button, input, textarea, select, a, [role="button"], [onclick] {
+  touch-action: manipulation;
   -webkit-user-select: none;
   -khtml-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* Allow text selection for input fields and text areas */
-input, textarea, [contenteditable] {
+input[type="text"], input[type="email"], input[type="password"], input[type="search"], textarea, [contenteditable] {
   -webkit-user-select: text;
   -khtml-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;
   user-select: text;
+  touch-action: manipulation;
 }
 
 /* Split Screen Login Layout */

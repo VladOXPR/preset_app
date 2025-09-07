@@ -2,17 +2,7 @@
 (function() {
     'use strict';
     
-    // Prevent double-tap zoom
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', function (event) {
-        const now = (new Date()).getTime();
-        if (now - lastTouchEnd <= 300) {
-            event.preventDefault();
-        }
-        lastTouchEnd = now;
-    }, false);
-    
-    // Prevent pinch zoom
+    // Prevent pinch zoom (only when multiple fingers)
     document.addEventListener('gesturestart', function (event) {
         event.preventDefault();
     });
@@ -25,26 +15,14 @@
         event.preventDefault();
     });
     
-    // Prevent zoom on input focus (iOS Safari)
+    // Prevent zoom on multi-touch (pinch gestures)
     document.addEventListener('touchstart', function(event) {
         if (event.touches.length > 1) {
             event.preventDefault();
         }
     });
     
-    let lastTouchStart = 0;
-    document.addEventListener('touchend', function(event) {
-        const now = (new Date()).getTime();
-        if (now - lastTouchStart <= 300) {
-            event.preventDefault();
-        }
-    }, false);
-    
-    document.addEventListener('touchstart', function(event) {
-        lastTouchStart = (new Date()).getTime();
-    }, false);
-    
-    // Prevent zoom on input focus
+    // Prevent zoom on input focus (iOS Safari)
     const inputs = document.querySelectorAll('input, textarea, select');
     inputs.forEach(function(input) {
         input.addEventListener('focus', function() {
@@ -68,9 +46,9 @@
             }, 100);
         });
         
-        // Prevent zoom on scroll
+        // Prevent zoom on scroll (only when scaling)
         document.addEventListener('touchmove', function(event) {
-            if (event.scale !== 1) {
+            if (event.scale && event.scale !== 1) {
                 event.preventDefault();
             }
         }, { passive: false });
