@@ -172,7 +172,22 @@ app.get('/', (req, res) => {
   res.redirect('/login');
 });
 
+// Helper function to escape HTML characters
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
 app.get('/login', (req, res) => {
+  // Extract username from URL parameters (password not pre-filled for security)
+  const username = escapeHtml(req.query.username || '');
+  
   res.setHeader('Content-Type', 'text/html');
   res.send(`
 <!DOCTYPE html>
@@ -211,7 +226,7 @@ app.get('/login', (req, res) => {
         <h1>Sign in</h1>
         <form action="/login" method="POST">
           <label for="username">Username</label>
-          <input type="text" id="username" name="username" required>
+          <input type="text" id="username" name="username" value="${username}" required>
           <label for="password">Password</label>
           <input type="password" id="password" name="password" required>
           <div class="remember-me">
@@ -1322,6 +1337,42 @@ app.post('/api/refresh-stations', async (req, res) => {
     });
   } catch (error) {
     console.error('Manual refresh failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Endpoint to generate pre-filled login links for onboarding (username only)
+app.get('/api/generate-login-link', async (req, res) => {
+  try {
+    const { username, baseUrl } = req.query;
+    
+    if (!username) {
+      return res.status(400).json({
+        success: false,
+        error: 'Username is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Use provided baseUrl or default to current request origin
+    const base = baseUrl || `${req.protocol}://${req.get('host')}`;
+    
+    // Create the pre-filled login URL (username only for security)
+    const loginUrl = `${base}/login?username=${encodeURIComponent(username)}`;
+    
+    res.json({
+      success: true,
+      loginUrl: loginUrl,
+      username: username,
+      message: 'Pre-filled login link generated successfully (username only)',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error generating login link:', error);
     res.status(500).json({
       success: false,
       error: error.message,
