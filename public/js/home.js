@@ -35,7 +35,9 @@ window.onload = function() {
 function initializeDateInputs() {
   const endDate = new Date();
   const startDate = new Date();
-  startDate.setMonth(startDate.getMonth() - 1);
+  
+  // Set start date to the first day of the current month
+  startDate.setDate(1);
   
   document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
   document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
@@ -46,10 +48,10 @@ function getSelectedDateRange() {
   const endDate = document.getElementById('end-date').value;
   
   if (!startDate || !endDate) {
-    // Fallback to last month if dates not selected
+    // Fallback to first day of current month to current date if dates not selected
     const end = new Date();
     const start = new Date();
-    start.setMonth(start.getMonth() - 1);
+    start.setDate(1);
     
     return {
       sTime: start.toISOString().slice(0, 19).replace('T', ' '),

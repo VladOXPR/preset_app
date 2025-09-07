@@ -929,10 +929,10 @@ app.get('/api/stations', verifyToken, async (req, res) => {
           eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
           console.log(`Using custom date range: ${sTime} to ${eTime}`);
         } else {
-          // Use default date range (last month)
+          // Use default date range (first day of current month to current date)
           const endDate = new Date();
           const startDate = new Date();
-          startDate.setMonth(startDate.getMonth() - 1);
+          startDate.setDate(1);
           sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
           eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
           console.log(`Using default date range: ${sTime} to ${eTime}`);
@@ -1090,10 +1090,10 @@ app.get('/api/test-orders/:stationId', async (req, res) => {
       redirect: 'follow'
     };
     
-    // Set date range for the last month
+    // Set date range for the first day of current month to current date
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 1);
+    startDate.setDate(1);
     
     const sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
     const eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
