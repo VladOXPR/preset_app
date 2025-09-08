@@ -166,7 +166,22 @@ async function updateUserStations(userId, stationIds) {
       throw new Error('User not found');
     }
     
-    users[userIndex].station_ids = stationIds || [];
+    // Handle both dictionary format (new) and array format (legacy)
+    if (typeof stationIds === 'object' && stationIds !== null && !Array.isArray(stationIds)) {
+      // New dictionary format: { "DTN00971": "Station Title", "DTN00970": "Another Title" }
+      users[userIndex].station_ids = stationIds;
+    } else if (Array.isArray(stationIds)) {
+      // Legacy array format: ["DTN00971", "DTN00970"]
+      const stationDict = {};
+      stationIds.forEach(id => {
+        stationDict[id] = id; // Use station ID as title for legacy format
+      });
+      users[userIndex].station_ids = stationDict;
+    } else {
+      // Default to empty dictionary
+      users[userIndex].station_ids = {};
+    }
+    
     writeJsonFile(USERS_FILE, users);
     
     return users[userIndex];

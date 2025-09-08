@@ -592,15 +592,15 @@ a.secondary:hover, button.secondary:hover {
 }
 
 .admin-user-details {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 400;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
   color: #fff;
-  line-height: 1.5;
+  line-height: 1.8;
 }
 
 .admin-user-details div {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .admin-user-details strong {
@@ -622,6 +622,137 @@ a.secondary:hover, button.secondary:hover {
   margin-bottom: 0px;
   transition: background 0.2s, color 0.2s;
   align-self: flex-start;
+}
+
+/* Station Management Styles */
+.station-management-section {
+  margin: 20px 0 0 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  width: 100%;
+}
+
+.station-header h3 {
+  margin: 0 0 15px 0;
+  color: #fff;
+  font-size: 16px;
+  font-weight: normal;
+}
+
+.station-columns {
+  display: flex;
+  margin-bottom: 10px;
+  font-weight: normal;
+  color: #fff;
+  font-size: 15px;
+}
+
+.station-column {
+  flex: 1;
+  padding: 0;
+}
+
+.station-row {
+  margin-bottom: 10px;
+}
+
+.station-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.station-id-input,
+.station-title-input {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: white;
+  font-size: 15px;
+  transition: border-color 0.2s ease;
+  flex: 1;
+  min-width: 0;
+}
+
+.station-id-input:focus,
+.station-title-input:focus {
+  outline: none;
+  border-color: #0099FF;
+  box-shadow: 0 0 0 2px rgba(0, 153, 255, 0.2);
+}
+
+.station-separator {
+  color: #666;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.btn-remove-station {
+  background: #ff4444;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-remove-station:hover {
+  background: #ff6666;
+}
+
+.add-station-btn {
+  margin-top: 15px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.2s ease;
+}
+
+.add-station-btn:hover {
+  background: transparent;
+}
+
+.add-station-btn span {
+  color: #ccc;
+  font-weight: normal;
+  font-size: 15px;
+}
+
+.add-station-btn:hover span {
+  color: #fff;
+}
+
+.admin-user-actions {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #333;
+}
+
+.btn-delete-user {
+  background: #ff4444;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.btn-delete-user:hover {
+  background: #ff6666;
 }
 
 .admin-delete-btn:hover {

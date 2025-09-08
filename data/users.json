@@ -5,13 +5,12 @@
     "phone": "7739460236",
     "password": "$2b$10$wgvs3/WcYm1Ml9puqR02aO3fvH9l8OrZqOgxaRdGxRmF6OxyL9oOK",
     "userType": "Host",
-    "station_ids": [
-      "DTN00872",
-      "DTN00970",
-      "DTN00971"
-    ],
-    "created_at": "2025-08-21T17:43:06.023Z",
-    "station_titles": {}
+    "station_ids": {
+      "DTN00872": "DePaul, Lincoln Park",
+      "DTN00970": "DePaul, Loop Campus",
+      "DTN00971": "DePaul, Student Center"
+    },
+    "created_at": "2025-08-21T17:43:06.023Z"
   },
   {
     "id": 2,
@@ -19,9 +18,9 @@
     "phone": "7739460236",
     "password": "$2b$10$7gq7uiUnLiFp0.S7eHGH/uGrPsyNoS3nihWbl45aHV9D.IAXu2I0K",
     "userType": "Host",
-    "station_ids": [
-      "BJH09881"
-    ],
+    "station_ids": {
+      "BJH09881": "Parlay Station"
+    },
     "created_at": "2025-08-23T18:41:12.148Z"
   },
   {
@@ -30,9 +29,9 @@
     "phone": "1",
     "password": "$2b$10$saukLoGZv2c6/2p/ks/31O/TxBlaM6.sf1ybde1GezomfcaWMVRxm",
     "userType": "Host",
-    "station_ids": [
-      "BJH09883"
-    ],
+    "station_ids": {
+      "BJH09883": "Kellys Station"
+    },
     "created_at": "2025-08-29T04:02:12.715Z"
   },
   {
@@ -41,13 +40,13 @@
     "phone": "7739460236",
     "password": "$2b$10$wxu8r9Qh3oxWhQto8hZbROT4ZklMvg3CKohrem86xQ/RjUrrYWJUi",
     "userType": "Distributor",
-    "station_ids": [
-      "DTN00971",
-      "DTN00970",
-      "DTN00872",
-      "BJH09883",
-      "BJH09881"
-    ],
+    "station_ids": {
+      "DTN00971": "DePaul, Theater School",
+      "DTN00970": "DePaul, Loop Student Center",
+      "DTN00872": "DePaul, Lincoln Park Student Center",
+      "BJH09883": "Kelly’s Pub",
+      "BJH09881": "Parlay Lincoln Park"
+    },
     "created_at": "2025-08-29T20:32:53.681Z"
   },
   {
@@ -55,11 +54,10 @@
     "username": "Home",
     "phone": "7739460236",
     "password": "$2b$10$T2aOVf83LEuVxuF2NP2tzej2/snWznzakQ8lhtWO0NTnoVfS2LHry",
-    "station_ids": [
-      "DTA22033"
-    ],
     "userType": "Distributor",
-    "station_titles": {},
+    "station_ids": {
+      "DTA22033": "Home Station"
+    },
     "created_at": "2025-08-30T00:28:52.269Z"
   }
 ]

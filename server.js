@@ -781,11 +781,22 @@ app.post('/admin/update-user-stations', async (req, res) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
     
-    // Parse station IDs from comma-separated string or use empty array
-    const stationIdsArray = stationIds ? stationIds.split(',').map(id => id.trim()).filter(id => id) : [];
+    // Handle both dictionary format (new) and array format (legacy)
+    let stationIdsDict = {};
     
-    console.log('Updating stations for user ID:', userId, 'with stations:', stationIdsArray);
-    const updatedUser = await db.updateUserStations(userId, stationIdsArray);
+    if (typeof stationIds === 'object' && stationIds !== null) {
+      // New dictionary format: { "DTN00971": "Station Title", "DTN00970": "Another Title" }
+      stationIdsDict = stationIds;
+    } else if (typeof stationIds === 'string') {
+      // Legacy comma-separated string format
+      const stationIdsArray = stationIds.split(',').map(id => id.trim()).filter(id => id);
+      stationIdsArray.forEach(id => {
+        stationIdsDict[id] = id; // Use station ID as title for legacy format
+      });
+    }
+    
+    console.log('Updating stations for user ID:', userId, 'with stations:', stationIdsDict);
+    const updatedUser = await db.updateUserStations(userId, stationIdsDict);
     
     if (updatedUser) {
       console.log('User stations updated successfully:', updatedUser.username);
@@ -858,8 +869,12 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     
     // Debug: Check if station_ids contains the expected value
     console.log('Expected station ID for Parlay: BJH09881');
-    console.log('User station_ids contains BJH09881:', user.station_ids.includes('BJH09881'));
-    console.log('User station_ids array:', JSON.stringify(user.station_ids));
+    if (Array.isArray(user.station_ids)) {
+      console.log('User station_ids contains BJH09881:', user.station_ids.includes('BJH09881'));
+    } else if (typeof user.station_ids === 'object' && user.station_ids !== null) {
+      console.log('User station_ids contains BJH09881:', 'BJH09881' in user.station_ids);
+    }
+    console.log('User station_ids:', JSON.stringify(user.station_ids));
     console.log('=== END DEBUG ===');
     
     // Use cached station data if available, otherwise fetch new data
@@ -909,20 +924,33 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     if (stationsArray.length > 0) {
       console.log('User station permissions:', user.station_ids);
       console.log('User station permissions type:', typeof user.station_ids);
-      console.log('User station permissions length:', user.station_ids ? user.station_ids.length : 'undefined');
       
-      if (user.station_ids && user.station_ids.length > 0) {
+      // Handle both dictionary format (new) and array format (legacy)
+      let userStationIds = [];
+      if (typeof user.station_ids === 'object' && user.station_ids !== null) {
+        if (Array.isArray(user.station_ids)) {
+          // Legacy array format
+          userStationIds = user.station_ids;
+        } else {
+          // New dictionary format - extract keys
+          userStationIds = Object.keys(user.station_ids);
+        }
+      }
+      
+      console.log('User station permissions length:', userStationIds.length);
+      
+      if (userStationIds.length > 0) {
         // Filter to only show stations the user has access to
         filteredStations = stationsArray.filter(station => {
           const stationId = station.pCabinetid || station.id;
-          console.log(`Checking station: ${stationId} (type: ${typeof stationId}) against user permissions: ${JSON.stringify(user.station_ids)}`);
+          console.log(`Checking station: ${stationId} (type: ${typeof stationId}) against user permissions: ${JSON.stringify(userStationIds)}`);
           
           // Check for exact match first
-          let hasAccess = user.station_ids.includes(stationId);
+          let hasAccess = userStationIds.includes(stationId);
           
           // If no exact match, try case-insensitive comparison
           if (!hasAccess) {
-            hasAccess = user.station_ids.some(permittedId => 
+            hasAccess = userStationIds.some(permittedId => 
               permittedId.toString().toLowerCase() === stationId.toString().toLowerCase()
             );
           }
@@ -962,6 +990,13 @@ app.get('/api/stations', verifyToken, async (req, res) => {
           try {
             const stationId = station.pCabinetid || station.id;
             console.log(`Fetching orders for station: ${stationId}`);
+            
+            // Add station title from user's station_ids dictionary
+            if (typeof user.station_ids === 'object' && user.station_ids !== null && !Array.isArray(user.station_ids)) {
+              station.stationTitle = user.station_ids[stationId] || stationId;
+            } else {
+              station.stationTitle = stationId; // Fallback to station ID if no title
+            }
             
             const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=100&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
             

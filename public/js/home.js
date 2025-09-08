@@ -2,7 +2,9 @@ window.onload = function() {
   // Use the remote API URL from config
   const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
   
-  fetch(apiUrl('/me')).then(r => {
+  fetch(apiUrl('/me'), {
+    credentials: 'include' // Include cookies for authentication
+  }).then(r => {
     if (r.status !== 200) { window.location = '/login'; return; }
     return r.json();
   }).then(data => {
@@ -82,7 +84,9 @@ async function fetchStations() {
       endDate: document.getElementById('end-date').value
     });
     
-    const response = await fetch(`/api/stations?${queryParams}`);
+    const response = await fetch(`/api/stations?${queryParams}`, {
+      credentials: 'include' // Include cookies for authentication
+    });
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -141,6 +145,7 @@ function displayStations(stationsData) {
   // Create the station list
   const stationHTML = stations.map((station, index) => {
     const stationId = station.pCabinetid || station.id || `Station ${index + 1}`;
+    const stationTitle = station.stationTitle || stationId; // Use title from backend, fallback to ID
     const pBorrow = parseInt(station.pBorrow) || 0;
     const pAlso = parseInt(station.pAlso) || 0;
     
@@ -153,7 +158,7 @@ function displayStations(stationsData) {
       <div class="station-card">
         <div class="station-header">
           <div class="station-title">
-            <p class="station-id">${stationId}</p>
+            <p class="station-id">${stationTitle}</p>
           </div>
           <div class="station-counts">
             <div class="count-item">
@@ -306,6 +311,7 @@ function dispenseBattery(stationId) {
     headers: {
       'Content-Type': 'application/json',
     },
+    credentials: 'include', // Include cookies for authentication
     body: JSON.stringify({ stationId: stationId })
   })
     .then(response => response.json())
