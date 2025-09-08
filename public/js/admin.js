@@ -2,7 +2,6 @@
 // CUUB DASHBOARD - ADMIN PANEL
 // ========================================
 // This file handles the admin panel functionality including:
-// - Password-based authentication
 // - User management and viewing
 // - Admin interface controls
 
@@ -10,99 +9,60 @@
 // CONFIGURATION
 // ========================================
 
-// Admin password - you can change this to whatever you want
-const ADMIN_PASSWORD = 'admin123';
-
 // ========================================
 // INITIALIZATION
 // ========================================
 
 /**
  * Main initialization function that runs when the page loads
- * Checks if admin is already authenticated and shows appropriate content
+ * Since authentication is now handled server-side, we just load the admin content
  */
 window.onload = function() {
-  // Check if already authenticated from previous session
-  if (localStorage.getItem('adminAuthenticated') === 'true') {
-    showAdminContent();
-  } else {
-    showPasswordScreen();
-  }
+  // Load and display users
+  loadUsers();
+  
+  // Set up event listeners for admin functions
+  setupAdminControls();
 };
-
-// ========================================
-// AUTHENTICATION FUNCTIONS
-// ========================================
-
-/**
- * Displays the password entry screen and hides admin content
- * Sets up event listeners for password submission
- */
-function showPasswordScreen() {
-  // Show password screen, hide admin content
-  document.getElementById('password-screen').style.display = 'flex';
-  document.getElementById('admin-content').style.display = 'none';
-  
-  // Add event listeners for password submission
-  document.getElementById('submit-password').addEventListener('click', checkPassword);
-  
-  // Allow Enter key to submit password
-  document.getElementById('admin-password').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      checkPassword();
-    }
-  });
-}
-
-/**
- * Validates the entered admin password
- * If correct: stores authentication and shows admin panel
- * If incorrect: shows error message and clears input
- */
-function checkPassword() {
-  const password = document.getElementById('admin-password').value;
-  const errorElement = document.getElementById('password-error');
-  
-  if (password === ADMIN_PASSWORD) {
-    // Correct password - authenticate and show admin content
-    localStorage.setItem('adminAuthenticated', 'true');
-    showAdminContent();
-  } else {
-    // Wrong password - show error and reset input
-    errorElement.style.display = 'block';
-    document.getElementById('admin-password').value = '';
-    document.getElementById('admin-password').focus();
-  }
-}
 
 // ========================================
 // ADMIN CONTENT MANAGEMENT
 // ========================================
 
 /**
- * Displays the main admin panel content
- * Hides password screen, loads user data, and sets up admin controls
+ * Logs out the admin user by clearing authentication cookies
+ * Redirects to the admin password page
  */
-function showAdminContent() {
-  // Hide password screen, show admin content
-  document.getElementById('password-screen').style.display = 'none';
-  document.getElementById('admin-content').style.display = 'block';
-  
-  // Load and display user data
-  loadUsers();
-  
-  // Set up admin functionality buttons
-  setupAdminControls();
+function logout() {
+  // Clear admin authentication cookie
+  fetch('/api/logout-admin', {
+    method: 'POST',
+    credentials: 'include'
+  })
+  .then(() => {
+    // Redirect to admin password page
+    window.location.href = '/admin-password';
+  })
+  .catch(error => {
+    console.error('Error during logout:', error);
+    // Still redirect to admin password page even if logout request fails
+    window.location.href = '/admin-password';
+  });
 }
 
 /**
  * Sets up event listeners for admin panel controls
- * Currently handles the "Add User" button redirect
+ * Handles the "Add User" button redirect and logout functionality
  */
 function setupAdminControls() {
   document.getElementById('addUserBtn').addEventListener('click', function() {
     // Redirect to new user creation page
     window.location.href = '/newuser';
+  });
+  
+  document.getElementById('logoutBtn').addEventListener('click', function() {
+    // Clear admin authentication and redirect to login
+    logout();
   });
 }
 

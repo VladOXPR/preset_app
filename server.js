@@ -400,7 +400,43 @@ app.get('/home', (req, res) => {
   }
 });
 
+// Admin password validation endpoint
+app.post('/api/validate-admin-password', (req, res) => {
+  const { password } = req.body;
+  const ADMIN_PASSWORD = '1234'; // Default admin password
+  
+  if (password === ADMIN_PASSWORD) {
+    // Set admin session cookie
+    res.cookie('admin_authenticated', 'true', { 
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 30 * 60 * 1000 // 30 minutes
+    });
+    res.json({ success: true });
+  } else {
+    res.json({ success: false, error: 'Incorrect password' });
+  }
+});
+
+// Admin logout endpoint
+app.post('/api/logout-admin', (req, res) => {
+  // Clear admin authentication cookie
+  res.clearCookie('admin_authenticated');
+  res.json({ success: true });
+});
+
+// Admin password page
+app.get('/admin-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/html/admin-password.html'));
+});
+
+// Protected admin route
 app.get('/admin', (req, res) => {
+  // Check if admin is authenticated
+  if (req.cookies.admin_authenticated !== 'true') {
+    return res.redirect('/admin-password');
+  }
+  
   res.setHeader('Content-Type', 'text/html');
   res.send(`
 <!DOCTYPE html>
@@ -426,30 +462,13 @@ app.get('/admin', (req, res) => {
 </head>
 <body>
   <div class="container">
-    <!-- Password Protection Screen -->
-    <div id="password-screen" class="password-screen">
-      <div class="password-container">
-        <h1>Admin Access</h1>
-        <p>Enter password to access admin panel</p>
-        <div class="password-input-group">
-          <input type="password" id="admin-password" class="password-input" placeholder="Enter password">
-          <button id="submit-password" class="primary">Access Admin</button>
-        </div>
-        <div id="password-error" class="password-error" style="display: none;">Incorrect password</div>
-        <a href="/home" class="secondary">Back to Home</a>
-      </div>
+    <div class="home-top">
+      <h1>Admin Panel</h1>
     </div>
-    
-    <!-- Admin Content (Hidden until password is correct) -->
-    <div id="admin-content" class="admin-content" style="display: none;">
-      <div class="home-top">
-        <h1>Admin Panel</h1>
-      </div>
-      <div id="user-list"></div>
-      <div class="button-row">
-        <button id="addUserBtn" class="primary">Add New User</button>
-        <a href="/home" class="secondary">Back to Home</a>
-      </div>
+    <div id="user-list"></div>
+    <div class="button-row">
+      <button id="addUserBtn" class="primary">Add New User</button>
+      <button id="logoutBtn" class="secondary">Logout</button>
     </div>
   </div>
   <script src="/js/deployment-manager.js"></script>
