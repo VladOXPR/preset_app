@@ -102,6 +102,50 @@ async function fetchChargeNowStations() {
   return result;
 }
 
+// Shared function to fetch battery rental information from ChargeNow API
+async function fetchBatteryRentalInfo(page = 1, limit = 100) {
+  const myHeaders = new Headers();
+  myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
+  myHeaders.append("Content-Type", "application/json");
+  
+  const requestOptions = {
+    method: 'GET',
+    headers: myHeaders,
+    redirect: 'follow'
+  };
+  
+  const url = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=${page}&limit=${limit}`;
+  console.log('Making API call to ChargeNow: /order/list');
+  
+  const response = await fetch(url, requestOptions);
+  const result = await response.json();
+  
+  console.log('Battery rental API response status:', response.status);
+  return { response, result };
+}
+
+// Shared function to fetch station availability data from ChargeNow API
+async function fetchStationAvailability(stationId) {
+  const myHeaders = new Headers();
+  myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
+  myHeaders.append("Content-Type", "application/json");
+  
+  const requestOptions = {
+    method: 'GET',
+    headers: myHeaders,
+    redirect: 'follow'
+  };
+  
+  const url = `https://developer.chargenow.top/cdb-open-api/v1/rent/cabinet/query?deviceId=${stationId}`;
+  console.log('Making API call to ChargeNow: /rent/cabinet/query for station:', stationId);
+  
+  const response = await fetch(url, requestOptions);
+  const result = await response.json();
+  
+  console.log('Station availability API response status:', response.status);
+  return { response, result };
+}
+
 // Test database endpoint
 app.get('/api/test-db', async (req, res) => {
   try {
@@ -1434,6 +1478,158 @@ app.get('/api/generate-login-link', async (req, res) => {
     console.error('Error generating login link:', error);
     res.status(500).json({
       success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// API endpoint to get battery rental information
+app.get('/api/battery-rentals', async (req, res) => {
+  try {
+    const { page = 1, limit = 100 } = req.query;
+    
+    console.log('Fetching battery rental information...');
+    const { response, result } = await fetchBatteryRentalInfo(parseInt(page), parseInt(limit));
+    
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: 'Failed to fetch battery rental data',
+        status: response.status
+      });
+    }
+    
+    // Format the response similar to existing patterns
+    const responseData = {
+      success: true,
+      url: `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=${page}&limit=${limit}`,
+      status: response.status,
+      responseSummary: {
+        message: result.msg || 'No message',
+        code: result.code || 'No code',
+        totalRecords: result.page?.total || 0,
+        currentPage: result.page?.current || 1,
+        pageSize: result.page?.size || 10
+      },
+      totalRecords: result.page?.records?.length || 0,
+      records: result.page?.records || [],
+      timestamp: new Date().toISOString()
+    };
+    
+    res.status(200).json(responseData);
+  } catch (error) {
+    console.error('Battery rental API call failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// API endpoint to get station availability data
+app.get('/api/station-availability/:stationId', async (req, res) => {
+  try {
+    const { stationId } = req.params;
+    
+    if (!stationId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Station ID is required'
+      });
+    }
+    
+    console.log('Fetching station availability for:', stationId);
+    const { response, result } = await fetchStationAvailability(stationId);
+    
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: 'Failed to fetch station availability data',
+        status: response.status
+      });
+    }
+    
+    // Format the response similar to existing patterns
+    const responseData = {
+      success: true,
+      stationId: stationId,
+      url: `https://developer.chargenow.top/cdb-open-api/v1/rent/cabinet/query?deviceId=${stationId}`,
+      status: response.status,
+      availability: {
+        available: result.data?.cabinet?.emptySlots || 0,
+        occupied: result.data?.cabinet?.busySlots || 0,
+        total: (result.data?.cabinet?.emptySlots || 0) + (result.data?.cabinet?.busySlots || 0)
+      },
+      rawData: result.data,
+      timestamp: new Date().toISOString()
+    };
+    
+    res.status(200).json(responseData);
+  } catch (error) {
+    console.error('Station availability API call failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// API endpoint to get availability for multiple stations
+app.get('/api/stations-availability', async (req, res) => {
+  try {
+    const { stationIds } = req.query;
+    
+    if (!stationIds) {
+      return res.status(400).json({
+        success: false,
+        error: 'Station IDs are required (comma-separated)'
+      });
+    }
+    
+    const stationIdArray = stationIds.split(',').map(id => id.trim());
+    console.log('Fetching availability for multiple stations:', stationIdArray);
+    
+    // Fetch availability for all stations in parallel
+    const stationPromises = stationIdArray.map(async (id) => {
+      try {
+        const { response, result } = await fetchStationAvailability(id);
+        return {
+          id,
+          available: result.data?.cabinet?.emptySlots || 0,
+          occupied: result.data?.cabinet?.busySlots || 0,
+          total: (result.data?.cabinet?.emptySlots || 0) + (result.data?.cabinet?.busySlots || 0),
+          error: !response.ok,
+          status: response.status
+        };
+      } catch (error) {
+        return {
+          id,
+          available: 0,
+          occupied: 0,
+          total: 0,
+          error: true,
+          errorMessage: error.message
+        };
+      }
+    });
+    
+    const results = await Promise.all(stationPromises);
+    
+    const responseData = {
+      success: true,
+      stationCount: stationIdArray.length,
+      stations: results,
+      timestamp: new Date().toISOString()
+    };
+    
+    res.status(200).json(responseData);
+  } catch (error) {
+    console.error('Multiple stations availability API call failed:', error);
+    res.status(500).json({ 
+      success: false, 
       error: error.message,
       timestamp: new Date().toISOString()
     });

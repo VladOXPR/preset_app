@@ -158,6 +158,7 @@ form label {
 input[type="text"],
 input[type="password"],
 textarea {
+  width: 100%;
   padding: 16px;
   font-size: 15px;
   border-radius: 12px;
@@ -212,19 +213,6 @@ textarea {
   }
 }
 
-@media (max-width: 360px) {
-  .button-row {
-    gap: 12px;
-    margin-top: 1.5rem;
-    width: 100%;
-  }
-  
-  .button-row button,
-  .button-row a {
-    flex: 1;
-    min-width: 0;
-  }
-}
 button.primary, a.primary {
   background: #fff;
   color: #000;
@@ -953,7 +941,9 @@ a.secondary:hover, button.secondary:hover {
   }
   
   .welcome-top {
-    max-width: calc(100% - 32px); /* Account for container padding on mobile */
+    max-width: 100%; /* Match station card width on mobile */
+    padding-left: 20px;
+    padding-right: 20px;
   }
 }
 
@@ -1047,33 +1037,7 @@ html, body {
   }
 }
 
-@media (max-width: 360px) {
-  .date-range-panel {
-    padding: 12px;
-    gap: 12px;
-    width: 100%; /* Use full width of welcome-top container */
-  }
-  
-  .date-inputs {
-    flex-direction: row; /* Keep side by side on small mobile */
-    width: 100%;
-  }
-  
-  .date-input-group {
-    flex: 1; /* Each input group takes equal space */
-    min-width: 0;
-  }
-  
-  .welcome-top {
-    max-width: calc(100% - 24px); /* Account for container padding on small mobile */
-  }
-}
 
-@media (max-width: 360px) {
-  .date-range-panel {
-    padding: 12px;
-  }
-}
 
 .apply-button {
   background: #009FFD;
@@ -1114,6 +1078,14 @@ html, body {
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Mobile responsive - remove margins on mobile */
+@media (max-width: 480px) {
+  .station-card {
+    margin-left: 0;
+    margin-right: 0;
+  }
 }
 
 .station-card:hover {
@@ -1226,7 +1198,7 @@ html, body {
 }
 
 /* Mobile-specific station-list margin override */
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   #station-list {
     margin-top: 200px !important;
   }
