@@ -83,6 +83,62 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Function to generate demo station data
+function generateDemoStationData() {
+  const demoStations = [
+    {
+      pCabinetid: "DEMO001",
+      id: "DEMO001",
+      stationTitle: "Demo Station - Downtown Mall",
+      location: "123 Main Street, Downtown",
+      status: "online",
+      batteryCount: 8,
+      availableBatteries: Math.floor(Math.random() * 4) + 3, // 3-6 available
+      totalRevenue: (Math.random() * 800) + 50, // $50-$850
+      totalRents: Math.floor(Math.random() * 50) + 20 // 20-70 rents
+    },
+    {
+      pCabinetid: "DEMO002", 
+      id: "DEMO002",
+      stationTitle: "Demo Station - University Campus",
+      location: "456 University Ave, Campus",
+      status: "online",
+      batteryCount: 12,
+      availableBatteries: Math.floor(Math.random() * 6) + 4, // 4-9 available
+      totalRevenue: (Math.random() * 800) + 50, // $50-$850
+      totalRents: Math.floor(Math.random() * 50) + 20 // 20-70 rents
+    },
+    {
+      pCabinetid: "DEMO003",
+      id: "DEMO003", 
+      stationTitle: "Demo Station - Shopping Center",
+      location: "789 Mall Drive, Shopping Center",
+      status: "online",
+      batteryCount: 6,
+      availableBatteries: Math.floor(Math.random() * 3) + 2, // 2-4 available
+      totalRevenue: (Math.random() * 800) + 50, // $50-$850
+      totalRents: Math.floor(Math.random() * 50) + 20 // 20-70 rents
+    },
+    {
+      pCabinetid: "DEMO004",
+      id: "DEMO004",
+      stationTitle: "Demo Station - Office Building", 
+      location: "321 Business Blvd, Office District",
+      status: "online",
+      batteryCount: 10,
+      availableBatteries: Math.floor(Math.random() * 5) + 3, // 3-7 available
+      totalRevenue: (Math.random() * 800) + 50, // $50-$850
+      totalRents: Math.floor(Math.random() * 50) + 20 // 20-70 rents
+    }
+  ];
+  
+  return JSON.stringify({
+    code: 0,
+    msg: "success",
+    data: demoStations
+  });
+}
+
 // Shared function to fetch stations from ChargeNow API
 async function fetchChargeNowStations() {
   const myHeaders = new Headers();
@@ -940,9 +996,12 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     console.log('User station_ids:', JSON.stringify(user.station_ids));
     console.log('=== END DEBUG ===');
     
-    // Use cached station data if available, otherwise fetch new data
+    // Use demo data for demo user, otherwise use cached station data
     let result;
-    if (latestStationData && lastFetchTime) {
+    if (req.user.username === 'demo') {
+      console.log('🎭 Using demo station data for demo user');
+      result = generateDemoStationData();
+    } else if (latestStationData && lastFetchTime) {
       console.log('📋 Using cached station data from:', lastFetchTime);
       result = latestStationData;
     } else {
@@ -1061,42 +1120,58 @@ app.get('/api/stations', verifyToken, async (req, res) => {
               station.stationTitle = stationId; // Fallback to station ID if no title
             }
             
-            const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=100&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
-            
-            const myHeaders = new Headers();
-            myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
-            
-            const requestOptions = {
-              method: 'GET',
-              headers: myHeaders,
-              redirect: 'follow'
-            };
-            
-            const orderResponse = await fetch(orderListUrl, requestOptions);
-            const orderResult = await orderResponse.text();
-            
-            let orderData;
-            try {
-              orderData = JSON.parse(orderResult);
-            } catch (e) {
-              orderData = { code: -1, msg: 'Failed to parse order data' };
+            // Return demo data for demo stations
+            if (stationId.startsWith('DEMO')) {
+              // Generate random demo data for each station
+              const randomOrders = Math.floor(Math.random() * 50) + 20; // 20-70 orders
+              const randomRevenue = (Math.random() * 800) + 50; // $50-$850 revenue
+              
+              station.orderData = {
+                totalRecords: randomOrders,
+                totalRevenue: randomRevenue,
+                success: true
+              };
+              
+              console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (DEMO DATA)`);
+            } else {
+              // Use real API for non-demo stations
+              const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=100&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
+              
+              const myHeaders = new Headers();
+              myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
+              
+              const requestOptions = {
+                method: 'GET',
+                headers: myHeaders,
+                redirect: 'follow'
+              };
+              
+              const orderResponse = await fetch(orderListUrl, requestOptions);
+              const orderResult = await orderResponse.text();
+              
+              let orderData;
+              try {
+                orderData = JSON.parse(orderResult);
+              } catch (e) {
+                orderData = { code: -1, msg: 'Failed to parse order data' };
+              }
+              
+              // Add order data to station
+              station.orderData = {
+                totalRecords: orderData.page?.total || 0,
+                totalRevenue: 0,
+                success: orderData.code === 0
+              };
+              
+              // Calculate total revenue from all records
+              if (orderData.page?.records && Array.isArray(orderData.page.records)) {
+                station.orderData.totalRevenue = orderData.page.records.reduce((sum, record) => {
+                  return sum + (parseFloat(record.settledAmount) || 0);
+                }, 0);
+              }
+              
+              console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
             }
-            
-            // Add order data to station
-            station.orderData = {
-              totalRecords: orderData.page?.total || 0,
-              totalRevenue: 0,
-              success: orderData.code === 0
-            };
-            
-            // Calculate total revenue from all records
-            if (orderData.page?.records && Array.isArray(orderData.page.records)) {
-              station.orderData.totalRevenue = orderData.page.records.reduce((sum, record) => {
-                return sum + (parseFloat(record.settledAmount) || 0);
-              }, 0);
-            }
-            
-            console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
             
           } catch (error) {
             console.error(`Error fetching orders for station ${station.pCabinetid}:`, error);
@@ -1198,6 +1273,51 @@ app.get('/api/test-orders/:stationId', async (req, res) => {
   try {
     const stationId = req.params.stationId;
     console.log('Testing order list API for station:', stationId);
+    
+    // Return demo data for demo stations
+    if (stationId.startsWith('DEMO')) {
+      const demoOrders = {
+        code: 0,
+        msg: "success",
+        data: {
+          records: [
+            {
+              orderId: "DEMO001_001",
+              userId: "user123",
+              stationId: stationId,
+              amount: 2.50,
+              status: "completed",
+              createTime: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+              endTime: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() // 1 hour ago
+            },
+            {
+              orderId: "DEMO001_002", 
+              userId: "user456",
+              stationId: stationId,
+              amount: 3.00,
+              status: "completed",
+              createTime: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+              endTime: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() // 3 hours ago
+            },
+            {
+              orderId: "DEMO001_003",
+              userId: "user789", 
+              stationId: stationId,
+              amount: 2.75,
+              status: "completed",
+              createTime: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
+              endTime: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() // 5 hours ago
+            }
+          ],
+          totalRecords: 3,
+          totalRevenue: 8.25
+        }
+      };
+      
+      console.log('Returning demo order data for station:', stationId);
+      res.setHeader('Content-Type', 'application/json');
+      return res.json(demoOrders);
+    }
     
     const myHeaders = new Headers();
     myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
@@ -1541,6 +1661,30 @@ app.get('/api/station-availability/:stationId', async (req, res) => {
     }
     
     console.log('Fetching station availability for:', stationId);
+    
+    // Return demo data for demo stations
+    if (stationId.startsWith('DEMO')) {
+      const demoAvailability = {
+        success: true,
+        stationId: stationId,
+        url: `demo://station-availability/${stationId}`,
+        status: 200,
+        availability: {
+          deviceId: stationId,
+          status: "online",
+          batterySlots: [
+            { slot: 1, status: "available", batteryLevel: 85 },
+            { slot: 2, status: "available", batteryLevel: 92 },
+            { slot: 3, status: "charging", batteryLevel: 45 },
+            { slot: 4, status: "available", batteryLevel: 78 },
+            { slot: 5, status: "available", batteryLevel: 88 },
+            { slot: 6, status: "charging", batteryLevel: 23 }
+          ]
+        }
+      };
+      return res.json(demoAvailability);
+    }
+    
     const { response, result } = await fetchStationAvailability(stationId);
     
     if (!response.ok) {

@@ -59,5 +59,19 @@
       "DTA22033": "Home Station"
     },
     "created_at": "2025-08-30T00:28:52.269Z"
+  },
+  {
+    "id": 6,
+    "username": "demo",
+    "phone": "5551234567",
+    "password": "$2b$10$16dz5KQ.ilodlDLeSTqTT.f8CM/Fh7.yvbVjR89lIKTcBH6sGqj7u",
+    "userType": "Host",
+    "station_ids": {
+      "DEMO001": "Demo Station - Downtown Mall",
+      "DEMO002": "Demo Station - University Campus",
+      "DEMO003": "Demo Station - Shopping Center",
+      "DEMO004": "Demo Station - Office Building"
+    },
+    "created_at": "2025-01-15T10:00:00.000Z"
   }
 ]
