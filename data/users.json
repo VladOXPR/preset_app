@@ -41,8 +41,8 @@
     "password": "$2b$10$wxu8r9Qh3oxWhQto8hZbROT4ZklMvg3CKohrem86xQ/RjUrrYWJUi",
     "userType": "Distributor",
     "station_ids": {
-      "DTN00971": "DePaul, Theater School",
-      "DTN00970": "DePaul, Loop Student Center",
+      "DTN00971": "DePaul, Loop Student CenterDePaul",
+      "DTN00970": "Theater School",
       "DTN00872": "DePaul, Lincoln Park Student Center",
       "BJH09883": "Kelly’s Pub",
       "BJH09881": "Parlay Lincoln Park"
