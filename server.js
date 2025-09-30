@@ -1135,7 +1135,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
               console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (DEMO DATA)`);
             } else {
               // Use real API for non-demo stations
-              const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=100&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
+              const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=1000&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
               
               const myHeaders = new Headers();
               myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
@@ -1336,7 +1336,7 @@ app.get('/api/test-orders/:stationId', async (req, res) => {
     const sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
     const eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
     
-    const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=100&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
+    const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=1000&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
     
     console.log('Making API call to order list:', orderListUrl);
     
