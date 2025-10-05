@@ -1304,40 +1304,169 @@ app.get('/api/take-home', async (req, res) => {
     if (queryStartDate) queryParams.append('startDate', queryStartDate);
     if (queryEndDate) queryParams.append('endDate', queryEndDate);
     
-    // Call the main /api/stations endpoint with the same parameters the dashboard uses
-    const stationsUrl = `http://localhost:3000/api/stations?${queryParams}`;
-    console.log(`Calling dashboard endpoint: ${stationsUrl}`);
+    // Instead of making an HTTP request, directly call the stations endpoint logic
+    // This avoids fetch issues in production and ensures consistency
+    console.log('Using internal stations endpoint logic for CUUB user');
     
-    // Make internal request to the main stations endpoint
-    const response = await fetch(stationsUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        // Create a fake JWT token for CUUB user
-        'Cookie': `token=${createFakeToken('CUUB')}`
+    // Get CUUB user data directly
+    const user = await db.getUserByUsername('CUUB');
+    if (!user) {
+      return res.status(404).json({ error: 'CUUB user not found' });
+    }
+    
+    // Get date range from query parameters or use default (current month)
+    let sTime, eTime;
+    if (queryStartDate && queryEndDate) {
+      // Use custom date range from frontend
+      const startDate = new Date(queryStartDate + 'T00:00:00');
+      const endDate = new Date(queryEndDate + 'T23:59:59');
+      sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
+      eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
+      console.log(`Using custom date range for take-home: ${sTime} to ${eTime}`);
+    } else {
+      // Use default date range (first day of current month to current date)
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(1);
+      sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
+      eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
+      console.log(`Using default date range for take-home: ${sTime} to ${eTime}`);
+    }
+    
+    // Use the same logic as the main /api/stations endpoint
+    let result;
+    if (latestStationData && lastFetchTime) {
+      console.log('📋 Using cached station data for take-home from:', lastFetchTime);
+      result = latestStationData;
+    } else {
+      console.log('🔄 No cached data available, fetching fresh station data for take-home...');
+      result = await fetchChargeNowStations();
+    }
+    
+    let formattedData;
+    try {
+      formattedData = JSON.parse(result);
+    } catch (e) {
+      formattedData = result;
+    }
+    
+    // Filter stations based on user permissions (same logic as main endpoint)
+    let filteredStations = [];
+    
+    // Extract the stations array from the API response
+    let stationsArray = [];
+    if (formattedData && formattedData.data && Array.isArray(formattedData.data)) {
+      stationsArray = formattedData.data;
+    } else if (Array.isArray(formattedData)) {
+      stationsArray = formattedData;
+    }
+    
+    if (stationsArray.length > 0) {
+      // Handle both dictionary format (new) and array format (legacy)
+      let userStationIds = [];
+      if (typeof user.station_ids === 'object' && user.station_ids !== null) {
+        if (Array.isArray(user.station_ids)) {
+          // Legacy array format
+          userStationIds = user.station_ids;
+        } else {
+          // New dictionary format - extract keys
+          userStationIds = Object.keys(user.station_ids);
+        }
       }
+      
+      // Filter stations
+      filteredStations = stationsArray.filter(station => {
+        const stationId = station.pCabinetid || station.id;
+        return userStationIds.includes(stationId);
+      });
+      
+      console.log(`Filtered ${filteredStations.length} stations for CUUB user`);
+    }
+    
+    // Fetch order data for each filtered station (same logic as main endpoint)
+    for (let station of filteredStations) {
+      try {
+        const stationId = station.pCabinetid || station.id;
+        
+        // Get station title from user's station_ids mapping
+        if (user.station_ids && typeof user.station_ids === 'object' && user.station_ids[stationId]) {
+          station.stationTitle = user.station_ids[stationId];
+        } else {
+          station.stationTitle = stationId;
+        }
+        
+        // Use real API for non-demo stations
+        const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=1000&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
+        
+        const myHeaders = new Headers();
+        myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
+        
+        const requestOptions = {
+          method: 'GET',
+          headers: myHeaders,
+          redirect: 'follow'
+        };
+        
+        const orderResponse = await fetch(orderListUrl, requestOptions);
+        const orderResult = await orderResponse.text();
+        
+        let orderData;
+        try {
+          orderData = JSON.parse(orderResult);
+        } catch (e) {
+          orderData = { code: -1, msg: 'Failed to parse order data' };
+        }
+        
+        // Add order data to station
+        station.orderData = {
+          totalRecords: orderData.page?.total || 0,
+          totalRevenue: 0,
+          success: orderData.code === 0
+        };
+        
+        // Calculate total revenue from all records
+        if (orderData.page?.records && Array.isArray(orderData.page.records)) {
+          station.orderData.totalRevenue = orderData.page.records.reduce((sum, record) => {
+            return sum + (parseFloat(record.settledAmount) || 0);
+          }, 0);
+        }
+        
+        console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
+        
+      } catch (error) {
+        console.error(`Error fetching orders for station ${station.pCabinetid}:`, error);
+        station.orderData = {
+          totalRecords: 0,
+          totalRevenue: 0,
+          success: false,
+          error: error.message
+        };
+      }
+    }
+    
+    // Calculate totals using the same logic as the main endpoint debugTotals
+    let totalRevenue = 0;
+    let totalRents = 0;
+    
+    filteredStations.forEach(station => {
+      const revenue = station.orderData?.totalRevenue || 0;
+      const rents = station.orderData?.totalRecords || 0;
+      
+      // Apply same rounding as frontend (Math.round for individual stations)
+      const roundedRevenue = Math.round(revenue);
+      totalRevenue += roundedRevenue;
+      totalRents += rents;
+      
+      console.log(`[TAKE-HOME] Adding station ${station.pCabinetid}: $${revenue.toFixed(2)} -> $${roundedRevenue} (total now: $${totalRevenue})`);
     });
     
-    if (!response.ok) {
-      throw new Error(`Dashboard endpoint failed: ${response.status}`);
-    }
-    
-    const dashboardData = await response.json();
-    console.log('Dashboard response:', dashboardData);
-    
-    if (!dashboardData.success || !dashboardData.debugTotals) {
-      throw new Error('Dashboard endpoint did not return expected data');
-    }
-    
-    // Extract the totals that the dashboard calculated
-    const totalRevenue = dashboardData.debugTotals.totalRevenue;
-    const totalRents = dashboardData.debugTotals.totalRents;
+    console.log(`[TAKE-HOME] Final totals: $${totalRevenue} revenue, ${totalRents} rents`);
     
     // Calculate take-home based on CUUB being a Distributor (80%)
     const takeHomePercentage = 0.8;
     const takeHomeAmount = Math.ceil(totalRevenue * takeHomePercentage);
     
-    console.log(`Dashboard totals for CUUB:`);
+    console.log(`Take-home calculation for CUUB:`);
     console.log(`- Total revenue: $${totalRevenue}`);
     console.log(`- Total rents: ${totalRents}`);
     console.log(`- Take-home (80%): $${takeHomeAmount}`);
@@ -1350,14 +1479,14 @@ app.get('/api/take-home', async (req, res) => {
         startDate: queryStartDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
         endDate: queryEndDate || new Date().toISOString().split('T')[0]
       },
-      totalRevenue: totalRevenue, // Direct from dashboard
-      totalRents: totalRents,     // Direct from dashboard
+      totalRevenue: totalRevenue, // Same calculation as dashboard
+      totalRents: totalRents,     // Same calculation as dashboard
       takeHomeAmount: takeHomeAmount,
       calculation: {
         takeHomePercentage: takeHomePercentage,
         formula: `$${totalRevenue} × ${takeHomePercentage * 100}% = $${takeHomeAmount}`
       },
-      source: 'dashboard_data',
+      source: 'internal_calculation',
       timestamp: new Date().toISOString()
     });
     
@@ -1371,12 +1500,6 @@ app.get('/api/take-home', async (req, res) => {
   }
 });
 
-// Helper function to create a fake JWT token for internal requests
-function createFakeToken(username) {
-  const jwt = require('jsonwebtoken');
-  const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-  return jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
-}
 
 // Test endpoint to get order list for a specific station
 app.get('/api/test-orders/:stationId', async (req, res) => {
