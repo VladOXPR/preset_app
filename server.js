@@ -1170,7 +1170,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 }, 0);
               }
               
-              console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
+              console.log(`[MAIN] Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (rounded: $${Math.round(station.orderData.totalRevenue)})`);
             }
             
           } catch (error) {
@@ -1192,11 +1192,32 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       console.log('No stations found in API response');
     }
     
+    // Calculate totals for debugging (same as frontend)
+    let debugTotalRevenue = 0;
+    let debugTotalRents = 0;
+    
+    filteredStations.forEach(station => {
+      const revenue = station.orderData?.totalRevenue || 0;
+      const rents = station.orderData?.totalRecords || 0;
+      
+      const roundedRevenue = Math.round(revenue);
+      debugTotalRevenue += roundedRevenue;
+      debugTotalRents += rents;
+      
+      console.log(`[MAIN] Adding station ${station.pCabinetid}: $${revenue.toFixed(2)} -> $${roundedRevenue} (total now: $${debugTotalRevenue})`);
+    });
+    
+    console.log(`[MAIN] Final totals: $${debugTotalRevenue} revenue, ${debugTotalRents} rents`);
+    
     res.json({ 
       success: true, 
       data: filteredStations,
       userPermissions: user.station_ids,
       totalStations: Array.isArray(formattedData) ? formattedData.length : 0,
+      debugTotals: {
+        totalRevenue: debugTotalRevenue,
+        totalRents: debugTotalRents
+      },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -1267,6 +1288,95 @@ app.get('/api/debug-user/:username', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// API endpoint to get take-home amount for CUUB user (no authentication required)
+// This endpoint gets the data directly from the dashboard by calling the main /api/stations endpoint
+app.get('/api/take-home', async (req, res) => {
+  try {
+    console.log('Fetching take-home amount for CUUB user from dashboard data');
+    
+    // Get date range from query parameters or use default (current month)
+    const queryStartDate = req.query.startDate;
+    const queryEndDate = req.query.endDate;
+    
+    // Build the same query parameters that the dashboard uses
+    const queryParams = new URLSearchParams();
+    if (queryStartDate) queryParams.append('startDate', queryStartDate);
+    if (queryEndDate) queryParams.append('endDate', queryEndDate);
+    
+    // Call the main /api/stations endpoint with the same parameters the dashboard uses
+    const stationsUrl = `http://localhost:3000/api/stations?${queryParams}`;
+    console.log(`Calling dashboard endpoint: ${stationsUrl}`);
+    
+    // Make internal request to the main stations endpoint
+    const response = await fetch(stationsUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        // Create a fake JWT token for CUUB user
+        'Cookie': `token=${createFakeToken('CUUB')}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Dashboard endpoint failed: ${response.status}`);
+    }
+    
+    const dashboardData = await response.json();
+    console.log('Dashboard response:', dashboardData);
+    
+    if (!dashboardData.success || !dashboardData.debugTotals) {
+      throw new Error('Dashboard endpoint did not return expected data');
+    }
+    
+    // Extract the totals that the dashboard calculated
+    const totalRevenue = dashboardData.debugTotals.totalRevenue;
+    const totalRents = dashboardData.debugTotals.totalRents;
+    
+    // Calculate take-home based on CUUB being a Distributor (80%)
+    const takeHomePercentage = 0.8;
+    const takeHomeAmount = Math.ceil(totalRevenue * takeHomePercentage);
+    
+    console.log(`Dashboard totals for CUUB:`);
+    console.log(`- Total revenue: $${totalRevenue}`);
+    console.log(`- Total rents: ${totalRents}`);
+    console.log(`- Take-home (80%): $${takeHomeAmount}`);
+    
+    res.json({
+      success: true,
+      username: 'CUUB',
+      userType: 'Distributor',
+      dateRange: {
+        startDate: queryStartDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+        endDate: queryEndDate || new Date().toISOString().split('T')[0]
+      },
+      totalRevenue: totalRevenue, // Direct from dashboard
+      totalRents: totalRents,     // Direct from dashboard
+      takeHomeAmount: takeHomeAmount,
+      calculation: {
+        takeHomePercentage: takeHomePercentage,
+        formula: `$${totalRevenue} × ${takeHomePercentage * 100}% = $${takeHomeAmount}`
+      },
+      source: 'dashboard_data',
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error getting dashboard data:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Helper function to create a fake JWT token for internal requests
+function createFakeToken(username) {
+  const jwt = require('jsonwebtoken');
+  const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+  return jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+}
 
 // Test endpoint to get order list for a specific station
 app.get('/api/test-orders/:stationId', async (req, res) => {
