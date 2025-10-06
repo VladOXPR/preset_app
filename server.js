@@ -1421,13 +1421,24 @@ app.get('/api/take-home', async (req, res) => {
         };
         
         const orderResponse = await fetch(orderListUrl, requestOptions);
+        
+        if (!orderResponse.ok) {
+          console.error(`[TAKE-HOME DEBUG] API request failed for station ${stationId}: ${orderResponse.status} ${orderResponse.statusText}`);
+          throw new Error(`API request failed: ${orderResponse.status}`);
+        }
+        
         const orderResult = await orderResponse.text();
         
         let orderData;
         try {
           orderData = JSON.parse(orderResult);
         } catch (e) {
+          console.error(`[TAKE-HOME DEBUG] Failed to parse JSON for station ${stationId}:`, e.message);
           orderData = { code: -1, msg: 'Failed to parse order data' };
+        }
+        
+        if (orderData.code !== 0) {
+          console.error(`[TAKE-HOME DEBUG] API returned error for station ${stationId}:`, orderData.msg);
         }
         
         // Add order data to station
@@ -1445,6 +1456,11 @@ app.get('/api/take-home', async (req, res) => {
         }
         
         console.log(`[TAKE-HOME DEBUG] Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
+        
+        // Add small delay to prevent rate limiting (except for last station)
+        if (i < filteredStations.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+        }
         
       } catch (error) {
         console.error(`[TAKE-HOME DEBUG] Error fetching orders for station ${station.pCabinetid}:`, error);
@@ -1478,6 +1494,19 @@ app.get('/api/take-home', async (req, res) => {
     });
     
     console.log(`[TAKE-HOME DEBUG] Final calculation totals: $${totalRevenue} revenue, ${totalRents} rents from ${filteredStations.length} stations`);
+    
+    // Summary of station processing results
+    const successfulStations = filteredStations.filter(s => s.orderData?.success !== false);
+    const failedStations = filteredStations.filter(s => s.orderData?.success === false);
+    
+    console.log(`[TAKE-HOME DEBUG] Processing summary:`);
+    console.log(`[TAKE-HOME DEBUG] - Total stations: ${filteredStations.length}`);
+    console.log(`[TAKE-HOME DEBUG] - Successful: ${successfulStations.length}`);
+    console.log(`[TAKE-HOME DEBUG] - Failed: ${failedStations.length}`);
+    
+    if (failedStations.length > 0) {
+      console.log(`[TAKE-HOME DEBUG] Failed stations:`, failedStations.map(s => `${s.pCabinetid} (${s.orderData?.error || 'unknown error'})`));
+    }
     
     // Calculate take-home based on CUUB being a Distributor (80%)
     const takeHomePercentage = 0.8;
