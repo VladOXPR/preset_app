@@ -1374,19 +1374,31 @@ app.get('/api/take-home', async (req, res) => {
         }
       }
       
+      console.log(`[TAKE-HOME DEBUG] Total stations in API response: ${stationsArray.length}`);
+      console.log(`[TAKE-HOME DEBUG] CUUB user station IDs:`, userStationIds);
+      
       // Filter stations
       filteredStations = stationsArray.filter(station => {
         const stationId = station.pCabinetid || station.id;
-        return userStationIds.includes(stationId);
+        const isIncluded = userStationIds.includes(stationId);
+        console.log(`[TAKE-HOME DEBUG] Station ${stationId}: ${isIncluded ? 'INCLUDED' : 'EXCLUDED'}`);
+        return isIncluded;
       });
       
-      console.log(`Filtered ${filteredStations.length} stations for CUUB user`);
+      console.log(`[TAKE-HOME DEBUG] Filtered ${filteredStations.length} stations for CUUB user`);
+      console.log(`[TAKE-HOME DEBUG] Filtered station IDs:`, filteredStations.map(s => s.pCabinetid || s.id));
+    } else {
+      console.log(`[TAKE-HOME DEBUG] No stations found in API response`);
     }
     
     // Fetch order data for each filtered station (same logic as main endpoint)
-    for (let station of filteredStations) {
+    console.log(`[TAKE-HOME DEBUG] Starting to process ${filteredStations.length} stations for order data...`);
+    
+    for (let i = 0; i < filteredStations.length; i++) {
+      const station = filteredStations[i];
       try {
         const stationId = station.pCabinetid || station.id;
+        console.log(`[TAKE-HOME DEBUG] Processing station ${i + 1}/${filteredStations.length}: ${stationId}`);
         
         // Get station title from user's station_ids mapping
         if (user.station_ids && typeof user.station_ids === 'object' && user.station_ids[stationId]) {
@@ -1397,6 +1409,7 @@ app.get('/api/take-home', async (req, res) => {
         
         // Use real API for non-demo stations
         const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=1000&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
+        console.log(`[TAKE-HOME DEBUG] Fetching orders for ${stationId} from: ${orderListUrl}`);
         
         const myHeaders = new Headers();
         myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
@@ -1431,10 +1444,10 @@ app.get('/api/take-home', async (req, res) => {
           }, 0);
         }
         
-        console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
+        console.log(`[TAKE-HOME DEBUG] Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
         
       } catch (error) {
-        console.error(`Error fetching orders for station ${station.pCabinetid}:`, error);
+        console.error(`[TAKE-HOME DEBUG] Error fetching orders for station ${station.pCabinetid}:`, error);
         station.orderData = {
           totalRecords: 0,
           totalRevenue: 0,
@@ -1444,11 +1457,15 @@ app.get('/api/take-home', async (req, res) => {
       }
     }
     
+    console.log(`[TAKE-HOME DEBUG] Finished processing all ${filteredStations.length} stations`);
+    
     // Calculate totals using the same logic as the main endpoint debugTotals
     let totalRevenue = 0;
     let totalRents = 0;
     
-    filteredStations.forEach(station => {
+    console.log(`[TAKE-HOME DEBUG] Calculating totals from ${filteredStations.length} stations...`);
+    
+    filteredStations.forEach((station, index) => {
       const revenue = station.orderData?.totalRevenue || 0;
       const rents = station.orderData?.totalRecords || 0;
       
@@ -1457,10 +1474,10 @@ app.get('/api/take-home', async (req, res) => {
       totalRevenue += roundedRevenue;
       totalRents += rents;
       
-      console.log(`[TAKE-HOME] Adding station ${station.pCabinetid}: $${revenue.toFixed(2)} -> $${roundedRevenue} (total now: $${totalRevenue})`);
+      console.log(`[TAKE-HOME DEBUG] Station ${index + 1}/${filteredStations.length} - ${station.pCabinetid}: $${revenue.toFixed(2)} -> $${roundedRevenue} (running total: $${totalRevenue})`);
     });
     
-    console.log(`[TAKE-HOME] Final totals: $${totalRevenue} revenue, ${totalRents} rents`);
+    console.log(`[TAKE-HOME DEBUG] Final calculation totals: $${totalRevenue} revenue, ${totalRents} rents from ${filteredStations.length} stations`);
     
     // Calculate take-home based on CUUB being a Distributor (80%)
     const takeHomePercentage = 0.8;
