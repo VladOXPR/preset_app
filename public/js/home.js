@@ -218,9 +218,6 @@ function updateSummaryStats() {
     }
   });
   
-  // Calculate take home based on user account type
-  let takeHomePercentage = 1.0; // Default 100% for most users
-  
   // Get username and userType from data attributes
   const container = document.querySelector('.container');
   const currentUsername = container ? container.getAttribute('data-username') : null;
@@ -231,22 +228,32 @@ function updateSummaryStats() {
   console.log('Current userType:', currentUserType);
   console.log('UserType type:', typeof currentUserType);
   
-  // Distributor gets 80% take home, Host gets 100%
+  // Update the summary display based on user type
+  const takeHomeElement = document.getElementById('take-home');
+  const takeHomeLabel = document.querySelector('#take-home').parentElement.querySelector('.stat-label');
+  
   if (currentUserType === 'Distributor') {
-    takeHomePercentage = 0.8;
-    console.log('Distributor user detected - using 80% take home');
-  } else if (currentUserType === 'Host') {
-    takeHomePercentage = 1.0;
-    console.log('Host user detected - using 100% take home');
+    // For Distributor accounts, show total rents count instead of take-home amount
+    takeHomeElement.textContent = totalRents;
+    takeHomeLabel.textContent = 'Rents';
+    console.log('Distributor user detected - showing total rents:', totalRents);
   } else {
-    console.log('Unknown user type - using default 20% take home');
+    // For other account types, calculate take home based on percentage
+    let takeHomePercentage = 1.0; // Default 100% for most users
+    
+    if (currentUserType === 'Host') {
+      takeHomePercentage = 1.0;
+      console.log('Host user detected - using 100% take home');
+    } else {
+      console.log('Unknown user type - using default 100% take home');
+    }
+    
+    console.log('Take home percentage:', takeHomePercentage);
+    const takeHome = Math.ceil(totalRevenue * takeHomePercentage);
+    takeHomeElement.textContent = `$${takeHome}`;
+    takeHomeLabel.textContent = 'Take home';
   }
   
-  console.log('Take home percentage:', takeHomePercentage);
-  const takeHome = Math.ceil(totalRevenue * takeHomePercentage);
-  
-  // Update the summary display
-  document.getElementById('take-home').textContent = `$${takeHome}`;
   document.getElementById('total-revenue').textContent = `$${Math.round(totalRevenue)}`;
 }
 
