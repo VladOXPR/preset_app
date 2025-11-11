@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Token Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #000000;
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+      background: #1a1a1a;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+      border: 1px solid #333;
+    }
+
+    h1 {
+      color: #ffffff;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #999;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .stat-card.success {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+
+    .stat-card.failure {
+      background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+    }
+
+    .stat-card.duration {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .stat-value {
+      font-size: 36px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      opacity: 0.9;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-weight: 600;
+      border: 1px solid;
+    }
+
+    .status-indicator.testing {
+      background: rgba(255, 193, 7, 0.15);
+      color: #ffc107;
+      border-color: #ffc107;
+    }
+
+    .status-indicator.success {
+      background: rgba(40, 167, 69, 0.15);
+      color: #28a745;
+      border-color: #28a745;
+    }
+
+    .status-indicator.failure {
+      background: rgba(220, 53, 69, 0.15);
+      color: #dc3545;
+      border-color: #dc3545;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .status-dot.testing {
+      background: #ffc107;
+    }
+
+    .status-dot.success {
+      background: #28a745;
+    }
+
+    .status-dot.failure {
+      background: #dc3545;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-start {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-start:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-start:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-stop {
+      background: #dc3545;
+      color: white;
+    }
+
+    .btn-stop:hover {
+      background: #c82333;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+    }
+
+    .btn-reset {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-reset:hover {
+      background: #5a6268;
+      transform: translateY(-2px);
+    }
+
+    .log-container {
+      background: #0a0a0a;
+      border-radius: 12px;
+      padding: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #333;
+    }
+
+    .log-header {
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: #ffffff;
+      font-size: 16px;
+    }
+
+    .log-entry {
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-left: 4px solid;
+    }
+
+    .log-entry.success {
+      background: rgba(40, 167, 69, 0.1);
+      color: #4ade80;
+      border-left-color: #28a745;
+    }
+
+    .log-entry.failure {
+      background: rgba(220, 53, 69, 0.1);
+      color: #f87171;
+      border-left-color: #dc3545;
+    }
+
+    .log-time {
+      font-weight: 600;
+      min-width: 80px;
+    }
+
+    .log-icon {
+      font-size: 16px;
+    }
+
+    .interval-control {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #0a0a0a;
+      border-radius: 12px;
+      border: 1px solid #333;
+    }
+
+    .interval-control label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #ffffff;
+      font-size: 14px;
+    }
+
+    .interval-control input {
+      width: 100%;
+      padding: 8px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #1a1a1a;
+      color: #ffffff;
+    }
+
+    .interval-control input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .interval-control small {
+      display: block;
+      margin-top: 5px;
+      color: #999;
+      font-size: 12px;
+    }
+
+    .token-control {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #0a0a0a;
+      border-radius: 12px;
+      border: 1px solid #333;
+    }
+
+    .token-control label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #ffffff;
+      font-size: 14px;
+    }
+
+    .token-status {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+      background: rgba(40, 167, 69, 0.2);
+      color: #4ade80;
+      border: 1px solid #28a745;
+    }
+
+    .token-status.custom {
+      background: rgba(255, 193, 7, 0.2);
+      color: #ffc107;
+      border: 1px solid #ffc107;
+    }
+
+    .token-control textarea {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      resize: vertical;
+      min-height: 80px;
+      background: #1a1a1a;
+      color: #ffffff;
+    }
+
+    .token-control textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .token-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .btn-update-token,
+    .btn-reset-token {
+      flex: 1;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-update-token {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      color: white;
+    }
+
+    .btn-update-token:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+    }
+
+    .btn-reset-token {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-reset-token:hover {
+      background: #5a6268;
+      transform: translateY(-2px);
+    }
+
+    .token-control small {
+      display: block;
+      margin-top: 8px;
+      color: #999;
+      font-size: 12px;
+    }
+
+    /* Scrollbar styling for dark mode */
+    .log-container::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .log-container::-webkit-scrollbar-track {
+      background: #0a0a0a;
+      border-radius: 4px;
+    }
+
+    .log-container::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 4px;
+    }
+
+    .log-container::-webkit-scrollbar-thumb:hover {
+      background: #444;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 API Token Expiration Test</h1>
+    <p class="subtitle">Testing Energo API token validity with periodic requests</p>
+
+    <div class="status-indicator testing" id="status">
+      <div class="status-dot testing"></div>
+      <span>Ready to start testing</span>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="total-requests">0</div>
+        <div class="stat-label">Total Requests</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-value" id="successful-requests">0</div>
+        <div class="stat-label">Successful</div>
+      </div>
+      <div class="stat-card failure">
+        <div class="stat-value" id="failed-requests">0</div>
+        <div class="stat-label">Failed</div>
+      </div>
+      <div class="stat-card duration">
+        <div class="stat-value" id="uptime">0m</div>
+        <div class="stat-label">Uptime</div>
+      </div>
+    </div>
+
+    <div class="interval-control">
+      <label for="interval">Request Interval</label>
+      <input type="number" id="interval" value="60" min="1" max="300" />
+      <small>Time between requests in seconds (1-300)</small>
+    </div>
+
+    <div class="token-control">
+      <label for="auth-token">
+        🔑 Authorization Token
+        <span class="token-status" id="token-status">Using default token</span>
+      </label>
+      <textarea id="auth-token" rows="4" placeholder="Bearer eyJhbGciOiJIUzUxMiJ9..."></textarea>
+      <div class="token-actions">
+        <button class="btn-update-token" onclick="updateToken()">💾 Update Token</button>
+        <button class="btn-reset-token" onclick="resetToken()">↺ Reset to Default</button>
+      </div>
+      <small>Paste a new Bearer token here if it expires. Token is saved automatically.</small>
+    </div>
+
+    <div class="controls">
+      <button class="btn-start" id="start-btn" onclick="startTest()">▶ Start Test</button>
+      <button class="btn-stop" id="stop-btn" onclick="stopTest()" disabled>⏸ Stop Test</button>
+      <button class="btn-reset" id="reset-btn" onclick="resetTest()">🔄 Reset</button>
+    </div>
+
+    <div class="log-container">
+      <div class="log-header">📋 Request Log (Latest 20)</div>
+      <div id="log-entries"></div>
+    </div>
+  </div>
+
+  <script src="../js/apitest.js"></script>
+</body>
+</html>
+

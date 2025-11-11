@@ -42,7 +42,7 @@ input[type="text"], input[type="email"], input[type="password"], input[type="sea
 
 .login-left {
   flex: 1;
-  background: #0099FF;
+  background: linear-gradient(to bottom, #22B1F7, #1F67E0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -89,6 +89,7 @@ input[type="text"], input[type="email"], input[type="password"], input[type="sea
     flex: none;
     height: 250px;
     padding: 0px;
+    background: linear-gradient(to bottom, #22B1F7, #1F67E0);
   }
   
   .login-right {
@@ -175,6 +176,52 @@ textarea:focus {
   outline: none;
   border-color: #D9D9D9;
   box-shadow: 0 0 0 2px rgba(217, 217, 217, 0.2);
+}
+
+/* Password input wrapper with eye icon */
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
+.password-input-wrapper input[type="password"],
+.password-input-wrapper input[type="text"] {
+  width: 100%;
+  padding-right: 50px; /* Make room for the eye icon */
+  margin-bottom: 0;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.password-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.password-toggle:active {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.eye-icon {
+  font-size: 18px;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 textarea {
@@ -751,6 +798,27 @@ a.secondary:hover, button.secondary:hover {
   margin: 2rem 0;
 }
 
+/* Loading message */
+.loading-message {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 18px;
+  color: #666;
+  background: #f5f5f5;
+  border-radius: 12px;
+  margin: 20px 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* Date Range Panel Styles */
 .date-range-panel {
   border: none;
@@ -981,16 +1049,16 @@ html, body {
   }
   
   .login-left {
-    /* Extend blue background to cover iOS status bar area */
-    background: #0099FF;
+    /* Extend gradient background to cover iOS status bar area */
+    background: linear-gradient(to bottom, #22B1F7, #1F67E0);
     padding-top: calc(40px + env(safe-area-inset-top));
     margin-top: calc(-1 * env(safe-area-inset-top));
   }
   
-  /* Ensure the body background is blue for login/signup screens */
+  /* Ensure the body background matches the gradient for login/signup screens */
   body.login-page,
   body.signup-page {
-    background-color: #0099FF;
+    background: linear-gradient(to bottom, #22B1F7, #1F67E0);
   }
 }
 
@@ -1091,6 +1159,26 @@ html, body {
 .station-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 25px rgba(0,0,0,0.4);
+}
+
+/* Admin dashboard station cards - fixed width */
+.admin-dashboard .station-card {
+  width: auto;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Admin dashboard welcome-top - fixed width and alignment */
+.admin-dashboard .welcome-top {
+  width: 400px;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative; /* Override fixed positioning for admin dashboard */
+  top: auto;
+  left: auto;
+  transform: none;
 }
 
 .station-header {
@@ -1249,6 +1337,173 @@ html, body {
   background: #C4C4C4;
 }
 
+/* Admin Dashboard Styles */
+.admin-dashboard {
+  display: flex;
+  min-height: 100vh;
+  background: #000;
+}
+
+.admin-sidebar {
+  width: 250px;
+  background: #000;
+  border-right: 1px solid #30363A;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid #30363A;
+}
+
+.sidebar-header h2 {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 5px 0;
+}
+
+.sidebar-header p {
+  color: #ccc;
+  font-size: 14px;
+  margin: 0;
+}
+
+.sidebar-nav {
+  padding: 20px 0;
+  flex: 1;
+}
+
+.nav-item {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 15px 20px;
+  color: #ccc;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.nav-item.active {
+  background: rgba(0, 159, 253, 0.1);
+  color: #009FFD;
+  border-right: 3px solid #009FFD;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+  background: none;
+  border: none;
+  outline: none;
+}
+
+.nav-text {
+  font-weight: 500;
+}
+
+.admin-main-content {
+  flex: 1;
+  margin-left: 250px;
+  padding: 0;
+  background: #000;
+}
+
+.tab-content {
+  display: none;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.admin-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.admin-content h1 {
+  color: #fff;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 30px 0;
+}
+
+/* Mobile responsive for admin dashboard */
+@media (max-width: 768px) {
+  .admin-sidebar {
+    width: 200px;
+  }
+  
+  .admin-main-content {
+    margin-left: 200px;
+  }
+  
+  .nav-item {
+    padding: 12px 15px;
+    font-size: 14px;
+  }
+  
+  .nav-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid #30363A;
+  }
+  
+  .admin-main-content {
+    margin-left: 0;
+  }
+  
+  .sidebar-nav {
+    display: flex;
+    padding: 10px 0;
+  }
+  
+  .nav-item {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 5px;
+  }
+  
+  .nav-text {
+    display: none;
+  }
+  
+  .nav-icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
 /* Password Protection Styles */
 .password-screen {
   display: flex;
@@ -1377,6 +1632,210 @@ html, body {
 
 .admin-content .button-row {
   margin-top: auto;
+}
+
+/* Admin Section Styles */
+.admin-section {
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #333;
+}
+
+.admin-section:last-of-type {
+  border-bottom: none;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 1.5rem;
+  margin-top: 0;
+}
+
+/* Station Management Card Styles */
+.station-item-admin {
+  border: 2px solid #40464A;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 15px;
+  background: #000;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.station-item-admin.editing {
+  border-color: #009FFD;
+  background: rgba(0, 159, 253, 0.05);
+}
+
+.station-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.station-field-label {
+  font-size: 12px;
+  color: #D9D9D9;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.station-field-input {
+  background: #2a2a2a;
+  border: 1px solid #40464A;
+  border-radius: 8px;
+  padding: 12px;
+  color: #ffffff;
+  font-size: 15px;
+  transition: border-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.station-field-input:focus {
+  outline: none;
+  border-color: #009FFD;
+  box-shadow: 0 0 0 2px rgba(0, 159, 253, 0.2);
+}
+
+.station-field-input:disabled {
+  background: #1a1a1a;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.station-field-input.readonly {
+  background: #1a1a1a;
+  color: #999;
+}
+
+.station-coordinates-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.station-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.station-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.station-btn-edit {
+  background: #009FFD;
+  color: #ffffff;
+}
+
+.station-btn-edit:hover {
+  background: #007ACC;
+}
+
+.station-btn-save {
+  background: #4CAF50;
+  color: #ffffff;
+}
+
+.station-btn-save:hover {
+  background: #45a049;
+}
+
+.station-btn-cancel {
+  background: #666;
+  color: #ffffff;
+}
+
+.station-btn-cancel:hover {
+  background: #555;
+}
+
+.station-btn-delete {
+  background: #ff4444;
+  color: #ffffff;
+}
+
+.station-btn-delete:hover {
+  background: #cc3333;
+}
+
+.station-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Station Info Display (when not editing) */
+.station-info-display {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.station-info-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.station-info-label {
+  font-size: 14px;
+  color: #999;
+  min-width: 100px;
+  font-weight: 500;
+}
+
+.station-info-value {
+  font-size: 15px;
+  color: #ffffff;
+  flex: 1;
+}
+
+/* Add Station Form */
+.add-station-form {
+  border: 2px solid #009FFD;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background: rgba(0, 159, 253, 0.05);
+  display: none;
+}
+
+.add-station-form.active {
+  display: block;
+}
+
+.add-station-form .section-title {
+  margin-bottom: 1rem;
+  font-size: 18px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .station-coordinates-group {
+    grid-template-columns: 1fr;
+  }
+  
+  .station-actions {
+    flex-direction: column;
+  }
+  
+  .station-btn {
+    width: 100%;
+  }
 } 
 
 /* Remember me checkbox styles */

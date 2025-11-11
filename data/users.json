@@ -39,12 +39,12 @@
     "username": "CUUB",
     "phone": "7739460236",
     "password": "$2b$10$wxu8r9Qh3oxWhQto8hZbROT4ZklMvg3CKohrem86xQ/RjUrrYWJUi",
-    "userType": "Distributor",
+    "userType": "Admin",
     "station_ids": {
       "DTN00971": "DePaul, Loop Student CenterDePaul",
       "DTN00970": "Theater School",
       "DTN00872": "DePaul, Lincoln Park Student Center",
-      "BJH09883": "Kelly’s Pub",
+      "BJH09883": "Kelly's Pub",
       "BJH09881": "Parlay Lincoln Park"
     },
     "created_at": "2025-08-29T20:32:53.681Z"

@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const db = require('./database');
+const chargenowAPI = require('./chargenow-api');
 
 // Add fetch for Node.js (if not using Node 18+)
 let fetch;
@@ -27,7 +28,7 @@ async function updateStationData() {
   try {
     console.log('🔄 Scheduled station data update started at:', new Date().toISOString());
     
-    const result = await fetchChargeNowStations();
+    const result = await chargenowAPI.fetchChargeNowStations();
     latestStationData = result;
     lastFetchTime = new Date().toISOString();
     
@@ -35,15 +36,43 @@ async function updateStationData() {
     console.log('📊 Data size:', result.length, 'characters');
   } catch (error) {
     console.error('❌ Scheduled station data update failed:', error.message);
-    // Keep previous data if update fails
+    
+    // Fallback to local stations.json file if external API fails
+    if (!latestStationData) {
+      try {
+        console.log('🔄 Falling back to local stations.json file...');
+        const fs = require('fs');
+        const path = require('path');
+        const stationsPath = path.join(__dirname, 'data', 'stations.json');
+        
+        if (fs.existsSync(stationsPath)) {
+          const localStations = fs.readFileSync(stationsPath, 'utf8');
+          // Convert local stations format to match API format
+          const parsedStations = JSON.parse(localStations);
+          const apiFormat = {
+            code: 0,
+            msg: 'success',
+            data: parsedStations.map(station => ({
+              pCabinetid: station.id,
+              id: station.id,
+              name: station.name,
+              address: station.address,
+              coordinates: station.coordinates,
+              pBorrow: 0, // Default values
+              pAlso: 0
+            }))
+          };
+          
+          latestStationData = JSON.stringify(apiFormat);
+          lastFetchTime = new Date().toISOString();
+          console.log('✅ Fallback to local stations.json successful');
+        }
+      } catch (fallbackError) {
+        console.error('❌ Fallback to local stations.json also failed:', fallbackError.message);
+      }
+    }
   }
 }
-
-// Initialize station data on server start
-updateStationData();
-
-// Schedule station data updates every minute (60000 ms)
-setInterval(updateStationData, 60000);
 
 // Initialize Express app and configuration
 const app = express();
@@ -83,124 +112,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Function to generate demo station data
-function generateDemoStationData() {
-  const demoStations = [
-    {
-      pCabinetid: "DEMO001",
-      id: "DEMO001",
-      stationTitle: "Demo Station - Downtown Mall",
-      location: "123 Main Street, Downtown",
-      status: "online",
-      batteryCount: 8,
-      availableBatteries: Math.floor(Math.random() * 4) + 3, // 3-6 available
-      totalRevenue: (Math.random() * 800) + 50, // $50-$850
-      totalRents: Math.floor(Math.random() * 50) + 20 // 20-70 rents
-    },
-    {
-      pCabinetid: "DEMO002", 
-      id: "DEMO002",
-      stationTitle: "Demo Station - University Campus",
-      location: "456 University Ave, Campus",
-      status: "online",
-      batteryCount: 12,
-      availableBatteries: Math.floor(Math.random() * 6) + 4, // 4-9 available
-      totalRevenue: (Math.random() * 800) + 50, // $50-$850
-      totalRents: Math.floor(Math.random() * 50) + 20 // 20-70 rents
-    },
-    {
-      pCabinetid: "DEMO003",
-      id: "DEMO003", 
-      stationTitle: "Demo Station - Shopping Center",
-      location: "789 Mall Drive, Shopping Center",
-      status: "online",
-      batteryCount: 6,
-      availableBatteries: Math.floor(Math.random() * 3) + 2, // 2-4 available
-      totalRevenue: (Math.random() * 800) + 50, // $50-$850
-      totalRents: Math.floor(Math.random() * 50) + 20 // 20-70 rents
-    },
-    {
-      pCabinetid: "DEMO004",
-      id: "DEMO004",
-      stationTitle: "Demo Station - Office Building", 
-      location: "321 Business Blvd, Office District",
-      status: "online",
-      batteryCount: 10,
-      availableBatteries: Math.floor(Math.random() * 5) + 3, // 3-7 available
-      totalRevenue: (Math.random() * 800) + 50, // $50-$850
-      totalRents: Math.floor(Math.random() * 50) + 20 // 20-70 rents
-    }
-  ];
-  
-  return JSON.stringify({
-    code: 0,
-    msg: "success",
-    data: demoStations
-  });
-}
-
-// Shared function to fetch stations from ChargeNow API
-async function fetchChargeNowStations() {
-  const myHeaders = new Headers();
-  myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
-  
-  const requestOptions = {
-    method: 'GET',
-    headers: myHeaders,
-    redirect: 'follow'
-  };
-  
-  console.log('Making API call to ChargeNow: /cabinet/getAllDevice');
-  const response = await fetch("https://developer.chargenow.top/cdb-open-api/v1/cabinet/getAllDevice", requestOptions);
-  const result = await response.text();
-  
-  console.log('ChargeNow API response status:', response.status);
-  return result;
-}
-
-// Shared function to fetch battery rental information from ChargeNow API
-async function fetchBatteryRentalInfo(page = 1, limit = 100) {
-  const myHeaders = new Headers();
-  myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
-  myHeaders.append("Content-Type", "application/json");
-  
-  const requestOptions = {
-    method: 'GET',
-    headers: myHeaders,
-    redirect: 'follow'
-  };
-  
-  const url = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=${page}&limit=${limit}`;
-  console.log('Making API call to ChargeNow: /order/list');
-  
-  const response = await fetch(url, requestOptions);
-  const result = await response.json();
-  
-  console.log('Battery rental API response status:', response.status);
-  return { response, result };
-}
-
-// Shared function to fetch station availability data from ChargeNow API
-async function fetchStationAvailability(stationId) {
-  const myHeaders = new Headers();
-  myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
-  myHeaders.append("Content-Type", "application/json");
-  
-  const requestOptions = {
-    method: 'GET',
-    headers: myHeaders,
-    redirect: 'follow'
-  };
-  
-  const url = `https://developer.chargenow.top/cdb-open-api/v1/rent/cabinet/query?deviceId=${stationId}`;
-  console.log('Making API call to ChargeNow: /rent/cabinet/query for station:', stationId);
-  
-  const response = await fetch(url, requestOptions);
-  const result = await response.json();
-  
-  console.log('Station availability API response status:', response.status);
-  return { response, result };
-}
+// ========================================
+// CHARGENOW API WRAPPER FUNCTIONS
+// ========================================
+// These functions are now imported from chargenow-api.js module
+// This makes it easier to switch suppliers in the future
+// ========================================
 
 // Test database endpoint
 app.get('/api/test-db', async (req, res) => {
@@ -348,6 +265,10 @@ app.get('/login', (req, res) => {
   `);
 });
 
+app.get('/apitest', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/html/apitest.html'));
+});
+
 app.get('/signup', (req, res) => {
   res.setHeader('Content-Type', 'text/html');
   res.send(`
@@ -423,20 +344,217 @@ app.get('/home', (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     console.log('User accessing home page:', decoded.username);
     console.log('Username type:', typeof decoded.username);
+    console.log('User type:', decoded.userType);
     res.setHeader('Content-Type', 'text/html');
-    const htmlContent = `
+    
+    // Check if user is Admin - show admin dashboard
+    if (decoded.userType === 'Admin') {
+      const adminHtmlContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Welcome</title>
+  <title>Admin Dashboard - ${escapeHtml(decoded.username)}</title>
   <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Favicon and iOS icons -->
+  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png?v=2">
+  <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48x48.png?v=2">
+  <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon-64x64.png?v=2">
+  <link rel="icon" type="image/png" sizes="96x96" href="/icons/favicon-96x96.png?v=2">
+  <link rel="icon" type="image/png" sizes="128x128" href="/icons/favicon-128x128.png?v=2">
+  <link rel="icon" type="image/png" sizes="144x144" href="/icons/favicon-144x144.png?v=2">
+  <link rel="icon" type="image/png" sizes="150x150" href="/icons/favicon-150x150.png?v=2">
+  <link rel="icon" type="image/png" sizes="152x152" href="/icons/favicon-152x152.png?v=2">
+  <link rel="icon" type="image/png" sizes="167x167" href="/icons/favicon-167x167.png?v=2">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png?v=2">
+  <link rel="icon" type="image/png" sizes="256x256" href="/icons/favicon-256x256.png?v=2">
+  <link rel="icon" type="image/png" sizes="384x384" href="/icons/favicon-384x384.png?v=2">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=2">
+  <link rel="manifest" href="/icons/site.webmanifest?v=2">
+  
+  <!-- iOS home screen meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Preset App">
+  <meta name="theme-color" content="#000000">
+</head>
+<body>
+  <div class="admin-dashboard" data-username="${escapeHtml(decoded.username)}" data-usertype="${decoded.userType}">
+    <!-- Left Sidebar -->
+    <div class="admin-sidebar">
+      <div class="sidebar-header">
+        <h2>Admin Dashboard</h2>
+        <p>Welcome, ${escapeHtml(decoded.username)}</p>
+      </div>
+      <div class="sidebar-nav">
+        <button class="nav-item active" data-tab="performance">
+          <img src="/icons/PerformanceIcon.png?v=3" alt="Performance" class="nav-icon">
+          <span class="nav-text">Performance</span>
+        </button>
+        <button class="nav-item" data-tab="partners">
+          <img src="/icons/PartnersIcon.png?v=3" alt="Partners" class="nav-icon">
+          <span class="nav-text">Partners</span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Main Content Area -->
+    <div class="admin-main-content">
+      <!-- Performance Tab Content -->
+      <div id="performance-tab" class="tab-content active">
+        <div class="welcome-top">
+          <div class="summary-stats">
+            <div class="stat-item">
+              <div class="stat-value" id="take-home">$0</div>
+              <div class="stat-label">Take home</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="total-revenue">$0</div>
+              <div class="stat-label">Total revenue</div>
+            </div>
+          </div>
+          
+          <div class="date-range-panel">
+            <div class="date-inputs">
+              <div class="date-input-group">
+                <input type="date" id="start-date" class="date-input">
+              </div>
+              <div class="date-input-group">
+                <input type="date" id="end-date" class="date-input">
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="station-section">
+          <div id="station-list">
+            <!-- Station list will be populated here -->
+          </div>
+        </div>
+      </div>
+      
+      <!-- Partners Tab Content -->
+      <div id="partners-tab" class="tab-content">
+        <div class="admin-content">
+          <h1>Partner Management</h1>
+          <div id="user-list">
+            <!-- User list will be populated here -->
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Menu Icon -->
+    <div class="menu-icon" id="menu-icon">
+      <div class="hamburger-lines">
+        <div class="hamburger-line"></div>
+        <div class="hamburger-line"></div>
+        <div class="hamburger-line"></div>
+      </div>
+      <div class="menu-x">×</div>
+    </div>
+    
+    <!-- Full Screen Overlay -->
+    <div class="menu-overlay" id="menu-overlay">
+      <div class="menu-items">
+        <a href="/logout" class="menu-item logout">Logout</a>
+        <a href="https://battery.cuub.tech/map.html" class="menu-item" target="_blank">Map</a>
+        <a href="https://cuub.tech/" class="menu-item" target="_blank">Website</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/deployment-manager.js"></script>
+  <script src="/js/home.js"></script>
+  <script src="/js/admin.js"></script>
+  <script src="/js/zoom-prevention.js"></script>
+  <script>
+    // Admin dashboard tab switching
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const tabContents = document.querySelectorAll('.tab-content');
+      
+      navItems.forEach(item => {
+        item.addEventListener('click', function() {
+          const tabName = this.getAttribute('data-tab');
+          
+          // Remove active class from all nav items and tab contents
+          navItems.forEach(nav => nav.classList.remove('active'));
+          tabContents.forEach(tab => tab.classList.remove('active'));
+          
+          // Add active class to clicked nav item and corresponding tab
+          this.classList.add('active');
+          document.getElementById(tabName + '-tab').classList.add('active');
+          
+          // Load content for the active tab
+          if (tabName === 'partners') {
+            loadUsers();
+          } else if (tabName === 'performance') {
+            // Ensure station data is loaded for performance tab
+            if (typeof fetchStations === 'function') {
+              fetchStations();
+            }
+          }
+        });
+      });
+      
+      // Ensure Performance tab loads station data on initial load
+      const performanceTab = document.getElementById('performance-tab');
+      if (performanceTab && performanceTab.classList.contains('active')) {
+        // Small delay to ensure all scripts are loaded
+        setTimeout(() => {
+          if (typeof fetchStations === 'function') {
+            console.log('Loading initial station data for Performance tab');
+            fetchStations();
+          }
+        }, 200);
+      }
+    });
+  </script>
+</body>
+</html>
+      `;
+      res.send(adminHtmlContent);
+    } else {
+      // Regular user dashboard (existing code)
+      const htmlContent = `
+  <title>Home - ${escapeHtml(decoded.username)}</title>
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Favicon and iOS icons -->
+  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png?v=2">
+  <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48x48.png?v=2">
+  <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon-64x64.png?v=2">
+  <link rel="icon" type="image/png" sizes="96x96" href="/icons/favicon-96x96.png?v=2">
+  <link rel="icon" type="image/png" sizes="128x128" href="/icons/favicon-128x128.png?v=2">
+  <link rel="icon" type="image/png" sizes="144x144" href="/icons/favicon-144x144.png?v=2">
+  <link rel="icon" type="image/png" sizes="150x150" href="/icons/favicon-150x150.png?v=2">
+  <link rel="icon" type="image/png" sizes="152x152" href="/icons/favicon-152x152.png?v=2">
+  <link rel="icon" type="image/png" sizes="167x167" href="/icons/favicon-167x167.png?v=2">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png?v=2">
+  <link rel="icon" type="image/png" sizes="256x256" href="/icons/favicon-256x256.png?v=2">
+  <link rel="icon" type="image/png" sizes="384x384" href="/icons/favicon-384x384.png?v=2">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=2">
+  <link rel="manifest" href="/icons/site.webmanifest?v=2">
+  
+  <!-- iOS home screen meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Preset App">
+  <meta name="theme-color" content="#000000">
 </head>
 <body>
   <div class="container" data-username="${decoded.username}" data-usertype="${decoded.userType}">
     <div class="welcome-top">
-              <div class="summary-stats">
+      <div class="summary-stats">
           <div class="stat-item">
             <div class="stat-value" id="take-home">$0</div>
             <div class="stat-label">Take home</div>
@@ -493,6 +611,7 @@ app.get('/home', (req, res) => {
     `;
     
     res.send(htmlContent);
+    }
   } catch (error) {
     console.log('Invalid JWT token, redirecting to login');
     res.clearCookie('token');
@@ -565,7 +684,20 @@ app.get('/admin', (req, res) => {
     <div class="home-top">
       <h1>Admin Panel</h1>
     </div>
-    <div id="user-list"></div>
+    
+    <!-- Station Management Section -->
+    <div id="station-management-section" class="admin-section">
+      <h2 class="section-title">Station Management</h2>
+      <div id="station-list-admin"></div>
+      <button id="addStationBtn" class="primary" style="margin-top: 20px; width: 100%;">Add New Station</button>
+    </div>
+    
+    <!-- User Management Section -->
+    <div id="user-management-section" class="admin-section">
+      <h2 class="section-title">User Management</h2>
+      <div id="user-list"></div>
+    </div>
+    
     <div class="button-row">
       <button id="addUserBtn" class="primary">Add New User</button>
       <button id="logoutBtn" class="secondary">Logout</button>
@@ -953,16 +1085,203 @@ app.post('/admin/delete-user', async (req, res) => {
 
 
 
-// Make initial API call when server starts
-console.log('Making initial API call to ChargeNow...');
-fetchChargeNowStations()
-  .then(result => {
-    console.log('Device list received:', result);
-    console.log('Initial API call completed successfully');
-  })
-  .catch(error => {
-    console.error('Initial API call failed:', error);
-  });
+// ========================================
+// STATION MANAGEMENT API ENDPOINTS
+// ========================================
+
+const fs = require('fs').promises;
+const stationsFilePath = path.join(__dirname, 'data', 'stations.json');
+
+/**
+ * Read stations from JSON file
+ */
+async function readStations() {
+  try {
+    const data = await fs.readFile(stationsFilePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading stations file:', error);
+    return [];
+  }
+}
+
+/**
+ * Write stations to JSON file
+ */
+async function writeStations(stations) {
+  try {
+    await fs.writeFile(stationsFilePath, JSON.stringify(stations, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error writing stations file:', error);
+    return false;
+  }
+}
+
+/**
+ * GET all stations
+ */
+app.get('/api/admin/stations', async (req, res) => {
+  try {
+    console.log('GET /api/admin/stations - Fetching all stations');
+    const stations = await readStations();
+    console.log('Stations loaded:', stations.length);
+    res.json(stations);
+  } catch (error) {
+    console.error('Error fetching stations:', error);
+    res.status(500).json({ error: 'Failed to fetch stations' });
+  }
+});
+
+/**
+ * POST new station
+ */
+app.post('/api/admin/stations', async (req, res) => {
+  try {
+    console.log('POST /api/admin/stations - Adding new station:', req.body);
+    
+    const { id, name, address, coordinates } = req.body;
+    
+    // Validation
+    if (!id || !name || !address || !coordinates) {
+      return res.status(400).json({ error: 'Missing required fields: id, name, address, coordinates' });
+    }
+    
+    if (!Array.isArray(coordinates) || coordinates.length !== 2) {
+      return res.status(400).json({ error: 'Coordinates must be an array with [longitude, latitude]' });
+    }
+    
+    // Read existing stations
+    const stations = await readStations();
+    
+    // Check if station ID already exists
+    if (stations.find(s => s.id === id)) {
+      return res.status(409).json({ error: 'Station with this ID already exists' });
+    }
+    
+    // Create new station object
+    const newStation = {
+      id,
+      name,
+      address,
+      coordinates
+    };
+    
+    // Add to stations array
+    stations.push(newStation);
+    
+    // Write to file
+    const success = await writeStations(stations);
+    
+    if (success) {
+      console.log('Station added successfully:', newStation);
+      res.status(201).json({
+        message: 'Station added successfully',
+        station: newStation
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to save station' });
+    }
+  } catch (error) {
+    console.error('Error adding station:', error);
+    res.status(500).json({ error: 'Failed to add station' });
+  }
+});
+
+/**
+ * PUT update station
+ */
+app.put('/api/admin/stations/:id', async (req, res) => {
+  try {
+    const stationId = req.params.id;
+    console.log('PUT /api/admin/stations/:id - Updating station:', stationId, req.body);
+    
+    const { name, address, coordinates } = req.body;
+    
+    // Validation
+    if (coordinates && (!Array.isArray(coordinates) || coordinates.length !== 2)) {
+      return res.status(400).json({ error: 'Coordinates must be an array with [longitude, latitude]' });
+    }
+    
+    // Read existing stations
+    const stations = await readStations();
+    
+    // Find station to update
+    const stationIndex = stations.findIndex(s => s.id === stationId);
+    
+    if (stationIndex === -1) {
+      return res.status(404).json({ error: 'Station not found' });
+    }
+    
+    // Update station fields
+    if (name !== undefined) stations[stationIndex].name = name;
+    if (address !== undefined) stations[stationIndex].address = address;
+    if (coordinates !== undefined) stations[stationIndex].coordinates = coordinates;
+    
+    // Write to file
+    const success = await writeStations(stations);
+    
+    if (success) {
+      console.log('Station updated successfully:', stations[stationIndex]);
+      res.json({
+        message: 'Station updated successfully',
+        station: stations[stationIndex]
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to update station' });
+    }
+  } catch (error) {
+    console.error('Error updating station:', error);
+    res.status(500).json({ error: 'Failed to update station' });
+  }
+});
+
+/**
+ * DELETE station
+ */
+app.delete('/api/admin/stations/:id', async (req, res) => {
+  try {
+    const stationId = req.params.id;
+    console.log('DELETE /api/admin/stations/:id - Deleting station:', stationId);
+    
+    // Read existing stations
+    const stations = await readStations();
+    
+    // Find station to delete
+    const stationIndex = stations.findIndex(s => s.id === stationId);
+    
+    if (stationIndex === -1) {
+      return res.status(404).json({ error: 'Station not found' });
+    }
+    
+    // Remove station
+    const deletedStation = stations.splice(stationIndex, 1)[0];
+    
+    // Write to file
+    const success = await writeStations(stations);
+    
+    if (success) {
+      console.log('Station deleted successfully:', deletedStation);
+      res.json({ message: 'Station deleted successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to delete station' });
+    }
+  } catch (error) {
+    console.error('Error deleting station:', error);
+    res.status(500).json({ error: 'Failed to delete station' });
+  }
+});
+
+// Make initial API call when server starts (duplicate of updateStationData above - commented out)
+// console.log('Making initial API call to ChargeNow...');
+// chargenowAPI.fetchChargeNowStations()
+//   .then(result => {
+//     console.log('Device list received:', result);
+//     console.log('Initial API call completed successfully');
+//   })
+//   .catch(error => {
+//     console.error('Initial API call failed:', error);
+//   });
 
 
 
@@ -996,17 +1315,58 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     console.log('User station_ids:', JSON.stringify(user.station_ids));
     console.log('=== END DEBUG ===');
     
-    // Use demo data for demo user, otherwise use cached station data
+    // Use Energo API for demo user, otherwise use cached station data
     let result;
     if (req.user.username === 'demo') {
-      console.log('🎭 Using demo station data for demo user');
-      result = generateDemoStationData();
+      console.log('🎭 Fetching real station data from Energo API for demo user');
+      try {
+        const energoData = await chargenowAPI.fetchEnergoStations(0, 100);
+        result = JSON.stringify(energoData.result);
+      } catch (error) {
+        console.error('❌ Failed to fetch from Energo API:', error.message);
+        console.log('🎭 Falling back to demo station data');
+        result = chargenowAPI.generateDemoStationData();
+      }
     } else if (latestStationData && lastFetchTime) {
       console.log('📋 Using cached station data from:', lastFetchTime);
       result = latestStationData;
     } else {
       console.log('🔄 No cached data available, fetching fresh station data...');
-      result = await fetchChargeNowStations();
+      try {
+        result = await chargenowAPI.fetchChargeNowStations();
+      } catch (error) {
+        console.error('❌ Failed to fetch fresh station data:', error.message);
+        console.log('🔄 Falling back to local stations.json file...');
+        
+        // Fallback to local stations.json file
+        const fs = require('fs');
+        const path = require('path');
+        const stationsPath = path.join(__dirname, 'data', 'stations.json');
+        
+        if (fs.existsSync(stationsPath)) {
+          const localStations = fs.readFileSync(stationsPath, 'utf8');
+          // Convert local stations format to match API format
+          const parsedStations = JSON.parse(localStations);
+          const apiFormat = {
+            code: 0,
+            msg: 'success',
+            data: parsedStations.map(station => ({
+              pCabinetid: station.id,
+              id: station.id,
+              name: station.name,
+              address: station.address,
+              coordinates: station.coordinates,
+              pBorrow: 0, // Default values
+              pAlso: 0
+            }))
+          };
+          
+          result = JSON.stringify(apiFormat);
+          console.log('✅ Fallback to local stations.json successful');
+        } else {
+          throw new Error('No station data available');
+        }
+      }
     }
     
     let formattedData;
@@ -1061,7 +1421,11 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       
       console.log('User station permissions length:', userStationIds.length);
       
-      if (userStationIds.length > 0) {
+      // For Admin users, show all stations
+      if (user.userType === 'Admin') {
+        console.log('Admin user detected - showing all stations');
+        filteredStations = stationsArray;
+      } else if (userStationIds.length > 0) {
         // Filter to only show stations the user has access to
         filteredStations = stationsArray.filter(station => {
           const stationId = station.pCabinetid || station.id;
@@ -1082,113 +1446,98 @@ app.get('/api/stations', verifyToken, async (req, res) => {
         });
         console.log(`Filtered stations: ${filteredStations.length} out of ${stationsArray.length}`);
         console.log('Filtered station IDs:', filteredStations.map(s => s.pCabinetid || s.id));
-        
-        // Fetch order data for each filtered station
-        console.log('Fetching order data for filtered stations...');
-        
-        // Get date range from query parameters or use default (last month)
-        const queryStartDate = req.query.startDate;
-        const queryEndDate = req.query.endDate;
-        
-        let sTime, eTime;
-        if (queryStartDate && queryEndDate) {
-          // Use custom date range from frontend
-          const startDate = new Date(queryStartDate + 'T00:00:00');
-          const endDate = new Date(queryEndDate + 'T23:59:59');
-          sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
-          eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
-          console.log(`Using custom date range: ${sTime} to ${eTime}`);
-        } else {
-          // Use default date range (first day of current month to current date)
-          const endDate = new Date();
-          const startDate = new Date();
-          startDate.setDate(1);
-          sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
-          eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
-          console.log(`Using default date range: ${sTime} to ${eTime}`);
-        }
-        
-        for (let station of filteredStations) {
-          try {
-            const stationId = station.pCabinetid || station.id;
-            console.log(`Fetching orders for station: ${stationId}`);
-            
-            // Add station title from user's station_ids dictionary
-            if (typeof user.station_ids === 'object' && user.station_ids !== null && !Array.isArray(user.station_ids)) {
-              station.stationTitle = user.station_ids[stationId] || stationId;
-            } else {
-              station.stationTitle = stationId; // Fallback to station ID if no title
-            }
-            
-            // Return demo data for demo stations
-            if (stationId.startsWith('DEMO')) {
-              // Generate random demo data for each station
-              const randomOrders = Math.floor(Math.random() * 50) + 20; // 20-70 orders
-              const randomRevenue = (Math.random() * 800) + 50; // $50-$850 revenue
-              
-              station.orderData = {
-                totalRecords: randomOrders,
-                totalRevenue: randomRevenue,
-                success: true
-              };
-              
-              console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (DEMO DATA)`);
-            } else {
-              // Use real API for non-demo stations
-              const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=1000&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
-              
-              const myHeaders = new Headers();
-              myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
-              
-              const requestOptions = {
-                method: 'GET',
-                headers: myHeaders,
-                redirect: 'follow'
-              };
-              
-              const orderResponse = await fetch(orderListUrl, requestOptions);
-              const orderResult = await orderResponse.text();
-              
-              let orderData;
-              try {
-                orderData = JSON.parse(orderResult);
-              } catch (e) {
-                orderData = { code: -1, msg: 'Failed to parse order data' };
-              }
-              
-              // Add order data to station
-              station.orderData = {
-                totalRecords: orderData.page?.total || 0,
-                totalRevenue: 0,
-                success: orderData.code === 0
-              };
-              
-              // Calculate total revenue from all records
-              if (orderData.page?.records && Array.isArray(orderData.page.records)) {
-                station.orderData.totalRevenue = orderData.page.records.reduce((sum, record) => {
-                  return sum + (parseFloat(record.settledAmount) || 0);
-                }, 0);
-              }
-              
-              console.log(`[MAIN] Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (rounded: $${Math.round(station.orderData.totalRevenue)})`);
-            }
-            
-          } catch (error) {
-            console.error(`Error fetching orders for station ${station.pCabinetid}:`, error);
-            station.orderData = {
-              totalRecords: 0,
-              totalRevenue: 0,
-              success: false,
-              error: error.message
-            };
-          }
-        }
-        
       } else {
-        console.log('User has no station permissions, showing no stations');
+        console.log('No stations assigned to user');
         filteredStations = [];
       }
+    }
+    
+    // Fetch order data for each filtered station
+    console.log('Fetching order data for filtered stations...');
+    
+    // Get date range from query parameters or use default (last month)
+    const queryStartDate = req.query.startDate;
+    const queryEndDate = req.query.endDate;
+    
+    let sTime, eTime;
+    if (queryStartDate && queryEndDate) {
+      // Use custom date range from frontend - treat as local dates
+      const startDate = new Date(queryStartDate + 'T00:00:00');
+      const endDate = new Date(queryEndDate + 'T23:59:59');
+      sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
+      eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
+      console.log(`Using custom date range: ${sTime} to ${eTime}`);
     } else {
+      // Use default date range (first day of current month to current date)
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(1);
+      // Set to start of day and end of day in local timezone
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+      sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
+      eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
+      console.log(`Using default date range: ${sTime} to ${eTime}`);
+    }
+    
+    for (let station of filteredStations) {
+      try {
+        const stationId = station.pCabinetid || station.id;
+        console.log(`Fetching orders for station: ${stationId}`);
+        
+        // Add station title from user's station_ids dictionary
+        if (typeof user.station_ids === 'object' && user.station_ids !== null && !Array.isArray(user.station_ids)) {
+          station.stationTitle = user.station_ids[stationId] || stationId;
+        } else {
+          station.stationTitle = stationId; // Fallback to station ID if no title
+        }
+        
+        // Return demo data for demo stations
+        if (stationId.startsWith('DEMO')) {
+          // Generate random demo data for each station
+          const randomOrders = Math.floor(Math.random() * 50) + 20; // 20-70 orders
+          const randomRevenue = (Math.random() * 800) + 50; // $50-$850 revenue
+          
+          station.orderData = {
+            totalRecords: randomOrders,
+            totalRevenue: randomRevenue,
+            success: true
+          };
+          
+          console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (DEMO DATA)`);
+        } else {
+          // Use real API for non-demo stations via chargenow-api module
+          const { response, result: orderData } = await chargenowAPI.fetchStationRentalHistory(stationId, sTime, eTime);
+          
+          // Add order data to station
+          station.orderData = {
+            totalRecords: orderData.page?.total || 0,
+            totalRevenue: 0,
+            success: orderData.code === 0
+          };
+          
+          // Calculate total revenue from all records
+          if (orderData.page?.records && Array.isArray(orderData.page.records)) {
+            station.orderData.totalRevenue = orderData.page.records.reduce((sum, record) => {
+              return sum + (parseFloat(record.settledAmount) || 0);
+            }, 0);
+          }
+          
+          console.log(`[MAIN] Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (rounded: $${Math.round(station.orderData.totalRevenue)})`);
+        }
+        
+      } catch (error) {
+        console.error(`Error fetching orders for station ${station.pCabinetid}:`, error);
+        station.orderData = {
+          totalRecords: 0,
+          totalRevenue: 0,
+          success: false,
+          error: error.message
+        };
+      }
+    }
+    
+    if (stationsArray.length === 0) {
       console.log('No stations found in API response');
     }
     
@@ -1328,6 +1677,9 @@ app.get('/api/take-home', async (req, res) => {
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(1);
+      // Set to start of day and end of day in local timezone
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
       sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
       eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
       console.log(`Using default date range for take-home: ${sTime} to ${eTime}`);
@@ -1340,7 +1692,7 @@ app.get('/api/take-home', async (req, res) => {
       result = latestStationData;
     } else {
       console.log('🔄 No cached data available, fetching fresh station data for take-home...');
-      result = await fetchChargeNowStations();
+      result = await chargenowAPI.fetchChargeNowStations();
     }
     
     let formattedData;
@@ -1407,34 +1759,14 @@ app.get('/api/take-home', async (req, res) => {
           station.stationTitle = stationId;
         }
         
-        // Use real API for non-demo stations
-        const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=1000&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
-        console.log(`[TAKE-HOME DEBUG] Fetching orders for ${stationId} from: ${orderListUrl}`);
+        // Use real API for non-demo stations via chargenow-api module
+        console.log(`[TAKE-HOME DEBUG] Fetching orders for ${stationId} from ChargeNow API`);
         
-        const myHeaders = new Headers();
-        myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
-        
-        const requestOptions = {
-          method: 'GET',
-          headers: myHeaders,
-          redirect: 'follow'
-        };
-        
-        const orderResponse = await fetch(orderListUrl, requestOptions);
+        const { response: orderResponse, result: orderData } = await chargenowAPI.fetchStationRentalHistory(stationId, sTime, eTime);
         
         if (!orderResponse.ok) {
           console.error(`[TAKE-HOME DEBUG] API request failed for station ${stationId}: ${orderResponse.status} ${orderResponse.statusText}`);
           throw new Error(`API request failed: ${orderResponse.status}`);
-        }
-        
-        const orderResult = await orderResponse.text();
-        
-        let orderData;
-        try {
-          orderData = JSON.parse(orderResult);
-        } catch (e) {
-          console.error(`[TAKE-HOME DEBUG] Failed to parse JSON for station ${stationId}:`, e.message);
-          orderData = { code: -1, msg: 'Failed to parse order data' };
         }
         
         if (orderData.code !== 0) {
@@ -1522,8 +1854,8 @@ app.get('/api/take-home', async (req, res) => {
       username: 'CUUB',
       userType: 'Distributor',
       dateRange: {
-        startDate: queryStartDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-        endDate: queryEndDate || new Date().toISOString().split('T')[0]
+        startDate: queryStartDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'),
+        endDate: queryEndDate || new Date().toLocaleDateString('en-CA')
       },
       totalRevenue: totalRevenue, // Same calculation as dashboard
       totalRents: totalRents,     // Same calculation as dashboard
@@ -1598,40 +1930,22 @@ app.get('/api/test-orders/:stationId', async (req, res) => {
       return res.json(demoOrders);
     }
     
-    const myHeaders = new Headers();
-    myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
-    
-    const requestOptions = {
-      method: 'GET',
-      headers: myHeaders,
-      redirect: 'follow'
-    };
-    
     // Set date range for the first day of current month to current date
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(1);
+    // Set to start of day and end of day in local timezone
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
     
     const sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
     const eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
     
-    const orderListUrl = `https://developer.chargenow.top/cdb-open-api/v1/order/list?page=1&limit=1000&sTime=${sTime}&eTime=${eTime}&pCabinetid=${stationId}`;
+    console.log('Making API call to order list via chargenow-api module');
     
-    console.log('Making API call to order list:', orderListUrl);
-    
-    const response = await fetch(orderListUrl, requestOptions);
-    const result = await response.text();
+    const { response, result: parsedData } = await chargenowAPI.fetchStationRentalHistory(stationId, sTime, eTime);
     
     console.log('Order list API response status:', response.status);
-    console.log('Order list API response:', result);
-    
-    // Parse the response as JSON for better structure
-    let parsedData;
-    try {
-      parsedData = JSON.parse(result);
-    } catch (e) {
-      parsedData = { rawResponse: result, parseError: e.message };
-    }
     
     // Set proper JSON headers and return formatted response
     res.setHeader('Content-Type', 'application/json');
@@ -1640,7 +1954,6 @@ app.get('/api/test-orders/:stationId', async (req, res) => {
     const responseData = {
       success: true,
       stationId: stationId,
-      url: orderListUrl,
       status: response.status,
       responseSummary: {
         message: parsedData.msg || 'No message',
@@ -1681,7 +1994,7 @@ app.get('/api/test-chargenow', async (req, res) => {
     console.log('Manual API call triggered');
     
     console.log('Making API call to ChargeNow via shared function');
-    const result = await fetchChargeNowStations();
+    const result = await chargenowAPI.fetchChargeNowStations();
     
     console.log('Response result:', result);
     
@@ -1693,6 +2006,37 @@ app.get('/api/test-chargenow', async (req, res) => {
     });
   } catch (error) {
     console.error('Manual API call failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Test endpoint for Energo API
+app.get('/api/test-energo', async (req, res) => {
+  try {
+    console.log('Manual Energo API call triggered');
+    
+    const { page = 0, size = 10 } = req.query;
+    console.log(`Fetching Energo stations: page=${page}, size=${size}`);
+    
+    const energoData = await chargenowAPI.fetchEnergoStations(parseInt(page), parseInt(size));
+    
+    console.log('Energo API response:', energoData.result);
+    
+    res.json({ 
+      success: true,
+      source: 'Energo API',
+      data: energoData.result,
+      status: energoData.response.status,
+      totalStations: energoData.result.totalElements || 0,
+      stationsReturned: energoData.result.data?.length || 0,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Energo API call failed:', error);
     res.status(500).json({ 
       success: false, 
       error: error.message,
@@ -1725,37 +2069,13 @@ app.post('/api/dispense-battery', verifyToken, async (req, res) => {
     
     console.log(`Dispensing battery from station: ${stationId} for user: ${req.user.username}`);
     
-    // Prepare the request to ChargeNow API
-    const myHeaders = new Headers();
-    myHeaders.append("Authorization", "Basic VmxhZFZhbGNoa292OlZWMTIxMg==");
+    // Make the API call to dispense battery via chargenow-api module
+    console.log('Making dispense API call via chargenow-api module for station:', stationId);
     
-    const requestOptions = {
-      method: 'POST',
-      headers: myHeaders,
-      redirect: 'follow'
-    };
-    
-    // Make the API call to dispense battery
-    const dispenseUrl = `https://developer.chargenow.top/cdb-open-api/v1/cabinet/ejectByRepair?cabinetid=${stationId}&slotNum=0`;
-    console.log('Making dispense API call to:', dispenseUrl);
-    console.log('Request headers:', Object.fromEntries(myHeaders.entries()));
-    
-    const response = await fetch(dispenseUrl, requestOptions);
-    const result = await response.text();
+    const { response, result: parsedData } = await chargenowAPI.ejectBatteryByRepair(stationId, 0);
     
     console.log('Dispense API response status:', response.status);
-    console.log('Dispense API response headers:', Object.fromEntries(response.headers.entries()));
-    console.log('Dispense API response body:', result);
-    
-    // Parse the response as JSON for better structure
-    let parsedData;
-    try {
-      parsedData = JSON.parse(result);
-      console.log('Successfully parsed dispense response as JSON');
-    } catch (e) {
-      parsedData = { rawResponse: result, parseError: e.message };
-      console.log('Failed to parse dispense response as JSON:', e.message);
-    }
+    console.log('Dispense API response:', parsedData);
     
     // Check if the dispense was actually successful
     const isSuccessful = parsedData.code === 0;
@@ -1889,7 +2209,7 @@ app.get('/api/battery-rentals', async (req, res) => {
     const { page = 1, limit = 100 } = req.query;
     
     console.log('Fetching battery rental information...');
-    const { response, result } = await fetchBatteryRentalInfo(parseInt(page), parseInt(limit));
+    const { response, result } = await chargenowAPI.fetchBatteryRentalInfo(parseInt(page), parseInt(limit));
     
     if (!response.ok) {
       return res.status(response.status).json({
@@ -1964,7 +2284,7 @@ app.get('/api/station-availability/:stationId', async (req, res) => {
       return res.json(demoAvailability);
     }
     
-    const { response, result } = await fetchStationAvailability(stationId);
+    const { response, result } = await chargenowAPI.fetchStationAvailability(stationId);
     
     if (!response.ok) {
       return res.status(response.status).json({
@@ -2018,7 +2338,7 @@ app.get('/api/stations-availability', async (req, res) => {
     // Fetch availability for all stations in parallel
     const stationPromises = stationIdArray.map(async (id) => {
       try {
-        const { response, result } = await fetchStationAvailability(id);
+        const { response, result } = await chargenowAPI.fetchStationAvailability(id);
         return {
           id,
           available: result.data?.cabinet?.emptySlots || 0,
@@ -2067,6 +2387,19 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://0.0.0.0:${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    
+    // Initialize station data AFTER server starts (non-blocking)
+    console.log('🔄 Starting background station data fetch...');
+    updateStationData().catch(err => {
+      console.error('Initial station data update failed:', err.message);
+    });
+    
+    // Schedule station data updates every minute (60000 ms)
+    setInterval(() => {
+      updateStationData().catch(err => {
+        console.error('Scheduled station data update failed:', err.message);
+      });
+    }, 60000);
   });
 
   // Error handling for uncaught exceptions

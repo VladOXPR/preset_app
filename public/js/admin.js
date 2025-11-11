@@ -17,13 +17,27 @@
  * Main initialization function that runs when the page loads
  * Since authentication is now handled server-side, we just load the admin content
  */
-window.onload = function() {
-  // Load and display users
-  loadUsers();
-  
-  // Set up event listeners for admin functions
-  setupAdminControls();
-};
+// Admin dashboard initialization - called after home.js loads
+function initializeAdminDashboard() {
+  // Check if this is an admin dashboard
+  const isAdminDashboard = document.querySelector('.admin-dashboard');
+  if (isAdminDashboard) {
+    // For admin dashboard, only setup controls
+    console.log('Admin dashboard detected - admin.js loaded');
+    setupAdminControls();
+  } else {
+    // For standalone admin page, load everything
+    loadStations();
+    loadUsers();
+    setupAdminControls();
+  }
+}
+
+// Initialize admin dashboard after DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  // Small delay to ensure home.js has loaded first
+  setTimeout(initializeAdminDashboard, 100);
+});
 
 // ========================================
 // ADMIN CONTENT MANAGEMENT
@@ -60,10 +74,19 @@ function setupAdminControls() {
     window.location.href = '/newuser';
   });
   
-  document.getElementById('logoutBtn').addEventListener('click', function() {
-    // Clear admin authentication and redirect to login
-    logout();
+  document.getElementById('addStationBtn').addEventListener('click', function() {
+    // Show add station form
+    showAddStationForm();
   });
+  
+  // Add logout button handler
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function() {
+      // Clear admin authentication and redirect to login
+      logout();
+    });
+  }
 }
 
 // ========================================
@@ -349,4 +372,347 @@ function deleteUser(userId) {
       alert('Error deleting user: ' + error.message);
     });
   }
+}
+
+// ========================================
+// STATION MANAGEMENT
+// ========================================
+
+/**
+ * Loads all stations from the API and displays them
+ */
+function loadStations() {
+  const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
+  
+  fetch(apiUrl('/api/admin/stations'))
+    .then(response => {
+      if (response.status !== 200) {
+        console.error('Failed to load stations - HTTP status:', response.status);
+        return [];
+      }
+      return response.json();
+    })
+    .then(stations => {
+      console.log('Stations data received:', stations);
+      renderStationList(stations);
+    })
+    .catch(error => {
+      console.error('Error loading stations:', error);
+      renderStationList([]);
+    });
+}
+
+/**
+ * Renders the station list in the admin panel
+ * 
+ * @param {Array} stations - Array of station objects
+ */
+function renderStationList(stations) {
+  const stationList = document.getElementById('station-list-admin');
+  stationList.innerHTML = '';
+  
+  if (stations.length === 0) {
+    stationList.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No stations found. Add your first station below.</p>';
+    return;
+  }
+  
+  stations.forEach(station => {
+    const stationItem = createStationItem(station);
+    stationList.appendChild(stationItem);
+  });
+}
+
+/**
+ * Creates a station item element
+ * 
+ * @param {Object} station - Station object
+ * @returns {HTMLElement} - DOM element for the station item
+ */
+function createStationItem(station) {
+  const stationItem = document.createElement('div');
+  stationItem.className = 'station-item-admin';
+  stationItem.setAttribute('data-station-id', station.id);
+  
+  stationItem.innerHTML = `
+    <div class="station-info-display">
+      <div class="station-info-row">
+        <span class="station-info-label">Station ID:</span>
+        <span class="station-info-value">${station.id}</span>
+      </div>
+      <div class="station-info-row">
+        <span class="station-info-label">Name:</span>
+        <span class="station-info-value">${station.name}</span>
+      </div>
+      <div class="station-info-row">
+        <span class="station-info-label">Address:</span>
+        <span class="station-info-value">${station.address}</span>
+      </div>
+      <div class="station-info-row">
+        <span class="station-info-label">Coordinates:</span>
+        <span class="station-info-value">[${station.coordinates[0]}, ${station.coordinates[1]}]</span>
+      </div>
+    </div>
+    <div class="station-actions">
+      <button class="station-btn station-btn-edit" onclick="editStation('${station.id}')">Edit Station</button>
+      <button class="station-btn station-btn-delete" onclick="deleteStation('${station.id}')">Delete Station</button>
+    </div>
+  `;
+  
+  return stationItem;
+}
+
+/**
+ * Shows the add station form
+ */
+function showAddStationForm() {
+  const stationList = document.getElementById('station-list-admin');
+  
+  // Check if form already exists
+  if (document.querySelector('.add-station-form')) {
+    return;
+  }
+  
+  const formContainer = document.createElement('div');
+  formContainer.className = 'add-station-form active';
+  formContainer.innerHTML = `
+    <h3 class="section-title">Add New Station</h3>
+    <div class="station-field-group">
+      <label class="station-field-label">Station ID *</label>
+      <input type="text" class="station-field-input" id="new-station-id" placeholder="e.g., DTN00873" required>
+    </div>
+    <div class="station-field-group">
+      <label class="station-field-label">Station Name *</label>
+      <input type="text" class="station-field-input" id="new-station-name" placeholder="e.g., DePaul University" required>
+    </div>
+    <div class="station-field-group">
+      <label class="station-field-label">Address *</label>
+      <input type="text" class="station-field-input" id="new-station-address" placeholder="e.g., 123 Main St, Chicago, IL 60614" required>
+    </div>
+    <div class="station-coordinates-group">
+      <div class="station-field-group">
+        <label class="station-field-label">Longitude *</label>
+        <input type="number" step="any" class="station-field-input" id="new-station-lng" placeholder="e.g., -87.6500" required>
+      </div>
+      <div class="station-field-group">
+        <label class="station-field-label">Latitude *</label>
+        <input type="number" step="any" class="station-field-input" id="new-station-lat" placeholder="e.g., 41.9000" required>
+      </div>
+    </div>
+    <div class="station-actions">
+      <button class="station-btn station-btn-save" onclick="saveNewStation()">Add Station</button>
+      <button class="station-btn station-btn-cancel" onclick="cancelAddStation()">Cancel</button>
+    </div>
+  `;
+  
+  stationList.insertBefore(formContainer, stationList.firstChild);
+  document.getElementById('new-station-id').focus();
+}
+
+/**
+ * Saves a new station
+ */
+function saveNewStation() {
+  const id = document.getElementById('new-station-id').value.trim();
+  const name = document.getElementById('new-station-name').value.trim();
+  const address = document.getElementById('new-station-address').value.trim();
+  const lng = parseFloat(document.getElementById('new-station-lng').value);
+  const lat = parseFloat(document.getElementById('new-station-lat').value);
+  
+  // Validation
+  if (!id || !name || !address || isNaN(lng) || isNaN(lat)) {
+    alert('Please fill in all required fields with valid values.');
+    return;
+  }
+  
+  const stationData = {
+    id: id,
+    name: name,
+    address: address,
+    coordinates: [lng, lat]
+  };
+  
+  const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
+  
+  fetch(apiUrl('/api/admin/stations'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(stationData)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.error) {
+      alert('Error: ' + result.error);
+    } else {
+      console.log('Station added successfully:', result);
+      cancelAddStation();
+      loadStations();
+    }
+  })
+  .catch(error => {
+    console.error('Error adding station:', error);
+    alert('Error adding station: ' + error.message);
+  });
+}
+
+/**
+ * Cancels adding a new station
+ */
+function cancelAddStation() {
+  const form = document.querySelector('.add-station-form');
+  if (form) {
+    form.remove();
+  }
+}
+
+/**
+ * Edits a station
+ * 
+ * @param {string} stationId - Station ID
+ */
+function editStation(stationId) {
+  const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
+  
+  // Fetch the station data first
+  fetch(apiUrl('/api/admin/stations'))
+    .then(response => response.json())
+    .then(stations => {
+      const station = stations.find(s => s.id === stationId);
+      if (!station) {
+        alert('Station not found');
+        return;
+      }
+      
+      showEditStationForm(station);
+    })
+    .catch(error => {
+      console.error('Error loading station:', error);
+      alert('Error loading station: ' + error.message);
+    });
+}
+
+/**
+ * Shows the edit station form
+ * 
+ * @param {Object} station - Station object
+ */
+function showEditStationForm(station) {
+  const stationItem = document.querySelector(`[data-station-id="${station.id}"]`);
+  stationItem.classList.add('editing');
+  
+  stationItem.innerHTML = `
+    <div class="station-field-group">
+      <label class="station-field-label">Station ID</label>
+      <input type="text" class="station-field-input readonly" value="${station.id}" disabled>
+    </div>
+    <div class="station-field-group">
+      <label class="station-field-label">Station Name *</label>
+      <input type="text" class="station-field-input" id="edit-station-name-${station.id}" value="${station.name}" required>
+    </div>
+    <div class="station-field-group">
+      <label class="station-field-label">Address *</label>
+      <input type="text" class="station-field-input" id="edit-station-address-${station.id}" value="${station.address}" required>
+    </div>
+    <div class="station-coordinates-group">
+      <div class="station-field-group">
+        <label class="station-field-label">Longitude *</label>
+        <input type="number" step="any" class="station-field-input" id="edit-station-lng-${station.id}" value="${station.coordinates[0]}" required>
+      </div>
+      <div class="station-field-group">
+        <label class="station-field-label">Latitude *</label>
+        <input type="number" step="any" class="station-field-input" id="edit-station-lat-${station.id}" value="${station.coordinates[1]}" required>
+      </div>
+    </div>
+    <div class="station-actions">
+      <button class="station-btn station-btn-save" onclick="saveEditedStation('${station.id}')">Save Changes</button>
+      <button class="station-btn station-btn-cancel" onclick="cancelEditStation('${station.id}')">Cancel</button>
+    </div>
+  `;
+}
+
+/**
+ * Saves an edited station
+ * 
+ * @param {string} stationId - Station ID
+ */
+function saveEditedStation(stationId) {
+  const name = document.getElementById(`edit-station-name-${stationId}`).value.trim();
+  const address = document.getElementById(`edit-station-address-${stationId}`).value.trim();
+  const lng = parseFloat(document.getElementById(`edit-station-lng-${stationId}`).value);
+  const lat = parseFloat(document.getElementById(`edit-station-lat-${stationId}`).value);
+  
+  // Validation
+  if (!name || !address || isNaN(lng) || isNaN(lat)) {
+    alert('Please fill in all required fields with valid values.');
+    return;
+  }
+  
+  const stationData = {
+    name: name,
+    address: address,
+    coordinates: [lng, lat]
+  };
+  
+  const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
+  
+  fetch(apiUrl(`/api/admin/stations/${stationId}`), {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(stationData)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.error) {
+      alert('Error: ' + result.error);
+    } else {
+      console.log('Station updated successfully:', result);
+      loadStations();
+    }
+  })
+  .catch(error => {
+    console.error('Error updating station:', error);
+    alert('Error updating station: ' + error.message);
+  });
+}
+
+/**
+ * Cancels editing a station
+ * 
+ * @param {string} stationId - Station ID
+ */
+function cancelEditStation(stationId) {
+  loadStations();
+}
+
+/**
+ * Deletes a station
+ * 
+ * @param {string} stationId - Station ID
+ */
+function deleteStation(stationId) {
+  if (!confirm(`Are you sure you want to delete station ${stationId}? This action cannot be undone.`)) {
+    return;
+  }
+  
+  const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
+  
+  fetch(apiUrl(`/api/admin/stations/${stationId}`), {
+    method: 'DELETE'
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.error) {
+      alert('Error: ' + result.error);
+    } else {
+      console.log('Station deleted successfully:', result);
+      loadStations();
+    }
+  })
+  .catch(error => {
+    console.error('Error deleting station:', error);
+    alert('Error deleting station: ' + error.message);
+  });
 } 

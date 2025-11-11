@@ -1,0 +1,47 @@
+[
+  {
+    "id": "DTN00970",
+    "name": "DePaul, Loop Student Center",
+    "address": "DePaul Loop Campus, Chicago, IL",
+    "coordinates": [
+      -87.6298,
+      41.8776
+    ]
+  },
+  {
+    "id": "DTN00971",
+    "name": "DePaul, Theater School",
+    "address": "DePaul Theater School, Chicago, IL",
+    "coordinates": [
+      -87.63,
+      41.878
+    ]
+  },
+  {
+    "id": "BJH09881",
+    "name": "Parlay Lincoln Park",
+    "address": "Parlay, Lincoln Park, Chicago, IL",
+    "coordinates": [
+      -87.64,
+      41.92
+    ]
+  },
+  {
+    "id": "BJH09883",
+    "name": "Kelly's Pub",
+    "address": "Kelly's Pub, Chicago, IL",
+    "coordinates": [
+      -87.65,
+      41.93
+    ]
+  },
+  {
+    "id": "DTA22033",
+    "name": "Home Station",
+    "address": "Home Station Location, Chicago, IL",
+    "coordinates": [
+      -87.635,
+      41.91
+    ]
+  }
+]
