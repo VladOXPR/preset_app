@@ -9,19 +9,7 @@ window.onload = function() {
     return r.json();
   }).then(data => {
     if (!data) return;
-    
-    // Check if this is an admin dashboard
-    const isAdminDashboard = document.querySelector('.admin-dashboard');
-    if (isAdminDashboard) {
-      // For admin dashboard, don't try to update welcome element
-      console.log('Admin dashboard detected');
-    } else {
-      // For regular dashboard, update welcome element if it exists
-      const welcomeElement = document.getElementById('welcome');
-      if (welcomeElement) {
-        welcomeElement.textContent = 'Welcome, ' + data.username;
-      }
-    }
+    document.getElementById('welcome').textContent = 'Welcome, ' + data.username;
   });
   
   // Initialize date inputs with default values (last month)
@@ -87,8 +75,6 @@ function getSelectedDateRange() {
 async function fetchStations() {
   try {
     console.log('Fetching stations...');
-    console.log('Current URL:', window.location.href);
-    console.log('Is admin dashboard:', !!document.querySelector('.admin-dashboard'));
     
     // Get selected date range
     const dateRange = getSelectedDateRange();
@@ -99,13 +85,9 @@ async function fetchStations() {
       endDate: document.getElementById('end-date').value
     });
     
-    console.log('Fetching stations with params:', queryParams.toString());
-    
     const response = await fetch(`/api/stations?${queryParams}`, {
       credentials: 'include' // Include cookies for authentication
     });
-    
-    console.log('Response status:', response.status);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -113,37 +95,21 @@ async function fetchStations() {
     
     const result = await response.json();
     console.log('Stations data:', result);
-    console.log('Result success:', result.success);
-    console.log('Result data length:', result.data ? result.data.length : 'no data');
     
     if (result.success && result.data) {
       displayStations(result.data);
     } else {
       console.error('Failed to fetch stations:', result);
-      const stationList = document.getElementById('station-list');
-      if (stationList) {
-        stationList.innerHTML = '<p>Error loading stations: ' + (result.error || 'Unknown error') + '</p>';
-      }
+      document.getElementById('station-list').innerHTML = '<p>Error loading stations</p>';
     }
   } catch (error) {
     console.error('Error fetching stations:', error);
-    const stationList = document.getElementById('station-list');
-    if (stationList) {
-      stationList.innerHTML = '<p>Error loading stations: ' + error.message + '</p>';
-    }
+    document.getElementById('station-list').innerHTML = '<p>Error loading stations</p>';
   }
 }
 
 function displayStations(stationsData) {
-  console.log('displayStations called with:', stationsData);
-  
   const stationList = document.getElementById('station-list');
-  console.log('station-list element:', stationList);
-  
-  if (!stationList) {
-    console.error('station-list element not found!');
-    return;
-  }
   
   // Check if the data has the expected structure
   let stations = [];
@@ -166,16 +132,14 @@ function displayStations(stationsData) {
   }
   
   if (stations.length === 0) {
-    console.log('No stations found, showing message');
     stationList.innerHTML = '<p>No stations assigned to your account. Please contact an administrator to get access to stations.</p>';
     return;
   }
   
   console.log('Processing stations:', stations);
-  console.log('Number of stations:', stations.length);
   
   // Get username and userType from data attributes
-  const container = document.querySelector('.container') || document.querySelector('.admin-dashboard');
+  const container = document.querySelector('.container');
   const currentUsername = container ? container.getAttribute('data-username') : null;
   const currentUserType = container ? container.getAttribute('data-usertype') : null;
   
@@ -219,7 +183,7 @@ function displayStations(stationsData) {
             <div class="rents-number">${totalRents}</div>
             <div class="rents-label">Rents</div>
           </div>
-          ${currentUserType === 'Distributor' || currentUserType === 'Admin' ? `
+          ${currentUserType === 'Distributor' ? `
           <div class="pop-out-section">
             <button class="pop-out-btn" onclick="dispenseBattery('${stationId}')">Pop out</button>
           </div>
@@ -229,12 +193,7 @@ function displayStations(stationsData) {
     `;
   }).join('');
   
-  console.log('Generated station HTML length:', stationHTML.length);
-  console.log('Setting innerHTML...');
-  
   stationList.innerHTML = stationHTML;
-  
-  console.log('Station list innerHTML set, updating summary stats...');
   
   // Update summary stats after displaying stations
   updateSummaryStats();
@@ -261,7 +220,7 @@ function updateSummaryStats() {
   });
   
   // Get username and userType from data attributes
-  const container = document.querySelector('.container') || document.querySelector('.admin-dashboard');
+  const container = document.querySelector('.container');
   const currentUsername = container ? container.getAttribute('data-username') : null;
   const currentUserType = container ? container.getAttribute('data-usertype') : null;
   
@@ -274,11 +233,11 @@ function updateSummaryStats() {
   const takeHomeElement = document.getElementById('take-home');
   const takeHomeLabel = document.querySelector('#take-home').parentElement.querySelector('.stat-label');
   
-  if (currentUserType === 'Distributor' || currentUserType === 'Admin') {
-    // For Distributor/Admin accounts, show total rents count instead of take-home amount
+  if (currentUserType === 'Distributor') {
+    // For Distributor accounts, show total rents count instead of take-home amount
     takeHomeElement.textContent = totalRents;
     takeHomeLabel.textContent = 'Rents';
-    console.log('Distributor/Admin user detected - showing total rents:', totalRents);
+    console.log('Distributor user detected - showing total rents:', totalRents);
   } else {
     // For other account types, calculate take home based on percentage
     let takeHomePercentage = 1.0; // Default 100% for most users

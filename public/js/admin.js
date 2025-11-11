@@ -17,27 +17,16 @@
  * Main initialization function that runs when the page loads
  * Since authentication is now handled server-side, we just load the admin content
  */
-// Admin dashboard initialization - called after home.js loads
-function initializeAdminDashboard() {
-  // Check if this is an admin dashboard
-  const isAdminDashboard = document.querySelector('.admin-dashboard');
-  if (isAdminDashboard) {
-    // For admin dashboard, only setup controls
-    console.log('Admin dashboard detected - admin.js loaded');
-    setupAdminControls();
-  } else {
-    // For standalone admin page, load everything
-    loadStations();
-    loadUsers();
-    setupAdminControls();
-  }
-}
-
-// Initialize admin dashboard after DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-  // Small delay to ensure home.js has loaded first
-  setTimeout(initializeAdminDashboard, 100);
-});
+window.onload = function() {
+  // Load and display stations
+  loadStations();
+  
+  // Load and display users
+  loadUsers();
+  
+  // Set up event listeners for admin functions
+  setupAdminControls();
+};
 
 // ========================================
 // ADMIN CONTENT MANAGEMENT

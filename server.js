@@ -36,41 +36,7 @@ async function updateStationData() {
     console.log('📊 Data size:', result.length, 'characters');
   } catch (error) {
     console.error('❌ Scheduled station data update failed:', error.message);
-    
-    // Fallback to local stations.json file if external API fails
-    if (!latestStationData) {
-      try {
-        console.log('🔄 Falling back to local stations.json file...');
-        const fs = require('fs');
-        const path = require('path');
-        const stationsPath = path.join(__dirname, 'data', 'stations.json');
-        
-        if (fs.existsSync(stationsPath)) {
-          const localStations = fs.readFileSync(stationsPath, 'utf8');
-          // Convert local stations format to match API format
-          const parsedStations = JSON.parse(localStations);
-          const apiFormat = {
-            code: 0,
-            msg: 'success',
-            data: parsedStations.map(station => ({
-              pCabinetid: station.id,
-              id: station.id,
-              name: station.name,
-              address: station.address,
-              coordinates: station.coordinates,
-              pBorrow: 0, // Default values
-              pAlso: 0
-            }))
-          };
-          
-          latestStationData = JSON.stringify(apiFormat);
-          lastFetchTime = new Date().toISOString();
-          console.log('✅ Fallback to local stations.json successful');
-        }
-      } catch (fallbackError) {
-        console.error('❌ Fallback to local stations.json also failed:', fallbackError.message);
-      }
-    }
+    // Keep previous data if update fails
   }
 }
 
@@ -346,185 +312,13 @@ app.get('/home', (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     console.log('User accessing home page:', decoded.username);
     console.log('Username type:', typeof decoded.username);
-    console.log('User type:', decoded.userType);
     res.setHeader('Content-Type', 'text/html');
-    
-    // Check if user is Admin - show admin dashboard
-    if (decoded.userType === 'Admin') {
-      const adminHtmlContent = `
+    const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Admin Dashboard - ${escapeHtml(decoded.username)}</title>
-  <link rel="stylesheet" href="/css/style.css">
-  
-  <!-- Favicon and iOS icons -->
-  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico?v=2">
-  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png?v=2">
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png?v=2">
-  <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48x48.png?v=2">
-  <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon-64x64.png?v=2">
-  <link rel="icon" type="image/png" sizes="96x96" href="/icons/favicon-96x96.png?v=2">
-  <link rel="icon" type="image/png" sizes="128x128" href="/icons/favicon-128x128.png?v=2">
-  <link rel="icon" type="image/png" sizes="144x144" href="/icons/favicon-144x144.png?v=2">
-  <link rel="icon" type="image/png" sizes="150x150" href="/icons/favicon-150x150.png?v=2">
-  <link rel="icon" type="image/png" sizes="152x152" href="/icons/favicon-152x152.png?v=2">
-  <link rel="icon" type="image/png" sizes="167x167" href="/icons/favicon-167x167.png?v=2">
-  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png?v=2">
-  <link rel="icon" type="image/png" sizes="256x256" href="/icons/favicon-256x256.png?v=2">
-  <link rel="icon" type="image/png" sizes="384x384" href="/icons/favicon-384x384.png?v=2">
-  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png?v=2">
-  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=2">
-  <link rel="manifest" href="/icons/site.webmanifest?v=2">
-  
-  <!-- iOS home screen meta tags -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Preset App">
-  <meta name="theme-color" content="#000000">
-</head>
-<body>
-  <div class="admin-dashboard" data-username="${escapeHtml(decoded.username)}" data-usertype="${decoded.userType}">
-    <!-- Left Sidebar -->
-    <div class="admin-sidebar">
-      <div class="sidebar-header">
-        <h2>Admin Dashboard</h2>
-        <p>Welcome, ${escapeHtml(decoded.username)}</p>
-      </div>
-      <div class="sidebar-nav">
-        <button class="nav-item active" data-tab="performance">
-          <img src="/icons/PerformanceIcon.png?v=3" alt="Performance" class="nav-icon">
-          <span class="nav-text">Performance</span>
-        </button>
-        <button class="nav-item" data-tab="partners">
-          <img src="/icons/PartnersIcon.png?v=3" alt="Partners" class="nav-icon">
-          <span class="nav-text">Partners</span>
-        </button>
-      </div>
-    </div>
-    
-    <!-- Main Content Area -->
-    <div class="admin-main-content">
-      <!-- Performance Tab Content -->
-      <div id="performance-tab" class="tab-content active">
-        <div class="welcome-top">
-          <div class="summary-stats">
-            <div class="stat-item">
-              <div class="stat-value" id="take-home">$0</div>
-              <div class="stat-label">Take home</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value" id="total-revenue">$0</div>
-              <div class="stat-label">Total revenue</div>
-            </div>
-          </div>
-          
-          <div class="date-range-panel">
-            <div class="date-inputs">
-              <div class="date-input-group">
-                <input type="date" id="start-date" class="date-input">
-              </div>
-              <div class="date-input-group">
-                <input type="date" id="end-date" class="date-input">
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="station-section">
-          <div id="station-list">
-            <!-- Station list will be populated here -->
-          </div>
-        </div>
-      </div>
-      
-      <!-- Partners Tab Content -->
-      <div id="partners-tab" class="tab-content">
-        <div class="admin-content">
-          <h1>Partner Management</h1>
-          <div id="user-list">
-            <!-- User list will be populated here -->
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Menu Icon -->
-    <div class="menu-icon" id="menu-icon">
-      <div class="hamburger-lines">
-        <div class="hamburger-line"></div>
-        <div class="hamburger-line"></div>
-        <div class="hamburger-line"></div>
-      </div>
-      <div class="menu-x">×</div>
-    </div>
-    
-    <!-- Full Screen Overlay -->
-    <div class="menu-overlay" id="menu-overlay">
-      <div class="menu-items">
-        <a href="/logout" class="menu-item logout">Logout</a>
-        <a href="https://battery.cuub.tech/map.html" class="menu-item" target="_blank">Map</a>
-        <a href="https://cuub.tech/" class="menu-item" target="_blank">Website</a>
-      </div>
-    </div>
-  </div>
-
-  <script src="/js/deployment-manager.js"></script>
-  <script src="/js/home.js"></script>
-  <script src="/js/admin.js"></script>
-  <script src="/js/zoom-prevention.js"></script>
-  <script>
-    // Admin dashboard tab switching
-    document.addEventListener('DOMContentLoaded', function() {
-      const navItems = document.querySelectorAll('.nav-item');
-      const tabContents = document.querySelectorAll('.tab-content');
-      
-      navItems.forEach(item => {
-        item.addEventListener('click', function() {
-          const tabName = this.getAttribute('data-tab');
-          
-          // Remove active class from all nav items and tab contents
-          navItems.forEach(nav => nav.classList.remove('active'));
-          tabContents.forEach(tab => tab.classList.remove('active'));
-          
-          // Add active class to clicked nav item and corresponding tab
-          this.classList.add('active');
-          document.getElementById(tabName + '-tab').classList.add('active');
-          
-          // Load content for the active tab
-          if (tabName === 'partners') {
-            loadUsers();
-          } else if (tabName === 'performance') {
-            // Ensure station data is loaded for performance tab
-            if (typeof fetchStations === 'function') {
-              fetchStations();
-            }
-          }
-        });
-      });
-      
-      // Ensure Performance tab loads station data on initial load
-      const performanceTab = document.getElementById('performance-tab');
-      if (performanceTab && performanceTab.classList.contains('active')) {
-        // Small delay to ensure all scripts are loaded
-        setTimeout(() => {
-          if (typeof fetchStations === 'function') {
-            console.log('Loading initial station data for Performance tab');
-            fetchStations();
-          }
-        }, 200);
-      }
-    });
-  </script>
-</body>
-</html>
-      `;
-      res.send(adminHtmlContent);
-    } else {
-      // Regular user dashboard (existing code)
-      const htmlContent = `
   <title>Home - ${escapeHtml(decoded.username)}</title>
   <link rel="stylesheet" href="/css/style.css">
   
@@ -613,7 +407,6 @@ app.get('/home', (req, res) => {
     `;
     
     res.send(htmlContent);
-    }
   } catch (error) {
     console.log('Invalid JWT token, redirecting to login');
     res.clearCookie('token');
@@ -1327,41 +1120,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       result = latestStationData;
     } else {
       console.log('🔄 No cached data available, fetching fresh station data...');
-      try {
-        result = await chargenowAPI.fetchChargeNowStations();
-      } catch (error) {
-        console.error('❌ Failed to fetch fresh station data:', error.message);
-        console.log('🔄 Falling back to local stations.json file...');
-        
-        // Fallback to local stations.json file
-        const fs = require('fs');
-        const path = require('path');
-        const stationsPath = path.join(__dirname, 'data', 'stations.json');
-        
-        if (fs.existsSync(stationsPath)) {
-          const localStations = fs.readFileSync(stationsPath, 'utf8');
-          // Convert local stations format to match API format
-          const parsedStations = JSON.parse(localStations);
-          const apiFormat = {
-            code: 0,
-            msg: 'success',
-            data: parsedStations.map(station => ({
-              pCabinetid: station.id,
-              id: station.id,
-              name: station.name,
-              address: station.address,
-              coordinates: station.coordinates,
-              pBorrow: 0, // Default values
-              pAlso: 0
-            }))
-          };
-          
-          result = JSON.stringify(apiFormat);
-          console.log('✅ Fallback to local stations.json successful');
-        } else {
-          throw new Error('No station data available');
-        }
-      }
+      result = await chargenowAPI.fetchChargeNowStations();
     }
     
     let formattedData;
@@ -1416,11 +1175,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       
       console.log('User station permissions length:', userStationIds.length);
       
-      // For Admin users, show all stations
-      if (user.userType === 'Admin') {
-        console.log('Admin user detected - showing all stations');
-        filteredStations = stationsArray;
-      } else if (userStationIds.length > 0) {
+      if (userStationIds.length > 0) {
         // Filter to only show stations the user has access to
         filteredStations = stationsArray.filter(station => {
           const stationId = station.pCabinetid || station.id;
@@ -1441,98 +1196,97 @@ app.get('/api/stations', verifyToken, async (req, res) => {
         });
         console.log(`Filtered stations: ${filteredStations.length} out of ${stationsArray.length}`);
         console.log('Filtered station IDs:', filteredStations.map(s => s.pCabinetid || s.id));
+        
+        // Fetch order data for each filtered station
+        console.log('Fetching order data for filtered stations...');
+        
+        // Get date range from query parameters or use default (last month)
+        const queryStartDate = req.query.startDate;
+        const queryEndDate = req.query.endDate;
+        
+        let sTime, eTime;
+        if (queryStartDate && queryEndDate) {
+          // Use custom date range from frontend - treat as local dates
+          const startDate = new Date(queryStartDate + 'T00:00:00');
+          const endDate = new Date(queryEndDate + 'T23:59:59');
+          sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
+          eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
+          console.log(`Using custom date range: ${sTime} to ${eTime}`);
+        } else {
+          // Use default date range (first day of current month to current date)
+          const endDate = new Date();
+          const startDate = new Date();
+          startDate.setDate(1);
+          // Set to start of day and end of day in local timezone
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+          sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
+          eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
+          console.log(`Using default date range: ${sTime} to ${eTime}`);
+        }
+        
+        for (let station of filteredStations) {
+          try {
+            const stationId = station.pCabinetid || station.id;
+            console.log(`Fetching orders for station: ${stationId}`);
+            
+            // Add station title from user's station_ids dictionary
+            if (typeof user.station_ids === 'object' && user.station_ids !== null && !Array.isArray(user.station_ids)) {
+              station.stationTitle = user.station_ids[stationId] || stationId;
+            } else {
+              station.stationTitle = stationId; // Fallback to station ID if no title
+            }
+            
+            // Return demo data for demo stations
+            if (stationId.startsWith('DEMO')) {
+              // Generate random demo data for each station
+              const randomOrders = Math.floor(Math.random() * 50) + 20; // 20-70 orders
+              const randomRevenue = (Math.random() * 800) + 50; // $50-$850 revenue
+              
+              station.orderData = {
+                totalRecords: randomOrders,
+                totalRevenue: randomRevenue,
+                success: true
+              };
+              
+              console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (DEMO DATA)`);
+            } else {
+              // Use real API for non-demo stations via chargenow-api module
+              const { response, result: orderData } = await chargenowAPI.fetchStationRentalHistory(stationId, sTime, eTime);
+              
+              // Add order data to station
+              station.orderData = {
+                totalRecords: orderData.page?.total || 0,
+                totalRevenue: 0,
+                success: orderData.code === 0
+              };
+              
+              // Calculate total revenue from all records
+              if (orderData.page?.records && Array.isArray(orderData.page.records)) {
+                station.orderData.totalRevenue = orderData.page.records.reduce((sum, record) => {
+                  return sum + (parseFloat(record.settledAmount) || 0);
+                }, 0);
+              }
+              
+              console.log(`[MAIN] Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (rounded: $${Math.round(station.orderData.totalRevenue)})`);
+            }
+            
+          } catch (error) {
+            console.error(`Error fetching orders for station ${station.pCabinetid}:`, error);
+            station.orderData = {
+              totalRecords: 0,
+              totalRevenue: 0,
+              success: false,
+              error: error.message
+            };
+          }
+        }
+        
       } else {
-        console.log('No stations assigned to user');
+        console.log('User has no station permissions, showing no stations');
         filteredStations = [];
       }
-    }
-    
-    // Fetch order data for each filtered station
-    console.log('Fetching order data for filtered stations...');
-    
-    // Get date range from query parameters or use default (last month)
-    const queryStartDate = req.query.startDate;
-    const queryEndDate = req.query.endDate;
-    
-    let sTime, eTime;
-    if (queryStartDate && queryEndDate) {
-      // Use custom date range from frontend - treat as local dates
-      const startDate = new Date(queryStartDate + 'T00:00:00');
-      const endDate = new Date(queryEndDate + 'T23:59:59');
-      sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
-      eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
-      console.log(`Using custom date range: ${sTime} to ${eTime}`);
     } else {
-      // Use default date range (first day of current month to current date)
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(1);
-      // Set to start of day and end of day in local timezone
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
-      sTime = startDate.toISOString().slice(0, 19).replace('T', ' ');
-      eTime = endDate.toISOString().slice(0, 19).replace('T', ' ');
-      console.log(`Using default date range: ${sTime} to ${eTime}`);
-    }
-    
-    for (let station of filteredStations) {
-      try {
-        const stationId = station.pCabinetid || station.id;
-        console.log(`Fetching orders for station: ${stationId}`);
-        
-        // Add station title from user's station_ids dictionary
-        if (typeof user.station_ids === 'object' && user.station_ids !== null && !Array.isArray(user.station_ids)) {
-          station.stationTitle = user.station_ids[stationId] || stationId;
-        } else {
-          station.stationTitle = stationId; // Fallback to station ID if no title
-        }
-        
-        // Return demo data for demo stations
-        if (stationId.startsWith('DEMO')) {
-          // Generate random demo data for each station
-          const randomOrders = Math.floor(Math.random() * 50) + 20; // 20-70 orders
-          const randomRevenue = (Math.random() * 800) + 50; // $50-$850 revenue
-          
-          station.orderData = {
-            totalRecords: randomOrders,
-            totalRevenue: randomRevenue,
-            success: true
-          };
-          
-          console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (DEMO DATA)`);
-        } else {
-          // Use real API for non-demo stations via chargenow-api module
-          const { response, result: orderData } = await chargenowAPI.fetchStationRentalHistory(stationId, sTime, eTime);
-          
-          // Add order data to station
-          station.orderData = {
-            totalRecords: orderData.page?.total || 0,
-            totalRevenue: 0,
-            success: orderData.code === 0
-          };
-          
-          // Calculate total revenue from all records
-          if (orderData.page?.records && Array.isArray(orderData.page.records)) {
-            station.orderData.totalRevenue = orderData.page.records.reduce((sum, record) => {
-              return sum + (parseFloat(record.settledAmount) || 0);
-            }, 0);
-          }
-          
-          console.log(`[MAIN] Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (rounded: $${Math.round(station.orderData.totalRevenue)})`);
-        }
-        
-      } catch (error) {
-        console.error(`Error fetching orders for station ${station.pCabinetid}:`, error);
-        station.orderData = {
-          totalRecords: 0,
-          totalRevenue: 0,
-          success: false,
-          error: error.message
-        };
-      }
-    }
-    
-    if (stationsArray.length === 0) {
       console.log('No stations found in API response');
     }
     
