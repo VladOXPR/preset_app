@@ -178,52 +178,6 @@ textarea:focus {
   box-shadow: 0 0 0 2px rgba(217, 217, 217, 0.2);
 }
 
-/* Password input wrapper with eye icon */
-.password-input-wrapper {
-  position: relative;
-  width: 100%;
-  margin-bottom: 1.5rem;
-}
-
-.password-input-wrapper input[type="password"],
-.password-input-wrapper input[type="text"] {
-  width: 100%;
-  padding-right: 50px; /* Make room for the eye icon */
-  margin-bottom: 0;
-}
-
-.password-toggle {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.password-toggle:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.password-toggle:active {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.eye-icon {
-  font-size: 18px;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
-
 textarea {
   resize: vertical;
   min-height: 80px;

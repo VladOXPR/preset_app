@@ -319,38 +319,13 @@ app.get('/home', (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Home - ${escapeHtml(decoded.username)}</title>
+  <title>Welcome</title>
   <link rel="stylesheet" href="/css/style.css">
-  
-  <!-- Favicon and iOS icons -->
-  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico?v=2">
-  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png?v=2">
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png?v=2">
-  <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48x48.png?v=2">
-  <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon-64x64.png?v=2">
-  <link rel="icon" type="image/png" sizes="96x96" href="/icons/favicon-96x96.png?v=2">
-  <link rel="icon" type="image/png" sizes="128x128" href="/icons/favicon-128x128.png?v=2">
-  <link rel="icon" type="image/png" sizes="144x144" href="/icons/favicon-144x144.png?v=2">
-  <link rel="icon" type="image/png" sizes="150x150" href="/icons/favicon-150x150.png?v=2">
-  <link rel="icon" type="image/png" sizes="152x152" href="/icons/favicon-152x152.png?v=2">
-  <link rel="icon" type="image/png" sizes="167x167" href="/icons/favicon-167x167.png?v=2">
-  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png?v=2">
-  <link rel="icon" type="image/png" sizes="256x256" href="/icons/favicon-256x256.png?v=2">
-  <link rel="icon" type="image/png" sizes="384x384" href="/icons/favicon-384x384.png?v=2">
-  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png?v=2">
-  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=2">
-  <link rel="manifest" href="/icons/site.webmanifest?v=2">
-  
-  <!-- iOS home screen meta tags -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Preset App">
-  <meta name="theme-color" content="#000000">
 </head>
 <body>
   <div class="container" data-username="${decoded.username}" data-usertype="${decoded.userType}">
     <div class="welcome-top">
-      <div class="summary-stats">
+              <div class="summary-stats">
           <div class="stat-item">
             <div class="stat-value" id="take-home">$0</div>
             <div class="stat-label">Take home</div>

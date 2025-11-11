@@ -130,7 +130,6 @@ async function getAllUsersWithPasswords() {
       username: user.username,
       phone: user.phone,
       password: user.password,
-      userType: user.userType,
       station_ids: user.station_ids || [],
       station_titles: user.station_titles || {},
       created_at: user.created_at
