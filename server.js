@@ -84,6 +84,89 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Test API token endpoint - uses same logic as testapi.js
+app.get('/api/test-token', async (req, res) => {
+  try {
+    console.log('Testing ChargeNow API token...');
+    
+    // Use the exact same API call as testapi.js
+    const API_URL = 'https://backend.energo.vip/api/cabinet?sort=isOnline,asc&sort=id,desc&page=0&size=10&leaseFilter=false&posFilter=false&AdsFilter=false';
+    const AUTH_TOKEN = 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkNDVhMjkzNWY3M2Y0ZjQ1OWU4MzdjM2E1YzBmOTgyMCIsInVzZXIiOiJjdWJVU0EyMDI1IiwiaXNBcGlUb2tlbiI6ZmFsc2UsInN1YiI6ImN1YlVTQTIwMjUiLCJBUElLRVkiOiJidXpOTEQyMDI0IiwiZXhwIjoxNzY1NDc5MDI1fQ.e8cSdnd-EQQZbkNf-qZCMn_0dBk1x8R9vYSkQNVObvp_f6PHcndXJTI5YBddl8WzUFAiMHLfM17zZV5ppmZ7Pw';
+    
+    // Add timestamp to prevent caching
+    const urlWithTimestamp = `${API_URL}&_t=${Date.now()}`;
+    
+    const response = await fetch(urlWithTimestamp, {
+      method: 'GET',
+      headers: {
+        'Authorization': AUTH_TOKEN,
+        'Accept': 'application/json, text/plain, */*',
+        'Content-Type': 'application/json',
+        'language': 'en-US',
+        'oid': '3526',
+        'Referer': 'https://backend.energo.vip/device/list',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:144.0) Gecko/20100101 Firefox/144.0'
+      }
+    });
+    
+    console.log(`Status Code: ${response.status} ${response.statusText}`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Validate response structure
+      if (data && data.content && Array.isArray(data.content)) {
+        console.log('✅ Token test successful');
+        res.json({
+          success: true,
+          statusCode: response.status,
+          totalElements: data.totalElements,
+          stationsCount: data.content.length,
+          sampleStation: data.content[0]?.cabinetId || 'N/A',
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        console.log('⚠️  Unexpected response structure');
+        res.json({
+          success: false,
+          statusCode: response.status,
+          error: 'Unexpected response structure',
+          message: 'API returned data but not in expected format',
+          data: data,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } else {
+      const errorText = await response.text();
+      console.log('❌ Token test failed');
+      
+      let errorMessage = errorText;
+      if (response.status === 401 || response.status === 403) {
+        errorMessage = '🔒 TOKEN EXPIRED OR UNAUTHORIZED!';
+      }
+      
+      res.json({
+        success: false,
+        statusCode: response.status,
+        error: response.statusText,
+        message: errorMessage,
+        details: errorText,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('❌ Token test error:', error.message);
+    
+    res.json({
+      success: false,
+      statusCode: 'N/A',
+      error: error.name || 'Error',
+      message: error.message || 'Unknown error occurred',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // ========================================
 // CHARGENOW API WRAPPER FUNCTIONS
 // ========================================
@@ -417,6 +500,11 @@ app.post('/api/logout-admin', (req, res) => {
 // Admin password page
 app.get('/admin-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/html/admin-password.html'));
+});
+
+// Test API page
+app.get('/testapi', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/html/testapi.html'));
 });
 
 // Protected admin route
