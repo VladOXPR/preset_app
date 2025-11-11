@@ -84,6 +84,126 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Helper function to read/write token from file
+const tokenFilePath = path.join(__dirname, 'data', 'api-token.json');
+
+async function getStoredToken() {
+  try {
+    const data = await fs.readFile(tokenFilePath, 'utf8');
+    const tokenData = JSON.parse(data);
+    return tokenData.token;
+  } catch (error) {
+    console.error('Error reading token file:', error);
+    // Return default token if file doesn't exist
+    return 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkNDVhMjkzNWY3M2Y0ZjQ1OWU4MzdjM2E1YzBmOTgyMCIsInVzZXIiOiJjdWJVU0EyMDI1IiwiaXNBcGlUb2tlbiI6ZmFsc2UsInN1YiI6ImN1YlVTQTIwMjUiLCJBUElLRVkiOiJidXpOTEQyMDI0IiwiZXhwIjoxNzY1NDc5MDI1fQ.e8cSdnd-EQQZbkNf-qZCMn_0dBk1x8R9vYSkQNVObvp_f6PHcndXJTI5YBddl8WzUFAiMHLfM17zZV5ppmZ7Pw';
+  }
+}
+
+async function saveToken(token) {
+  try {
+    const tokenData = {
+      token: token,
+      lastUpdated: new Date().toISOString()
+    };
+    await fs.writeFile(tokenFilePath, JSON.stringify(tokenData, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error saving token file:', error);
+    return false;
+  }
+}
+
+function decodeTokenExpiry(token) {
+  try {
+    // Remove "Bearer " prefix if present
+    const tokenString = token.replace('Bearer ', '');
+    
+    // JWT tokens are in format: header.payload.signature
+    const parts = tokenString.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+    
+    // Decode the payload (second part)
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    
+    // The 'exp' field contains the expiration timestamp
+    if (payload.exp) {
+      return new Date(payload.exp * 1000); // Convert from seconds to milliseconds
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return null;
+  }
+}
+
+// Get current token info
+app.get('/api/token-info', async (req, res) => {
+  try {
+    const token = await getStoredToken();
+    const expiryDate = decodeTokenExpiry(token);
+    
+    res.json({
+      success: true,
+      token: token,
+      expiryDate: expiryDate ? expiryDate.toISOString() : null
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Update token
+app.post('/api/update-token', async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token || !token.startsWith('Bearer ')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid token format. Token must start with "Bearer "'
+      });
+    }
+    
+    // Verify token can be decoded
+    const expiryDate = decodeTokenExpiry(token);
+    if (!expiryDate) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid token format. Cannot decode JWT token.'
+      });
+    }
+    
+    // Save the token
+    const saved = await saveToken(token);
+    
+    if (saved) {
+      console.log('✅ Token updated successfully');
+      res.json({
+        success: true,
+        message: 'Token updated successfully',
+        expiryDate: expiryDate.toISOString()
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to save token'
+      });
+    }
+  } catch (error) {
+    console.error('Error updating token:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Test API token endpoint - uses same logic as testapi.js
 app.get('/api/test-token', async (req, res) => {
   try {
@@ -91,7 +211,7 @@ app.get('/api/test-token', async (req, res) => {
     
     // Use the exact same API call as testapi.js
     const API_URL = 'https://backend.energo.vip/api/cabinet?sort=isOnline,asc&sort=id,desc&page=0&size=10&leaseFilter=false&posFilter=false&AdsFilter=false';
-    const AUTH_TOKEN = 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkNDVhMjkzNWY3M2Y0ZjQ1OWU4MzdjM2E1YzBmOTgyMCIsInVzZXIiOiJjdWJVU0EyMDI1IiwiaXNBcGlUb2tlbiI6ZmFsc2UsInN1YiI6ImN1YlVTQTIwMjUiLCJBUElLRVkiOiJidXpOTEQyMDI0IiwiZXhwIjoxNzY1NDc5MDI1fQ.e8cSdnd-EQQZbkNf-qZCMn_0dBk1x8R9vYSkQNVObvp_f6PHcndXJTI5YBddl8WzUFAiMHLfM17zZV5ppmZ7Pw';
+    const AUTH_TOKEN = await getStoredToken();
     
     // Add timestamp to prevent caching
     const urlWithTimestamp = `${API_URL}&_t=${Date.now()}`;
