@@ -74,6 +74,12 @@ async function updateStationData() {
   }
 }
 
+// Initialize station data on server start
+updateStationData();
+
+// Schedule station data updates every minute (60000 ms)
+setInterval(updateStationData, 60000);
+
 // Initialize Express app and configuration
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -263,10 +269,6 @@ app.get('/login', (req, res) => {
 </body>
 </html>
   `);
-});
-
-app.get('/apitest', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/html/apitest.html'));
 });
 
 app.get('/signup', (req, res) => {
@@ -1272,16 +1274,16 @@ app.delete('/api/admin/stations/:id', async (req, res) => {
   }
 });
 
-// Make initial API call when server starts (duplicate of updateStationData above - commented out)
-// console.log('Making initial API call to ChargeNow...');
-// chargenowAPI.fetchChargeNowStations()
-//   .then(result => {
-//     console.log('Device list received:', result);
-//     console.log('Initial API call completed successfully');
-//   })
-//   .catch(error => {
-//     console.error('Initial API call failed:', error);
-//   });
+// Make initial API call when server starts
+console.log('Making initial API call to ChargeNow...');
+chargenowAPI.fetchChargeNowStations()
+  .then(result => {
+    console.log('Device list received:', result);
+    console.log('Initial API call completed successfully');
+  })
+  .catch(error => {
+    console.error('Initial API call failed:', error);
+  });
 
 
 
@@ -1315,18 +1317,11 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     console.log('User station_ids:', JSON.stringify(user.station_ids));
     console.log('=== END DEBUG ===');
     
-    // Use Energo API for demo user, otherwise use cached station data
+    // Use demo data for demo user, otherwise use cached station data
     let result;
     if (req.user.username === 'demo') {
-      console.log('🎭 Fetching real station data from Energo API for demo user');
-      try {
-        const energoData = await chargenowAPI.fetchEnergoStations(0, 100);
-        result = JSON.stringify(energoData.result);
-      } catch (error) {
-        console.error('❌ Failed to fetch from Energo API:', error.message);
-        console.log('🎭 Falling back to demo station data');
-        result = chargenowAPI.generateDemoStationData();
-      }
+      console.log('🎭 Using demo station data for demo user');
+      result = chargenowAPI.generateDemoStationData();
     } else if (latestStationData && lastFetchTime) {
       console.log('📋 Using cached station data from:', lastFetchTime);
       result = latestStationData;
@@ -2014,37 +2009,6 @@ app.get('/api/test-chargenow', async (req, res) => {
   }
 });
 
-// Test endpoint for Energo API
-app.get('/api/test-energo', async (req, res) => {
-  try {
-    console.log('Manual Energo API call triggered');
-    
-    const { page = 0, size = 10 } = req.query;
-    console.log(`Fetching Energo stations: page=${page}, size=${size}`);
-    
-    const energoData = await chargenowAPI.fetchEnergoStations(parseInt(page), parseInt(size));
-    
-    console.log('Energo API response:', energoData.result);
-    
-    res.json({ 
-      success: true,
-      source: 'Energo API',
-      data: energoData.result,
-      status: energoData.response.status,
-      totalStations: energoData.result.totalElements || 0,
-      stationsReturned: energoData.result.data?.length || 0,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Energo API call failed:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
 // Dispense battery endpoint for Distributor users
 app.post('/api/dispense-battery', verifyToken, async (req, res) => {
   try {
@@ -2387,19 +2351,6 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://0.0.0.0:${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    
-    // Initialize station data AFTER server starts (non-blocking)
-    console.log('🔄 Starting background station data fetch...');
-    updateStationData().catch(err => {
-      console.error('Initial station data update failed:', err.message);
-    });
-    
-    // Schedule station data updates every minute (60000 ms)
-    setInterval(() => {
-      updateStationData().catch(err => {
-        console.error('Scheduled station data update failed:', err.message);
-      });
-    }, 60000);
   });
 
   // Error handling for uncaught exceptions

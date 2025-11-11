@@ -17,48 +17,6 @@ if (typeof globalThis.fetch === 'undefined') {
 }
 
 // ========================================
-// TIMEOUT HELPER
-// ========================================
-
-/**
- * Fetch with timeout
- * @param {string} url - The URL to fetch
- * @param {Object} options - Fetch options
- * @param {number} timeout - Timeout in milliseconds (default: 10000)
- * @returns {Promise<Response>} - Fetch response
- */
-async function fetchWithTimeout(url, options = {}, timeout = 10000) {
-  // Check if AbortController is available
-  if (typeof AbortController === 'undefined') {
-    console.warn('AbortController not available, using timeout without abort');
-    return Promise.race([
-      fetch(url, options),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`Request timeout after ${timeout}ms`)), timeout)
-      )
-    ]);
-  }
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      throw new Error(`Request timeout after ${timeout}ms`);
-    }
-    throw error;
-  }
-}
-
-// ========================================
 // CONFIGURATION
 // ========================================
 
@@ -67,90 +25,9 @@ const CHARGENOW_CONFIG = {
   credentials: 'Basic VmxhZFZhbGNoa292OlZWMTIxMg==', // Base64 encoded credentials
 };
 
-const ENERGO_CONFIG = {
-  baseUrl: 'https://backend.energo.vip/api',
-  authToken: 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkNDVhMjkzNWY3M2Y0ZjQ1OWU4MzdjM2E1YzBmOTgyMCIsInVzZXIiOiJjdWJVU0EyMDI1IiwiaXNBcGlUb2tlbiI6ZmFsc2UsInN1YiI6ImN1YlVTQTIwMjUiLCJBUElLRVkiOiJidXpOTEQyMDI0IiwiZXhwIjoxNzY1NDc5MDI1fQ.e8cSdnd-EQQZbkNf-qZCMn_0dBk1x8R9vYSkQNVObvp_f6PHcndXJTI5YBddl8WzUFAiMHLfM17zZV5ppmZ7Pw',
-  oid: '3526',
-  language: 'en-US'
-};
-
 // ========================================
 // CORE API FUNCTIONS
 // ========================================
-
-/**
- * Fetches all devices/stations from Energo API
- * @param {number} page - Page number (default: 0)
- * @param {number} size - Items per page (default: 100 for all stations)
- * @returns {Promise<Object>} - Object containing response and result
- */
-async function fetchEnergoStations(page = 0, size = 100) {
-  const myHeaders = new Headers();
-  myHeaders.append("Authorization", ENERGO_CONFIG.authToken);
-  myHeaders.append("Accept", "application/json, text/plain, */*");
-  myHeaders.append("Content-Type", "application/json");
-  myHeaders.append("language", ENERGO_CONFIG.language);
-  myHeaders.append("oid", ENERGO_CONFIG.oid);
-  myHeaders.append("Referer", "https://backend.energo.vip/device/list");
-  myHeaders.append("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:144.0) Gecko/20100101 Firefox/144.0");
-  
-  const requestOptions = {
-    method: 'GET',
-    headers: myHeaders,
-    redirect: 'follow'
-  };
-  
-  const url = `${ENERGO_CONFIG.baseUrl}/cabinet?sort=isOnline,asc&sort=id,desc&page=${page}&size=${size}&leaseFilter=false&posFilter=false&AdsFilter=false&_t=${Date.now()}`;
-  console.log('Making API call to Energo: /cabinet');
-  
-  const response = await fetchWithTimeout(url, requestOptions, 15000); // 15 second timeout
-  const result = await response.json();
-  
-  console.log('Energo API response status:', response.status);
-  console.log('Energo API total stations:', result.totalElements || 0);
-  
-  // Transform Energo API response to match the expected format
-  if (result.content && Array.isArray(result.content)) {
-    const transformedStations = result.content.map(station => ({
-      pCabinetid: station.cabinetId || station.id,
-      id: station.id,
-      stationTitle: station.cabinetId || `Station ${station.id}`,
-      // Map position info to expected fields
-      pBorrow: station.positionInfo?.borrowNum || 0,  // Batteries available to take
-      pAlso: station.positionInfo?.returnNum || 0,     // Batteries available to return
-      totalNum: station.positionInfo?.totalNum || 0,
-      rentNum: station.positionInfo?.rentNum || 0,
-      // Additional fields
-      isOnline: station.isOnline,
-      devicenum: station.devicenum,
-      shopName: station.shopName,
-      onlineTime: station.onlineTime,
-      offlineTime: station.offlineTime,
-      qrcodeUrl: station.qrcodeUrl,
-      // Keep original data for reference
-      _original: station
-    }));
-    
-    return {
-      response,
-      result: {
-        code: 0,
-        msg: 'success',
-        data: transformedStations,
-        totalElements: result.totalElements
-      }
-    };
-  }
-  
-  return {
-    response,
-    result: {
-      code: -1,
-      msg: 'Invalid response format',
-      data: []
-    }
-  };
-}
 
 /**
  * Fetches all devices/stations from ChargeNow API
@@ -167,7 +44,7 @@ async function fetchChargeNowStations() {
   };
   
   console.log('Making API call to ChargeNow: /cabinet/getAllDevice');
-  const response = await fetchWithTimeout(`${CHARGENOW_CONFIG.baseUrl}/cabinet/getAllDevice`, requestOptions, 15000);
+  const response = await fetch(`${CHARGENOW_CONFIG.baseUrl}/cabinet/getAllDevice`, requestOptions);
   const result = await response.text();
   
   console.log('ChargeNow API response status:', response.status);
@@ -430,7 +307,6 @@ function calculateOrderStats(orders) {
 module.exports = {
   // Core API functions
   fetchChargeNowStations,
-  fetchEnergoStations,
   fetchBatteryRentalInfo,
   fetchStationAvailability,
   fetchStationRentalHistory,
@@ -442,7 +318,6 @@ module.exports = {
   calculateOrderStats,
   
   // Configuration (for future customization)
-  CHARGENOW_CONFIG,
-  ENERGO_CONFIG
+  CHARGENOW_CONFIG
 };
 

@@ -90,12 +90,6 @@ async function fetchStations() {
     console.log('Current URL:', window.location.href);
     console.log('Is admin dashboard:', !!document.querySelector('.admin-dashboard'));
     
-    // Show loading indicator
-    const stationList = document.getElementById('station-list');
-    if (stationList) {
-      stationList.innerHTML = '<div class="loading-message">⏳ Loading stations...</div>';
-    }
-    
     // Get selected date range
     const dateRange = getSelectedDateRange();
     
@@ -126,6 +120,7 @@ async function fetchStations() {
       displayStations(result.data);
     } else {
       console.error('Failed to fetch stations:', result);
+      const stationList = document.getElementById('station-list');
       if (stationList) {
         stationList.innerHTML = '<p>Error loading stations: ' + (result.error || 'Unknown error') + '</p>';
       }

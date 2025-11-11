@@ -798,27 +798,6 @@ a.secondary:hover, button.secondary:hover {
   margin: 2rem 0;
 }
 
-/* Loading message */
-.loading-message {
-  text-align: center;
-  padding: 40px 20px;
-  font-size: 18px;
-  color: #666;
-  background: #f5f5f5;
-  border-radius: 12px;
-  margin: 20px 0;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
 /* Date Range Panel Styles */
 .date-range-panel {
   border: none;
