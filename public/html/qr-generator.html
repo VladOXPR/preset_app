@@ -61,6 +61,43 @@
             font-weight: bold;
             font-size: 16px;
         }
+        .qr-bottom-text {
+            width: 200px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 35px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .qr-bottom-text .gradient-text {
+            display: inline-block;
+        }
+        .qr-bottom-text .gradient-text.gradient-1 {
+            background: linear-gradient(to right, #FEDC7C, #E64102);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .qr-bottom-text .gradient-text.gradient-2 {
+            background: linear-gradient(to right, #FFD55C, #FFB700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .qr-bottom-text .gradient-text.gradient-3 {
+            background: linear-gradient(to right, #DFA2ED, #A741BB);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .qr-bottom-text .emoji {
+            display: inline-block;
+            color: white;
+            font-size: 30px;
+        }
         .qr-link {
             margin-top: 10px;
             font-size: 12px;
@@ -332,12 +369,23 @@
                 const container = document.getElementById('qr-container');
                 container.innerHTML = '';
 
-                links.forEach((link) => {
+                // Variations for each column (text and emoji separated)
+                const columnVariations = [
+                    { text: 'OR ELSE', emoji: '😡' },  // Column 1
+                    { text: 'PLEASE ', emoji: '🙏' },   // Column 2
+                    { text: 'OR ELSE', emoji: '😈' },  // Column 3
+                    { text: 'OR ELSE', emoji: '😡' }   // Column 4 (repeating first)
+                ];
+
+                links.forEach((link, index) => {
                     const item = document.createElement('div');
                     item.className = 'qr-item';
                     
                     // Extract 4-digit code from link (e.g., "A001" from "https://battery.cuub.tech/A001")
                     const code = link.split('/').pop();
+                    
+                    // Determine which column this QR code is in (0-3)
+                    const columnIndex = index % 4;
                     
                     const qrDiv = document.createElement('div');
                     qrDiv.style.width = '200px';
@@ -364,12 +412,46 @@
                     qrCanvasWrapper.appendChild(qrCanvas);
                     qrCanvasWrapper.appendChild(overlay);
                     
+                    // Add bottom text with column-specific variation and gradient
+                    const bottomText = document.createElement('div');
+                    bottomText.className = 'qr-bottom-text';
+                    
+                    const variation = columnVariations[columnIndex];
+                    
+                    // Create text span with gradient
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'gradient-text';
+                    
+                    // Apply gradient class based on column
+                    if (columnIndex === 0 || columnIndex === 3) {
+                        // Column 1 and 4: OR ELSE 😡 - gradient from #FEDC7C to #E64102
+                        textSpan.classList.add('gradient-1');
+                    } else if (columnIndex === 1) {
+                        // Column 2: PLEASE 🙏 - gradient from #FFD55C to #FFB700
+                        textSpan.classList.add('gradient-2');
+                    } else if (columnIndex === 2) {
+                        // Column 3: OR ELSE 😈 - gradient from #DFA2ED to #A741BB
+                        textSpan.classList.add('gradient-3');
+                    }
+                    
+                    textSpan.textContent = variation.text;
+                    
+                    // Create emoji span (no gradient)
+                    const emojiSpan = document.createElement('span');
+                    emojiSpan.className = 'emoji';
+                    emojiSpan.textContent = variation.emoji;
+                    
+                    // Append text and emoji to bottomText
+                    bottomText.appendChild(textSpan);
+                    bottomText.appendChild(emojiSpan);
+                    
                     const linkText = document.createElement('div');
                     linkText.className = 'qr-link';
                     linkText.textContent = link;
                     
                     qrDiv.appendChild(scanText);
                     qrDiv.appendChild(qrCanvasWrapper);
+                    qrDiv.appendChild(bottomText);
                     item.appendChild(qrDiv);
                     item.appendChild(linkText);
                     container.appendChild(item);

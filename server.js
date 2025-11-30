@@ -262,6 +262,10 @@ app.get('/home', verifyToken, (req, res) => {
   res.sendFile(path.join(__dirname, 'public/html/home.html'));
 });
 
+app.get('/qr-generator', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/html/qr-generator.html'));
+});
+
 // Admin password validation endpoint
 app.post('/api/validate-admin-password', (req, res) => {
   const { password } = req.body;
