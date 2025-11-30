@@ -2,8 +2,54 @@ console.log('🔧 Script loaded successfully!');
 console.log('Node.js version:', process.version);
 
 const API_URL = 'https://backend.energo.vip/api/cabinet?sort=isOnline,asc&sort=id,desc&page=0&size=10&leaseFilter=false&posFilter=false&AdsFilter=false';
-const AUTH_TOKEN = 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkNDVhMjkzNWY3M2Y0ZjQ1OWU4MzdjM2E1YzBmOTgyMCIsInVzZXIiOiJjdWJVU0EyMDI1IiwiaXNBcGlUb2tlbiI6ZmFsc2UsInN1YiI6ImN1YlVTQTIwMjUiLCJBUElLRVkiOiJidXpOTEQyMDI0IiwiZXhwIjoxNzY1NDc5MDI1fQ.e8cSdnd-EQQZbkNf-qZCMn_0dBk1x8R9vYSkQNVObvp_f6PHcndXJTI5YBddl8WzUFAiMHLfM17zZV5ppmZ7Pw';
+const AUTH_TOKEN = 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiI3ZmEwYzg2ODYyYmI0MWRlYjJiMjAwZDAxMGI1ZjllMiIsInVzZXIiOiJjdWJVU0EyMDI1IiwiaXNBcGlUb2tlbiI6ZmFsc2UsInN1YiI6ImN1YlVTQTIwMjUiLCJBUElLRVkiOiJidXpOTEQyMDI0IiwiZXhwIjoxNzY1NzI0ODM5fQ.sNGtVbT55jbqEsgF80hkiolMgAaxc47KsMQom00GRNKpKs7amRv8N_ZOaRzjRp7Hh6djniQN6i7TihNoHcqiBA';
 
+// Function to decode JWT token and get expiration
+function getTokenExpiration(token) {
+    try {
+        // Remove 'Bearer ' prefix if present
+        const tokenWithoutBearer = token.replace('Bearer ', '');
+        
+        // JWT has 3 parts separated by dots: header.payload.signature
+        const parts = tokenWithoutBearer.split('.');
+        if (parts.length !== 3) {
+            return null;
+        }
+        
+        // Decode the payload (second part)
+        const payload = parts[1];
+        
+        // Add padding if needed (base64url may not have padding)
+        const paddedPayload = payload + '='.repeat((4 - payload.length % 4) % 4);
+        
+        // Decode from base64url
+        const decoded = Buffer.from(paddedPayload, 'base64').toString('utf-8');
+        const tokenData = JSON.parse(decoded);
+        
+        if (tokenData.exp) {
+            const expirationDate = new Date(tokenData.exp * 1000); // Convert Unix timestamp to Date
+            const now = new Date();
+            const timeUntilExpiry = expirationDate - now;
+            const hoursUntilExpiry = timeUntilExpiry / (1000 * 60 * 60);
+            const daysUntilExpiry = hoursUntilExpiry / 24;
+            
+            return {
+                expirationDate,
+                expirationTimestamp: tokenData.exp,
+                timeUntilExpiry,
+                hoursUntilExpiry,
+                daysUntilExpiry,
+                isExpired: timeUntilExpiry < 0,
+                tokenData
+            };
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error decoding token:', error.message);
+        return null;
+    }
+}
 
 let requestCount = 0;
 let successCount = 0;
@@ -42,6 +88,19 @@ async function testAPIToken() {
        if (response.ok) {
            const data = await response.json();
           
+           // Check token expiration status
+           const currentTokenInfo = getTokenExpiration(AUTH_TOKEN);
+           if (currentTokenInfo) {
+               if (currentTokenInfo.isExpired) {
+                   console.log('⚠️  WARNING: Token has EXPIRED but request still succeeded!');
+                   console.log(`   Token expired: ${currentTokenInfo.expirationDate.toLocaleString()}`);
+               } else if (currentTokenInfo.hoursUntilExpiry < 24) {
+                   const hours = currentTokenInfo.hoursUntilExpiry;
+                   const minutes = hours * 60;
+                   console.log(`⚠️  WARNING: Token expires soon! (${hours.toFixed(1)} hours / ${minutes.toFixed(0)} minutes remaining)`);
+               }
+           }
+          
            // Validate response structure
            if (data && data.content && Array.isArray(data.content)) {
                successCount++;
@@ -51,7 +110,7 @@ async function testAPIToken() {
                console.log(`   - Total stations: ${data.totalElements}`);
                console.log(`   - Stations in response: ${data.content.length}`);
                console.log(`   - Success rate: ${successCount}/${requestCount} (${((successCount/requestCount)*100).toFixed(2)}%)`);
-              
+               
                // Show first station ID as sample
                if (data.content.length > 0) {
                    console.log(`   - Sample Station ID: ${data.content[0].cabinetId}`);
@@ -107,8 +166,35 @@ async function testAPIToken() {
 // Run the test immediately
 console.log('🚀 Starting API Token Expiration Test');
 console.log('📡 Testing endpoint:', API_URL);
-console.log('⏱️  Request interval: 60 seconds (1 minute)');
+console.log('⏱️  Request interval: 5 seconds');
 console.log('🔑 Using provided Bearer token');
+
+// Show token expiration prominently
+const startupTokenInfo = getTokenExpiration(AUTH_TOKEN);
+if (startupTokenInfo) {
+    console.log('\n' + '='.repeat(80));
+    console.log('🔑 TOKEN EXPIRATION STATUS:');
+    console.log('='.repeat(80));
+    if (startupTokenInfo.isExpired) {
+        const expiredHours = Math.abs(startupTokenInfo.hoursUntilExpiry);
+        console.log(`   ⚠️  TOKEN IS EXPIRED!`);
+        console.log(`   Expired: ${startupTokenInfo.expirationDate.toLocaleString()}`);
+        console.log(`   Expired ${expiredHours.toFixed(2)} hours ago`);
+    } else {
+        console.log(`   ✅ Token is VALID`);
+        console.log(`   Expires: ${startupTokenInfo.expirationDate.toLocaleString()}`);
+        if (startupTokenInfo.daysUntilExpiry > 1) {
+            console.log(`   Time remaining: ${startupTokenInfo.daysUntilExpiry.toFixed(2)} days (${startupTokenInfo.hoursUntilExpiry.toFixed(2)} hours)`);
+        } else if (startupTokenInfo.hoursUntilExpiry > 1) {
+            console.log(`   Time remaining: ${startupTokenInfo.hoursUntilExpiry.toFixed(2)} hours`);
+        } else {
+            const minutes = startupTokenInfo.hoursUntilExpiry * 60;
+            console.log(`   ⚠️  WARNING: Only ${minutes.toFixed(0)} minutes remaining!`);
+        }
+    }
+    console.log('='.repeat(80));
+}
+
 console.log('\nPress Ctrl+C to stop the test\n');
 
 
@@ -133,6 +219,27 @@ process.on('SIGINT', () => {
    }
    if (firstFailureTime) {
        console.log(`First failure occurred: ${firstFailureTime}`);
+   }
+   
+   // Show token expiration status
+   const finalTokenInfo = getTokenExpiration(AUTH_TOKEN);
+   if (finalTokenInfo) {
+       console.log('\n🔑 Token Status:');
+       if (finalTokenInfo.isExpired) {
+           const expiredHours = Math.abs(finalTokenInfo.hoursUntilExpiry);
+           console.log(`   ⚠️  TOKEN IS EXPIRED! (Expired ${expiredHours.toFixed(2)} hours ago)`);
+           console.log(`   Expiration Date: ${finalTokenInfo.expirationDate.toLocaleString()}`);
+       } else {
+           if (finalTokenInfo.daysUntilExpiry > 1) {
+               console.log(`   ✅ Token expires in ${finalTokenInfo.daysUntilExpiry.toFixed(2)} days`);
+           } else if (finalTokenInfo.hoursUntilExpiry > 1) {
+               console.log(`   ✅ Token expires in ${finalTokenInfo.hoursUntilExpiry.toFixed(2)} hours`);
+           } else {
+               const minutes = finalTokenInfo.hoursUntilExpiry * 60;
+               console.log(`   ⚠️  Token expires in ${minutes.toFixed(0)} minutes!`);
+           }
+           console.log(`   Expiration Date: ${finalTokenInfo.expirationDate.toLocaleString()}`);
+       }
    }
   
    console.log('\n👋 Test stopped by user');

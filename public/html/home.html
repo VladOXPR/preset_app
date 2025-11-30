@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Welcome</title>
-  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
   
   <!-- Favicon and iOS icons -->
   <link rel="icon" type="image/x-icon" href="/icons/favicon.ico?v=2">
@@ -32,7 +32,7 @@
   <meta name="theme-color" content="#000000">
 </head>
 <body>
-      <div class="container">
+      <div class="container" id="main-container">
       <div class="welcome-top">
         <div class="summary-stats">
           <div class="stat-item">
@@ -85,7 +85,33 @@
         </div>
       </div>
     </div>
-      <script src="../js/deployment-manager.js"></script>
-    <script src="../js/home.js"></script>
+      <script src="/js/deployment-manager.js"></script>
+    <script src="/js/home.js"></script>
+    <script src="/js/zoom-prevention.js"></script>
+    <script>
+      // Set data attributes from user info (fetched from /me endpoint)
+      fetch('/me', { credentials: 'include' })
+        .then(r => {
+          if (r.status !== 200) {
+            window.location = '/login';
+            return null;
+          }
+          return r.json();
+        })
+        .then(data => {
+          if (data && data.username) {
+            const container = document.getElementById('main-container');
+            container.setAttribute('data-username', data.username);
+            // Get userType from JWT token or default to 'Host'
+            // The /me endpoint doesn't return userType, so we'll get it from the token
+            // For now, default to 'Host' - home.js will handle the actual user type logic
+            container.setAttribute('data-usertype', data.userType || 'Host');
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching user info:', err);
+          window.location = '/login';
+        });
+    </script>
 </body>
 </html> 

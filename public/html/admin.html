@@ -31,24 +31,8 @@
   <meta name="apple-mobile-web-app-title" content="Preset App">
   <meta name="theme-color" content="#000000">
 </head>
-<body class="admin-page">
+<body>
   <div class="container">
-    <!-- Password Protection Screen -->
-    <div id="password-screen" class="password-screen">
-      <div class="password-container">
-        <h1>Admin Access</h1>
-        <p>Enter password to access admin panel</p>
-        <div class="password-input-group">
-          <input type="password" id="admin-password" class="password-input" placeholder="Enter password">
-          <button id="submit-password" class="primary">Access Admin</button>
-        </div>
-        <div id="password-error" class="password-error" style="display: none;">Incorrect password</div>
-        <a href="/home" class="secondary">Back to Home</a>
-      </div>
-    </div>
-    
-    <!-- Admin Content (Hidden until password is correct) -->
-    <div id="admin-content" class="admin-content" style="display: none;">
       <div class="home-top">
         <h1>Admin Panel</h1>
       </div>
@@ -68,11 +52,11 @@
       
       <div class="button-row">
         <button id="addUserBtn" class="primary">Add New User</button>
-        <a href="/home" class="secondary">Back to Home</a>
-      </div>
+      <button id="logoutBtn" class="secondary">Logout</button>
     </div>
   </div>
   <script src="/js/deployment-manager.js"></script>
   <script src="/js/admin.js"></script>
+  <script src="/js/zoom-prevention.js"></script>
 </body>
 </html> 

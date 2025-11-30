@@ -9,7 +9,8 @@ window.onload = function() {
     return r.json();
   }).then(data => {
     if (!data) return;
-    document.getElementById('welcome').textContent = 'Welcome, ' + data.username;
+    // Note: 'welcome' element doesn't exist in home.html, so we skip this
+    // The welcome message is handled by the data attributes on the container
   });
   
   // Initialize date inputs with default values (last month)

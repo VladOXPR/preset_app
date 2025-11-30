@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" onload="initQRGenerator()" onerror="handleQRCodeError()"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        #qr-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .qr-item {
+            text-align: center;
+        }
+        .qr-scan-text {
+            width: 200px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 70px;
+            color: white;
+        }
+        .qr-item > div:first-child {
+            border-radius: 20px;
+            padding: 20px;
+            padding-top: 7px;
+            background: black;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .qr-canvas-wrapper {
+            position: relative;
+            width: 200px;
+            height: 200px;
+        }
+        .qr-code-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: black;
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-code-overlay-text {
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .qr-link {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+            word-break: break-all;
+        }
+        .download-pdf-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        .download-pdf-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <h1>QR Code Generator</h1>
+    <button class="download-pdf-btn" onclick="downloadPDF()">Download PDF</button>
+    <div id="qr-container"></div>
+
+    <script>
+        // Add your links here
+        const links = [
+            'https://battery.cuub.tech/A001',
+            'https://battery.cuub.tech/A002',
+            'https://battery.cuub.tech/A003',
+            'https://battery.cuub.tech/A004',
+            'https://battery.cuub.tech/A005',
+            'https://battery.cuub.tech/A006',
+            'https://battery.cuub.tech/A007',
+            'https://battery.cuub.tech/A008',
+            'https://battery.cuub.tech/A009',
+            'https://battery.cuub.tech/A010',
+            'https://battery.cuub.tech/A011',
+            'https://battery.cuub.tech/A012',
+            'https://battery.cuub.tech/A013',
+            'https://battery.cuub.tech/A014',
+            'https://battery.cuub.tech/A015',
+            'https://battery.cuub.tech/A016',
+            'https://battery.cuub.tech/A017',
+            'https://battery.cuub.tech/A018',
+            'https://battery.cuub.tech/A019',
+            'https://battery.cuub.tech/A020',
+            'https://battery.cuub.tech/A021',
+            'https://battery.cuub.tech/A022',
+            'https://battery.cuub.tech/A023',
+            'https://battery.cuub.tech/A024',
+            'https://battery.cuub.tech/A025',
+            'https://battery.cuub.tech/A026',
+            'https://battery.cuub.tech/A027',
+            'https://battery.cuub.tech/A028',
+            'https://battery.cuub.tech/A029',
+            'https://battery.cuub.tech/A030',
+            'https://battery.cuub.tech/A031',
+            'https://battery.cuub.tech/A032',
+            'https://battery.cuub.tech/A033',
+            'https://battery.cuub.tech/A034',
+            'https://battery.cuub.tech/A035',
+            'https://battery.cuub.tech/A036',
+            'https://battery.cuub.tech/A037',
+            'https://battery.cuub.tech/A038',
+            'https://battery.cuub.tech/A039',
+            'https://battery.cuub.tech/A040',
+            'https://battery.cuub.tech/A041',
+            'https://battery.cuub.tech/A042',
+            'https://battery.cuub.tech/A043',
+            'https://battery.cuub.tech/A044',
+            'https://battery.cuub.tech/A045',
+            'https://battery.cuub.tech/A046',
+            'https://battery.cuub.tech/A047',
+            'https://battery.cuub.tech/A048',
+            'https://battery.cuub.tech/A049',
+            'https://battery.cuub.tech/A050',
+            'https://battery.cuub.tech/A051',
+            'https://battery.cuub.tech/A052',
+            'https://battery.cuub.tech/A053',
+            'https://battery.cuub.tech/A054',
+            'https://battery.cuub.tech/A055',
+            'https://battery.cuub.tech/A056',
+            'https://battery.cuub.tech/A057',
+            'https://battery.cuub.tech/A058',
+            'https://battery.cuub.tech/A059',
+            'https://battery.cuub.tech/A060',
+            'https://battery.cuub.tech/A061',
+            'https://battery.cuub.tech/A062',
+            'https://battery.cuub.tech/A063',
+            'https://battery.cuub.tech/A064',
+            'https://battery.cuub.tech/A065',
+            'https://battery.cuub.tech/A066',
+            'https://battery.cuub.tech/A067',
+            'https://battery.cuub.tech/A068',
+            'https://battery.cuub.tech/A069',
+            'https://battery.cuub.tech/A070',
+            'https://battery.cuub.tech/A071',
+            'https://battery.cuub.tech/A072',
+            'https://battery.cuub.tech/A073',
+            'https://battery.cuub.tech/A074',
+            'https://battery.cuub.tech/A075',
+            'https://battery.cuub.tech/A076',
+            'https://battery.cuub.tech/A077',
+            'https://battery.cuub.tech/A078',
+            'https://battery.cuub.tech/A079',
+            'https://battery.cuub.tech/A080',
+            'https://battery.cuub.tech/A081',
+            'https://battery.cuub.tech/A082',
+            'https://battery.cuub.tech/A083',
+            'https://battery.cuub.tech/A084',
+            'https://battery.cuub.tech/A085',
+            'https://battery.cuub.tech/A086',
+            'https://battery.cuub.tech/A087',
+            'https://battery.cuub.tech/A088',
+            'https://battery.cuub.tech/A089',
+            'https://battery.cuub.tech/A090',
+            'https://battery.cuub.tech/A091',
+            'https://battery.cuub.tech/A092',
+            'https://battery.cuub.tech/A093',
+            'https://battery.cuub.tech/A094',
+            'https://battery.cuub.tech/A095',
+            'https://battery.cuub.tech/A096',
+            'https://battery.cuub.tech/A097',
+            'https://battery.cuub.tech/A098',
+            'https://battery.cuub.tech/A099',
+            'https://battery.cuub.tech/A100',
+            'https://battery.cuub.tech/A101',
+            'https://battery.cuub.tech/A102',
+            'https://battery.cuub.tech/A103',
+            'https://battery.cuub.tech/A104',
+            'https://battery.cuub.tech/A105',
+            'https://battery.cuub.tech/A106',
+            'https://battery.cuub.tech/A107',
+            'https://battery.cuub.tech/A108',
+            'https://battery.cuub.tech/A109',
+            'https://battery.cuub.tech/A110',
+            'https://battery.cuub.tech/A111',
+            'https://battery.cuub.tech/A112',
+            'https://battery.cuub.tech/A113',
+            'https://battery.cuub.tech/A114',
+            'https://battery.cuub.tech/A115',
+            'https://battery.cuub.tech/A116',
+            'https://battery.cuub.tech/A117',
+            'https://battery.cuub.tech/A118',
+            'https://battery.cuub.tech/A119',
+            'https://battery.cuub.tech/A120',
+            'https://battery.cuub.tech/A121',
+            'https://battery.cuub.tech/A122',
+            'https://battery.cuub.tech/A123',
+            'https://battery.cuub.tech/A124',
+            'https://battery.cuub.tech/A125',
+            'https://battery.cuub.tech/A126',
+            'https://battery.cuub.tech/A127',
+            'https://battery.cuub.tech/A128',
+            'https://battery.cuub.tech/A129',
+            'https://battery.cuub.tech/A130',
+            'https://battery.cuub.tech/A131',
+            'https://battery.cuub.tech/A132',
+            'https://battery.cuub.tech/A133',
+            'https://battery.cuub.tech/A134',
+            'https://battery.cuub.tech/A135',
+            'https://battery.cuub.tech/A136',
+            'https://battery.cuub.tech/A137',
+            'https://battery.cuub.tech/A138',
+            'https://battery.cuub.tech/A139',
+            'https://battery.cuub.tech/A140',
+            'https://battery.cuub.tech/A141',
+            'https://battery.cuub.tech/A142',
+            'https://battery.cuub.tech/A143',
+            'https://battery.cuub.tech/A144',
+            'https://battery.cuub.tech/A145',
+            'https://battery.cuub.tech/A146',
+            'https://battery.cuub.tech/A147',
+            'https://battery.cuub.tech/A148',
+            'https://battery.cuub.tech/A149',
+            'https://battery.cuub.tech/A150',
+            'https://battery.cuub.tech/A151',
+            'https://battery.cuub.tech/A152',
+            'https://battery.cuub.tech/A153',
+            'https://battery.cuub.tech/A154',
+            'https://battery.cuub.tech/A155',
+            'https://battery.cuub.tech/A156',
+            'https://battery.cuub.tech/A157',
+            'https://battery.cuub.tech/A158',
+            'https://battery.cuub.tech/A159',
+            'https://battery.cuub.tech/A160',
+            'https://battery.cuub.tech/A161',
+            'https://battery.cuub.tech/A162',
+            'https://battery.cuub.tech/A163',
+            'https://battery.cuub.tech/A164',
+            'https://battery.cuub.tech/A165',
+            'https://battery.cuub.tech/A166',
+            'https://battery.cuub.tech/A167',
+            'https://battery.cuub.tech/A168',
+            'https://battery.cuub.tech/A169',
+            'https://battery.cuub.tech/A170',
+            'https://battery.cuub.tech/A171',
+            'https://battery.cuub.tech/A172',
+            'https://battery.cuub.tech/A173',
+            'https://battery.cuub.tech/A174',
+            'https://battery.cuub.tech/A175',
+            'https://battery.cuub.tech/A176',
+            'https://battery.cuub.tech/A177',
+            'https://battery.cuub.tech/A178',
+            'https://battery.cuub.tech/A179',
+            'https://battery.cuub.tech/A180',
+            'https://battery.cuub.tech/A181',
+            'https://battery.cuub.tech/A182',
+            'https://battery.cuub.tech/A183',
+            'https://battery.cuub.tech/A184',
+            'https://battery.cuub.tech/A185',
+            'https://battery.cuub.tech/A186',
+            'https://battery.cuub.tech/A187',
+            'https://battery.cuub.tech/A188',
+            'https://battery.cuub.tech/A189',
+            'https://battery.cuub.tech/A190',
+            'https://battery.cuub.tech/A191',
+            'https://battery.cuub.tech/A192',
+            'https://battery.cuub.tech/A193',
+            'https://battery.cuub.tech/A194',
+            'https://battery.cuub.tech/A195',
+            'https://battery.cuub.tech/A196',
+            'https://battery.cuub.tech/A197',
+            'https://battery.cuub.tech/A198',
+            'https://battery.cuub.tech/A199',
+            'https://battery.cuub.tech/A200',
+            'https://battery.cuub.tech/A201',
+            'https://battery.cuub.tech/A202',
+            'https://battery.cuub.tech/A203',
+            'https://battery.cuub.tech/A204',
+            'https://battery.cuub.tech/A205',
+            'https://battery.cuub.tech/A206',
+            'https://battery.cuub.tech/A207',
+            'https://battery.cuub.tech/A208',
+            'https://battery.cuub.tech/A209',
+            'https://battery.cuub.tech/A210',
+            'https://battery.cuub.tech/A211',
+            'https://battery.cuub.tech/A212',
+            'https://battery.cuub.tech/A213',
+            'https://battery.cuub.tech/A214',
+            'https://battery.cuub.tech/A215',
+            'https://battery.cuub.tech/A216',
+            'https://battery.cuub.tech/A217',
+            'https://battery.cuub.tech/A218',
+            'https://battery.cuub.tech/A219',
+            'https://battery.cuub.tech/A220',
+            'https://battery.cuub.tech/A221',
+            'https://battery.cuub.tech/A222',
+            'https://battery.cuub.tech/A223',
+            'https://battery.cuub.tech/A224',
+        ];
+
+        function handleQRCodeError() {
+            document.getElementById('qr-container').innerHTML = '<p style="color: red;">Error: Failed to load QRCode library. Please check your internet connection.</p>';
+        }
+
+        function initQRGenerator() {
+            // Wait a bit to ensure QRCode is fully available
+            setTimeout(function() {
+                if (typeof QRCode === 'undefined') {
+                    document.getElementById('qr-container').innerHTML = '<p style="color: red;">Error: QRCode library not available.</p>';
+                    return;
+                }
+
+                const container = document.getElementById('qr-container');
+                container.innerHTML = '';
+
+                links.forEach((link) => {
+                    const item = document.createElement('div');
+                    item.className = 'qr-item';
+                    
+                    // Extract 4-digit code from link (e.g., "A001" from "https://battery.cuub.tech/A001")
+                    const code = link.split('/').pop();
+                    
+                    const qrDiv = document.createElement('div');
+                    qrDiv.style.width = '200px';
+                    qrDiv.style.margin = '0 auto';
+                    
+                    const scanText = document.createElement('div');
+                    scanText.className = 'qr-scan-text';
+                    scanText.textContent = 'SCAN';
+                    
+                    const qrCanvasWrapper = document.createElement('div');
+                    qrCanvasWrapper.className = 'qr-canvas-wrapper';
+                    
+                    const qrCanvas = document.createElement('div');
+                    qrCanvas.style.width = '200px';
+                    qrCanvas.style.height = '200px';
+                    
+                    const overlay = document.createElement('div');
+                    overlay.className = 'qr-code-overlay';
+                    const overlayText = document.createElement('div');
+                    overlayText.className = 'qr-code-overlay-text';
+                    overlayText.textContent = code;
+                    overlay.appendChild(overlayText);
+                    
+                    qrCanvasWrapper.appendChild(qrCanvas);
+                    qrCanvasWrapper.appendChild(overlay);
+                    
+                    const linkText = document.createElement('div');
+                    linkText.className = 'qr-link';
+                    linkText.textContent = link;
+                    
+                    qrDiv.appendChild(scanText);
+                    qrDiv.appendChild(qrCanvasWrapper);
+                    item.appendChild(qrDiv);
+                    item.appendChild(linkText);
+                    container.appendChild(item);
+
+                    try {
+                        new QRCode(qrCanvas, {
+                            text: link,
+                            width: 200,
+                            height: 200,
+                            colorDark: '#FFFFFF',
+                            colorLight: '#000000',
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                    } catch (error) {
+                        console.error('Error generating QR code:', error);
+                        qrCanvas.innerHTML = '<p style="color: red;">Error generating QR code</p>';
+                    }
+                });
+            }, 50);
+        }
+
+        // Fallback: if script loaded before this code runs
+        if (typeof QRCode !== 'undefined') {
+            initQRGenerator();
+        }
+
+        // PDF Download Function
+        async function downloadPDF() {
+            console.log('Starting PDF download...');
+            
+            // Show loading indicator
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Generating PDF...';
+            btn.disabled = true;
+            
+            // Wait for libraries to load
+            let attempts = 0;
+            while ((typeof window.jspdf === 'undefined' || typeof html2canvas === 'undefined') && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+
+            if (typeof window.jspdf === 'undefined') {
+                console.error('jsPDF library not loaded');
+                alert('jsPDF library not loaded. Please refresh the page and try again.');
+                btn.textContent = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            if (typeof html2canvas === 'undefined') {
+                console.error('html2canvas library not loaded');
+                alert('html2canvas library not loaded. Please refresh the page and try again.');
+                btn.textContent = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            try {
+                const { jsPDF } = window.jspdf;
+                console.log('jsPDF loaded, creating PDF...');
+                
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'in',
+                    format: 'letter' // 8.5 x 11 inches
+                });
+
+                const pageWidth = 8.5;
+                const pageHeight = 11;
+                const qrCodesPerPage = 16; // 4x4 grid
+                const qrCodesPerRow = 4;
+                const margin = 0.5; // inch margin on all sides
+                const usableWidth = pageWidth - (margin * 2); // 7.5 inches
+                const usableHeight = pageHeight - (margin * 2); // 10 inches
+                const qrSize = 1.5; // inches per QR code
+                const spacingX = (usableWidth - (qrCodesPerRow * qrSize)) / (qrCodesPerRow - 1);
+                const spacingY = (usableHeight - (qrCodesPerRow * qrSize)) / (qrCodesPerRow - 1);
+
+                const qrItems = document.querySelectorAll('.qr-item');
+                const totalQRCodes = qrItems.length;
+                const totalPages = Math.ceil(totalQRCodes / qrCodesPerPage);
+
+                console.log(`Found ${totalQRCodes} QR codes, generating ${totalPages} page(s)...`);
+
+                // Capture all QR codes directly from the page as they are rendered
+                const capturePromises = [];
+
+                for (let i = 0; i < totalQRCodes; i++) {
+                    const qrItem = qrItems[i];
+                    const qrDiv = qrItem.querySelector('.qr-item > div:first-child');
+                    
+                    if (!qrDiv) {
+                        capturePromises.push(Promise.resolve(null));
+                        continue;
+                    }
+
+                    // Capture the actual rendered div with all its styles
+                    capturePromises.push(
+                        html2canvas(qrDiv, {
+                            backgroundColor: '#000000', // Black background to match the div
+                            scale: 3, // Higher scale for better quality
+                            logging: false,
+                            useCORS: true,
+                            allowTaint: true,
+                            windowWidth: qrDiv.offsetWidth,
+                            windowHeight: qrDiv.offsetHeight,
+                            x: 0,
+                            y: 0,
+                            width: qrDiv.offsetWidth,
+                            height: qrDiv.offsetHeight
+                        }).then(canvas => {
+                            return canvas.toDataURL('image/png');
+                        }).catch(error => {
+                            console.error(`Error processing QR code ${i + 1}:`, error);
+                            return null;
+                        })
+                    );
+                }
+
+                // Wait for all captures to complete
+                console.log('Capturing all QR codes...');
+                const capturedImages = await Promise.all(capturePromises);
+
+                // Add images to PDF
+                for (let page = 0; page < totalPages; page++) {
+                    if (page > 0) {
+                        pdf.addPage();
+                    }
+
+                    const startIndex = page * qrCodesPerPage;
+                    const endIndex = Math.min(startIndex + qrCodesPerPage, totalQRCodes);
+
+                    for (let i = startIndex; i < endIndex; i++) {
+                        const imgData = capturedImages[i];
+                        if (!imgData) continue;
+
+                        // Calculate position in 4x4 grid
+                        const indexInPage = i - startIndex;
+                        const row = Math.floor(indexInPage / qrCodesPerRow);
+                        const col = indexInPage % qrCodesPerRow;
+                        
+                        const x = margin + (col * (qrSize + spacingX));
+                        const y = margin + (row * (qrSize + spacingY));
+
+                        // Add image to PDF
+                        pdf.addImage(imgData, 'PNG', x, y, qrSize, qrSize);
+                    }
+                }
+
+                // Save PDF
+                console.log('Saving PDF...');
+                pdf.save('qr-codes.pdf');
+                console.log('PDF download complete!');
+                
+                btn.textContent = originalText;
+                btn.disabled = false;
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert('Error generating PDF: ' + error.message);
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

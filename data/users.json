@@ -73,5 +73,16 @@
       "DEMO004": "Demo Station - Office Building"
     },
     "created_at": "2025-01-15T10:00:00.000Z"
+  },
+  {
+    "id": 7,
+    "username": "Relink",
+    "phone": "7739460236",
+    "password": "$2b$10$Jo9LsM7RLfWpe0nLvYwMW.npHgrF.VduoabIOxT2YNtuFEO1x4uX.",
+    "station_ids": {
+      "RL3T062411030004": "Demo station"
+    },
+    "station_titles": {},
+    "created_at": "2025-11-29T22:48:04.455Z"
   }
 ]

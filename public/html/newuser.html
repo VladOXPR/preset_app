@@ -33,23 +33,24 @@
 </head>
 <body>
   <div class="container">
-    <h1>Add New User</h1>
+    <h1>Create New User</h1>
     <form action="/newuser" method="POST">
-      <label for="phone">Phone number</label>
+      <label for="phone">Phone</label>
       <input type="text" id="phone" name="phone" required>
-      <label for="username">Create username</label>
+      <label for="username">Username</label>
       <input type="text" id="username" name="username" required>
-      <label for="stationIds">Station IDs (comma-separated)</label>
-      <input type="text" id="stationIds" name="stationIds" placeholder="e.g., ST001,ST002,ST003" required>
       <label for="password">Password</label>
       <input type="password" id="password" name="password" required>
-      <label for="password2">Re type password</label>
+      <label for="password2">Confirm Password</label>
       <input type="password" id="password2" name="password2" required>
+      <label for="stationIds">Station IDs (comma-separated)</label>
+      <input type="text" id="stationIds" name="stationIds">
       <div class="button-row">
-        <button type="submit" class="primary">Add</button>
-        <a href="/admin" class="secondary">Cancel</a>
+        <button type="submit" class="primary">Create User</button>
+        <a href="/admin" class="secondary">Back to Admin</a>
       </div>
     </form>
   </div>
+  <script src="/js/zoom-prevention.js"></script>
 </body>
 </html> 

@@ -254,216 +254,13 @@
             border: 1px solid #404040;
             cursor: pointer;
         }
-        
-        /* Token Management Section */
-        .token-management {
-            background: #1a1a1a;
-            padding: 30px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            border: 1px solid #2a2a2a;
-        }
-        
-        .token-management h2 {
-            margin: 0 0 25px 0;
-            color: white;
-            font-size: 24px;
-        }
-        
-        .token-management h3 {
-            margin: 0 0 15px 0;
-            color: #ccc;
-            font-size: 16px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .token-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .token-status-card,
-        .token-display-card {
-            background: #0a0a0a;
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #2a2a2a;
-        }
-        
-        .token-expiry {
-            padding: 15px;
-            background: rgba(59, 130, 246, 0.1);
-            border-radius: 8px;
-            margin-bottom: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        
-        .expiry-label {
-            color: #888;
-            font-size: 12px;
-            text-transform: uppercase;
-        }
-        
-        .expiry-date {
-            color: #3b82f6;
-            font-size: 18px;
-            font-weight: bold;
-            font-family: 'Monaco', monospace;
-        }
-        
-        .expiry-date.expired {
-            color: #ef4444;
-        }
-        
-        .expiry-date.expiring-soon {
-            color: #f59e0b;
-        }
-        
-        .token-health {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 15px;
-            background: rgba(16, 185, 129, 0.1);
-            border-radius: 8px;
-        }
-        
-        .token-health.expired {
-            background: rgba(239, 68, 68, 0.1);
-        }
-        
-        .token-health.expiring-soon {
-            background: rgba(245, 158, 11, 0.1);
-        }
-        
-        .health-indicator {
-            font-size: 24px;
-        }
-        
-        #health-text {
-            color: #10b981;
-            font-weight: 600;
-        }
-        
-        .token-health.expired #health-text {
-            color: #ef4444;
-        }
-        
-        .token-health.expiring-soon #health-text {
-            color: #f59e0b;
-        }
-        
-        .token-preview {
-            background: #000;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #2a2a2a;
-            margin-bottom: 15px;
-            max-height: 120px;
-            overflow-y: auto;
-        }
-        
-        .token-preview code {
-            color: #10b981;
-            font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 12px;
-            word-break: break-all;
-            line-height: 1.6;
-        }
-        
-        .copy-btn {
-            width: 100%;
-            padding: 10px;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        
-        .copy-btn:hover {
-            background: #2563eb;
-        }
-        
-        .copy-btn:active {
-            background: #1d4ed8;
-        }
-        
-        .token-update-section {
-            background: #0a0a0a;
-            padding: 25px;
-            border-radius: 10px;
-            border: 1px solid #2a2a2a;
-        }
-        
-        .update-description {
-            color: #888;
-            margin: 0 0 15px 0;
-            font-size: 14px;
-        }
-        
-        .token-input-group {
-            display: flex;
-            gap: 15px;
-            align-items: flex-start;
-            flex-wrap: wrap;
-        }
-        
-        .token-input {
-            flex: 1;
-            min-width: 300px;
-            padding: 12px;
-            background: #000;
-            border: 1px solid #404040;
-            border-radius: 8px;
-            color: white;
-            font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 13px;
-            resize: vertical;
-        }
-        
-        .token-input:focus {
-            outline: none;
-            border-color: #3b82f6;
-        }
-        
-        .update-message {
-            margin-top: 15px;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            display: none;
-        }
-        
-        .update-message.success {
-            display: block;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid #10b981;
-            color: #10b981;
-        }
-        
-        .update-message.error {
-            display: block;
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid #ef4444;
-            color: #ef4444;
-        }
     </style>
 </head>
 <body>
     <div class="testapi-container">
         <div class="test-header">
-            <h1>🧪 API Token Expiration Test</h1>
-            <p>Monitor ChargeNow API token validity in real-time</p>
+            <h1>🧪 API Token Monitor</h1>
+            <p>24/7 background monitoring of ChargeNow API token validity • Tests run every 60 seconds</p>
         </div>
         
         <div class="stats-grid">
@@ -486,98 +283,43 @@
         </div>
         
         <div class="control-panel">
-            <button class="control-btn start" id="start-btn" onclick="startTest()">
-                ▶️ Start Test
+            <button class="control-btn start" id="start-btn" onclick="startMonitoring()" disabled>
+                ▶️ Start Monitoring
             </button>
-            <button class="control-btn stop" id="stop-btn" onclick="stopTest()" disabled>
-                ⏸️ Stop Test
+            <button class="control-btn stop" id="stop-btn" onclick="stopMonitoring()" disabled>
+                ⏸️ Pause Monitoring
             </button>
             <button class="control-btn clear" onclick="clearLogs()">
                 🗑️ Clear Logs
             </button>
             
-            <div class="interval-control">
-                <label>Interval:</label>
-                <select id="interval-select" onchange="updateInterval()">
-                    <option value="5000">5 seconds</option>
-                    <option value="10000">10 seconds</option>
-                    <option value="30000">30 seconds</option>
-                    <option value="60000" selected>1 minute</option>
-                    <option value="300000">5 minutes</option>
-                </select>
-            </div>
-            
             <div class="status-indicator">
-                <div class="status-dot stopped" id="status-dot"></div>
-                <span id="status-text">Stopped</span>
-            </div>
-        </div>
-        
-        <!-- Token Management Section -->
-        <div class="token-management">
-            <h2>🔑 Token Management</h2>
-            
-            <div class="token-info">
-                <div class="token-status-card">
-                    <h3>Current Token Status</h3>
-                    <div class="token-expiry" id="token-expiry">
-                        <span class="expiry-label">Expires:</span>
-                        <span class="expiry-date" id="expiry-date">Loading...</span>
-                    </div>
-                    <div class="token-health" id="token-health">
-                        <span class="health-indicator" id="health-indicator">⏳</span>
-                        <span id="health-text">Checking...</span>
-                    </div>
-                </div>
-                
-                <div class="token-display-card">
-                    <h3>Current Token</h3>
-                    <div class="token-preview" id="token-preview">
-                        <code id="token-display">Loading...</code>
-                    </div>
-                    <button class="copy-btn" onclick="copyToken()">📋 Copy Token</button>
-                </div>
+                <div class="status-dot running" id="status-dot"></div>
+                <span id="status-text">Initializing...</span>
             </div>
             
-            <div class="token-update-section">
-                <h3>Update Token</h3>
-                <p class="update-description">Paste a new Bearer token below to update the API credentials</p>
-                <div class="token-input-group">
-                    <textarea 
-                        id="new-token-input" 
-                        class="token-input" 
-                        placeholder="Bearer eyJhbGciOiJIUzUxMiJ9..."
-                        rows="4"
-                    ></textarea>
-                    <button class="control-btn start" onclick="updateToken()">
-                        🔄 Update Token
-                    </button>
-                </div>
-                <div id="update-message" class="update-message"></div>
+            <div style="color: #888; font-size: 12px; margin-left: auto;">
+                ⚡ Background service tests every 60 seconds
             </div>
         </div>
         
         <div class="log-container" id="log-container">
             <div style="color: #666; text-align: center; padding: 40px;">
-                Click "Start Test" to begin monitoring the API token
+                Loading test results from background service...
             </div>
         </div>
     </div>
     
     <script>
-        let testInterval = null;
-        let currentInterval = 60000; // 1 minute default
-        let requestCount = 0;
-        let successCount = 0;
-        let failureCount = 0;
+        let refreshInterval = null;
+        let currentRefreshInterval = 5000; // Refresh UI every 5 seconds
+        let displayedLogs = new Set(); // Track which logs we've already displayed
         
-        function updateStats() {
-            document.getElementById('total-requests').textContent = requestCount;
-            document.getElementById('success-count').textContent = successCount;
-            document.getElementById('failure-count').textContent = failureCount;
-            
-            const rate = requestCount > 0 ? ((successCount / requestCount) * 100).toFixed(2) : 0;
-            document.getElementById('success-rate').textContent = rate + '%';
+        function updateStats(stats) {
+            document.getElementById('total-requests').textContent = stats.requestCount;
+            document.getElementById('success-count').textContent = stats.successCount;
+            document.getElementById('failure-count').textContent = stats.failureCount;
+            document.getElementById('success-rate').textContent = stats.successRate.toFixed(2) + '%';
         }
         
         function addLog(timestamp, status, statusCode, details) {
@@ -614,231 +356,110 @@
             }
         }
         
-        async function makeTestRequest() {
-            requestCount++;
-            const timestamp = new Date().toISOString();
-            
+        async function fetchTestStatus() {
             try {
-                const response = await fetch('/api/test-token', {
+                const response = await fetch('/api/test-token-status', {
                     method: 'GET',
                     credentials: 'include'
                 });
                 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 
-                if (response.ok && data.success) {
-                    successCount++;
-                    addLog(timestamp, 'success', data.statusCode, {
-                        'Total Stations': data.totalElements || 'N/A',
-                        'Stations Returned': data.stationsCount || 'N/A',
-                        'Sample Station': data.sampleStation || 'N/A'
-                    });
-                } else {
-                    failureCount++;
-                    const errorDetails = {
-                        'Error': data.error || 'Unknown error',
-                        'Message': data.message || 'Request failed'
-                    };
+                if (data.success) {
+                    // Update statistics
+                    updateStats(data.stats);
                     
-                    // Add additional details if available
-                    if (data.details) {
-                        errorDetails['Details'] = data.details;
+                    // Update logs - only add new ones
+                    if (data.recentLogs && data.recentLogs.length > 0) {
+                        data.recentLogs.forEach(log => {
+                            // Create unique ID for each log entry
+                            const logId = `${log.requestNumber}-${log.timestamp}`;
+                            
+                            // Only add if we haven't displayed it yet
+                            if (!displayedLogs.has(logId)) {
+                                displayedLogs.add(logId);
+                                
+                                if (log.status === 'success') {
+                                    addLog(log.timestamp, 'success', log.statusCode, {
+                                        'Request #': log.requestNumber,
+                                        'Total Stations': log.totalElements || 'N/A',
+                                        'Stations Returned': log.stationsCount || 'N/A',
+                                        'Sample Station': log.sampleStation || 'N/A'
+                                    });
+                                } else {
+                                    const errorDetails = {
+                                        'Request #': log.requestNumber,
+                                        'Error': log.error || 'Unknown error',
+                                        'Message': log.message || 'Request failed'
+                                    };
+                                    
+                                    if (log.details) {
+                                        errorDetails['Details'] = log.details.substring(0, 100);
+                                    }
+                                    
+                                    addLog(log.timestamp, 'error', log.statusCode, errorDetails);
+                                }
+                            }
+                        });
                     }
-                    if (data.data) {
-                        errorDetails['Response Data'] = JSON.stringify(data.data).substring(0, 100) + '...';
-                    }
-                    
-                    addLog(timestamp, 'error', data.statusCode || response.status, errorDetails);
                 }
             } catch (error) {
-                failureCount++;
-                addLog(timestamp, 'error', 'N/A', {
-                    'Error Type': error.name,
-                    'Message': error.message
-                });
+                console.error('Error fetching test status:', error);
+                // Don't show error to user - just log it
             }
-            
-            updateStats();
         }
         
-        function startTest() {
-            if (testInterval) return;
+        function startMonitoring() {
+            if (refreshInterval) return;
             
             // Update UI
             document.getElementById('start-btn').disabled = true;
             document.getElementById('stop-btn').disabled = false;
             document.getElementById('status-dot').className = 'status-dot running';
-            document.getElementById('status-text').textContent = 'Running';
-            document.getElementById('interval-select').disabled = true;
+            document.getElementById('status-text').textContent = 'Monitoring (Tests run in background)';
             
-            // Run first test immediately
-            makeTestRequest();
+            // Fetch status immediately
+            fetchTestStatus();
             
-            // Set interval for subsequent tests
-            testInterval = setInterval(makeTestRequest, currentInterval);
+            // Set interval to refresh UI
+            refreshInterval = setInterval(fetchTestStatus, currentRefreshInterval);
         }
         
-        function stopTest() {
-            if (!testInterval) return;
+        function stopMonitoring() {
+            if (!refreshInterval) return;
             
-            clearInterval(testInterval);
-            testInterval = null;
+            clearInterval(refreshInterval);
+            refreshInterval = null;
             
             // Update UI
             document.getElementById('start-btn').disabled = false;
             document.getElementById('stop-btn').disabled = true;
             document.getElementById('status-dot').className = 'status-dot stopped';
-            document.getElementById('status-text').textContent = 'Stopped';
-            document.getElementById('interval-select').disabled = false;
+            document.getElementById('status-text').textContent = 'Monitoring Stopped (Background tests continue)';
         }
         
         function clearLogs() {
             const logContainer = document.getElementById('log-container');
-            logContainer.innerHTML = '<div style="color: #666; text-align: center; padding: 40px;">Logs cleared. Click "Start Test" to continue monitoring.</div>';
+            logContainer.innerHTML = '<div style="color: #666; text-align: center; padding: 40px;">Logs cleared. The background service continues testing.</div>';
             
-            // Reset counters
-            requestCount = 0;
-            successCount = 0;
-            failureCount = 0;
-            updateStats();
+            // Clear displayed logs tracking
+            displayedLogs.clear();
         }
         
-        function updateInterval() {
-            const newInterval = parseInt(document.getElementById('interval-select').value);
-            currentInterval = newInterval;
-            
-            // If test is running, restart with new interval
-            if (testInterval) {
-                stopTest();
-                startTest();
-            }
-        }
+        // Start monitoring automatically when page loads
+        window.addEventListener('load', () => {
+            startMonitoring();
+        });
         
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
-            if (testInterval) {
-                stopTest();
+            if (refreshInterval) {
+                stopMonitoring();
             }
-        });
-        
-        // Token Management Functions
-        async function loadTokenInfo() {
-            try {
-                const response = await fetch('/api/token-info', {
-                    credentials: 'include'
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Display token
-                    document.getElementById('token-display').textContent = data.token;
-                    
-                    // Display expiry date
-                    const expiryDate = new Date(data.expiryDate);
-                    const now = new Date();
-                    const daysUntilExpiry = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
-                    
-                    const expiryElement = document.getElementById('expiry-date');
-                    expiryElement.textContent = expiryDate.toLocaleString();
-                    
-                    // Update health status
-                    const healthElement = document.getElementById('token-health');
-                    const indicatorElement = document.getElementById('health-indicator');
-                    const textElement = document.getElementById('health-text');
-                    
-                    if (daysUntilExpiry < 0) {
-                        // Expired
-                        expiryElement.className = 'expiry-date expired';
-                        healthElement.className = 'token-health expired';
-                        indicatorElement.textContent = '❌';
-                        textElement.textContent = `Expired ${Math.abs(daysUntilExpiry)} days ago`;
-                    } else if (daysUntilExpiry <= 7) {
-                        // Expiring soon
-                        expiryElement.className = 'expiry-date expiring-soon';
-                        healthElement.className = 'token-health expiring-soon';
-                        indicatorElement.textContent = '⚠️';
-                        textElement.textContent = `Expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}`;
-                    } else {
-                        // Healthy
-                        expiryElement.className = 'expiry-date';
-                        healthElement.className = 'token-health';
-                        indicatorElement.textContent = '✅';
-                        textElement.textContent = `Valid (${daysUntilExpiry} days remaining)`;
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading token info:', error);
-                document.getElementById('token-display').textContent = 'Error loading token';
-                document.getElementById('expiry-date').textContent = 'Unknown';
-                document.getElementById('health-text').textContent = 'Unable to check';
-            }
-        }
-        
-        function copyToken() {
-            const tokenText = document.getElementById('token-display').textContent;
-            navigator.clipboard.writeText(tokenText).then(() => {
-                const btn = event.target;
-                const originalText = btn.textContent;
-                btn.textContent = '✅ Copied!';
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                }, 2000);
-            }).catch(err => {
-                alert('Failed to copy token: ' + err);
-            });
-        }
-        
-        async function updateToken() {
-            const newToken = document.getElementById('new-token-input').value.trim();
-            const messageEl = document.getElementById('update-message');
-            
-            if (!newToken) {
-                messageEl.className = 'update-message error';
-                messageEl.textContent = '❌ Please enter a token';
-                return;
-            }
-            
-            if (!newToken.startsWith('Bearer ')) {
-                messageEl.className = 'update-message error';
-                messageEl.textContent = '❌ Token must start with "Bearer "';
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/update-token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ token: newToken })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    messageEl.className = 'update-message success';
-                    messageEl.textContent = '✅ Token updated successfully!';
-                    document.getElementById('new-token-input').value = '';
-                    
-                    // Reload token info
-                    setTimeout(() => {
-                        loadTokenInfo();
-                        messageEl.style.display = 'none';
-                    }, 2000);
-                } else {
-                    messageEl.className = 'update-message error';
-                    messageEl.textContent = '❌ ' + (data.error || 'Failed to update token');
-                }
-            } catch (error) {
-                messageEl.className = 'update-message error';
-                messageEl.textContent = '❌ Error: ' + error.message;
-            }
-        }
-        
-        // Load token info on page load
-        window.addEventListener('load', () => {
-            loadTokenInfo();
         });
     </script>
 </body>
