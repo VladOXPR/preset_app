@@ -942,18 +942,41 @@ app.get('/api/stations', verifyToken, async (req, res) => {
               
               // Add order data to station
               station.orderData = {
-                totalRecords: orderData.page?.total || 0,
+                totalRecords: 0,
                 totalRevenue: 0,
                 success: orderData.code === 0
               };
               
-              // Calculate total revenue from all records
+              // Calculate total revenue and count from records
               // For Energo, totalRevenue is already calculated in the API response
               if (orderData.page?.totalRevenue !== undefined) {
-                station.orderData.totalRevenue = orderData.page.totalRevenue;
+                // For Energo, filter out zero amounts from the content array
+                if (orderData.page?.records && Array.isArray(orderData.page.records)) {
+                  const validRecords = orderData.page.records.filter(record => {
+                    const amount = parseFloat(record.totalPay || record.settledAmount || 0);
+                    return amount > 0;
+                  });
+                  station.orderData.totalRecords = validRecords.length;
+                  station.orderData.totalRevenue = validRecords.reduce((sum, record) => {
+                    return sum + (parseFloat(record.totalPay || record.settledAmount) || 0);
+                  }, 0);
+                } else {
+                  // Fallback to API total if records not available
+                  station.orderData.totalRevenue = orderData.page.totalRevenue;
+                  station.orderData.totalRecords = orderData.page?.total || 0;
+                }
               } else if (orderData.page?.records && Array.isArray(orderData.page.records)) {
-                // For ChargeNow, calculate from records
-                station.orderData.totalRevenue = orderData.page.records.reduce((sum, record) => {
+                // For ChargeNow, filter out records where settledAmount is 0
+                const validRecords = orderData.page.records.filter(record => {
+                  const settledAmount = parseFloat(record.settledAmount || 0);
+                  return settledAmount > 0;
+                });
+                
+                // Count only valid records (non-zero settledAmount)
+                station.orderData.totalRecords = validRecords.length;
+                
+                // Calculate total revenue from valid records only
+                station.orderData.totalRevenue = validRecords.reduce((sum, record) => {
                   return sum + (parseFloat(record.settledAmount) || 0);
                 }, 0);
               }

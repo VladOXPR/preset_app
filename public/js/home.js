@@ -234,7 +234,13 @@ function updateSummaryStats() {
   const takeHomeElement = document.getElementById('take-home');
   const takeHomeLabel = document.querySelector('#take-home').parentElement.querySelector('.stat-label');
   
-  if (currentUserType === 'Distributor') {
+  // Check if username is "parlay" (case-insensitive)
+  if (currentUsername && currentUsername.toLowerCase() === 'parlay') {
+    // For parlay account, take home = number of rents (as dollar amount)
+    takeHomeElement.textContent = `$${totalRents}`;
+    takeHomeLabel.textContent = 'Take home';
+    console.log('Parlay user detected - take home equals number of rents:', totalRents);
+  } else if (currentUserType === 'Distributor') {
     // For Distributor accounts, show total rents count instead of take-home amount
     takeHomeElement.textContent = totalRents;
     takeHomeLabel.textContent = 'Rents';

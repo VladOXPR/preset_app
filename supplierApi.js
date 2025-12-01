@@ -530,6 +530,7 @@ function generateDemoStationData() {
 
 /**
  * Calculates revenue and rent statistics from order data
+ * Only counts records where settledAmount (or amount) is greater than 0
  * @param {Array} orders - Array of order objects
  * @returns {Object} - Object with totalRevenue and totalRecords
  */
@@ -541,14 +542,20 @@ function calculateOrderStats(orders) {
     };
   }
   
-  const totalRevenue = orders.reduce((sum, order) => {
-    const amount = parseFloat(order.amount) || 0;
+  // Filter out records where settledAmount or amount is 0
+  const validOrders = orders.filter(order => {
+    const amount = parseFloat(order.settledAmount || order.amount || 0);
+    return amount > 0;
+  });
+  
+  const totalRevenue = validOrders.reduce((sum, order) => {
+    const amount = parseFloat(order.settledAmount || order.amount || 0);
     return sum + amount;
   }, 0);
   
   return {
     totalRevenue: totalRevenue,
-    totalRecords: orders.length
+    totalRecords: validOrders.length
   };
 }
 
