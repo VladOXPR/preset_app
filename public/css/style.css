@@ -1094,6 +1094,26 @@ html, body {
   box-shadow: 0 6px 25px rgba(0,0,0,0.4);
 }
 
+/* Yellow card style - when to take <= to return */
+.station-card-yellow {
+  background: #261C00 !important;
+  border: 1px solid #3E3100 !important;
+}
+
+.station-card-yellow:hover {
+  box-shadow: 0 6px 25px rgba(219, 161, 0, 0.3);
+}
+
+/* Red card style - when to take < 3 */
+.station-card-red {
+  background: #260001 !important;
+  border: 1px solid #431F1F !important;
+}
+
+.station-card-red:hover {
+  box-shadow: 0 6px 25px rgba(229, 0, 18, 0.3);
+}
+
 .station-header {
   display: flex;
   justify-content: space-between;
@@ -1650,7 +1670,41 @@ html, body {
 
 .pop-out-btn.error {
   background: #f44336 !important;
-} 
+}
+
+/* Service buttons for distributor accounts */
+.service-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+  color: #ffffff;
+}
+
+.service-btn-yellow {
+  background: #DBA100;
+  color: #000000;
+}
+
+.service-btn-yellow:hover {
+  background: #C18F00;
+  transform: translateY(-1px);
+}
+
+.service-btn-red {
+  background: #E50012;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.service-btn-red:hover {
+  background: #CC0010;
+  transform: translateY(-1px);
+}
 
 /* Custom Date Input Styling */
 .date-input {

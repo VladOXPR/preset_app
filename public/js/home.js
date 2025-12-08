@@ -109,6 +109,71 @@ async function fetchStations() {
   }
 }
 
+// Cache for station coordinates
+let stationCoordinatesCache = null;
+
+/**
+ * Loads station coordinates from API
+ * @returns {Promise<Object>} Object mapping station IDs to coordinates
+ */
+async function loadStationCoordinates() {
+  if (stationCoordinatesCache) {
+    return stationCoordinatesCache;
+  }
+  
+  try {
+    const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
+    const response = await fetch(apiUrl('/api/admin/stations'), {
+      credentials: 'include' // Include cookies for authentication
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to fetch station coordinates:', response.status);
+      return {};
+    }
+    
+    const stations = await response.json();
+    const coordinatesMap = {};
+    
+    stations.forEach(station => {
+      if (station.id && station.coordinates && Array.isArray(station.coordinates) && station.coordinates.length === 2) {
+        coordinatesMap[station.id] = {
+          coordinates: station.coordinates,
+          address: station.address || ''
+        };
+      }
+    });
+    
+    stationCoordinatesCache = coordinatesMap;
+    return coordinatesMap;
+  } catch (error) {
+    console.error('Error loading station coordinates:', error);
+    return {};
+  }
+}
+
+/**
+ * Opens Apple Maps directions to a location
+ * @param {string} stationId - Station ID to look up coordinates
+ * @param {string} stationTitle - Station title/name
+ */
+window.openAppleMapsDirections = async function(stationId, stationTitle) {
+  const coordinatesMap = await loadStationCoordinates();
+  const stationInfo = coordinatesMap[stationId];
+  
+  if (!stationInfo || !stationInfo.coordinates) {
+    // Fallback: try to use address or station title
+    const address = stationInfo?.address || stationTitle;
+    const encodedAddress = encodeURIComponent(address);
+    window.location.href = `https://maps.apple.com/?q=${encodedAddress}`;
+    return;
+  }
+  
+  const [lng, lat] = stationInfo.coordinates;
+  // Apple Maps URL format: https://maps.apple.com/?daddr=lat,lng
+  window.location.href = `https://maps.apple.com/?daddr=${lat},${lng}`;
+}
+
 function displayStations(stationsData) {
   const stationList = document.getElementById('station-list');
   
@@ -156,8 +221,39 @@ function displayStations(stationsData) {
     const totalRents = orderData.totalRecords || 0;
     const totalRevenue = orderData.totalRevenue || 0;
     
+    // Determine card style for Distributor accounts
+    let cardClass = 'station-card';
+    let buttonHTML = '';
+    
+    if (currentUserType === 'Distributor') {
+      if (pBorrow < 3) {
+        // Red card: to take < 3
+        cardClass = 'station-card station-card-red';
+        buttonHTML = `
+          <div class="pop-out-section">
+            <button class="service-btn service-btn-red" onclick="openAppleMapsDirections('${stationId}', '${stationTitle.replace(/'/g, "\\'")}')">SERVICE!</button>
+          </div>
+        `;
+      } else if (pBorrow <= pAlso) {
+        // Yellow card: to take <= to return
+        cardClass = 'station-card station-card-yellow';
+        buttonHTML = `
+          <div class="pop-out-section">
+            <button class="service-btn service-btn-yellow" onclick="openAppleMapsDirections('${stationId}', '${stationTitle.replace(/'/g, "\\'")}')">Service</button>
+          </div>
+        `;
+      } else {
+        // Normal card with pop out button
+        buttonHTML = `
+          <div class="pop-out-section">
+            <button class="pop-out-btn" onclick="dispenseBattery('${stationId}')">Pop out</button>
+          </div>
+        `;
+      }
+    }
+    
     return `
-      <div class="station-card">
+      <div class="${cardClass}">
         <div class="station-header">
           <div class="station-title">
             <p class="station-id">${stationTitle}</p>
@@ -184,11 +280,7 @@ function displayStations(stationsData) {
             <div class="rents-number">${totalRents}</div>
             <div class="rents-label">Rents</div>
           </div>
-          ${currentUserType === 'Distributor' ? `
-          <div class="pop-out-section">
-            <button class="pop-out-btn" onclick="dispenseBattery('${stationId}')">Pop out</button>
-          </div>
-          ` : ''}
+          ${buttonHTML}
         </div>
       </div>
     `;

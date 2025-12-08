@@ -10,6 +10,7 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 const db = require('./database');
 const supplierAPI = require('./supplierApi');
+const maintenance = require('./maintenance');
 
 // Add fetch for Node.js (if not using Node 18+)
 let fetch;
@@ -45,6 +46,9 @@ updateStationData();
 
 // Schedule station data updates every minute (60000 ms)
 setInterval(updateStationData, 60000);
+
+// Start maintenance monitoring system
+maintenance.startMaintenanceMonitoring();
 
 // ========================================
 // BACKGROUND API TOKEN TESTING SERVICE
