@@ -1,17 +1,26 @@
 [
   {
-    "id": "DTN00970",
+    "id": "DTN00872",
+    "name": "DePaul, Lincoln Park Student Center",
+    "address": "2400 N Sheffield Ave, Chicago, IL 60614, United States",
+    "coordinates": [
+      -87.653,
+      41.926
+    ]
+  },
+  {
+    "id": "DTN00971",
     "name": "DePaul, Loop Student Center",
-    "address": "DePaul Loop Campus, Chicago, IL",
+    "address": "DePaul University, 1 Historic Route 66, Chicago, IL 60604, United States",
     "coordinates": [
       -87.6298,
       41.8776
     ]
   },
   {
-    "id": "DTN00971",
+    "id": "DTN00970",
     "name": "DePaul, Theater School",
-    "address": "DePaul Theater School, Chicago, IL",
+    "address": "2350 N Racine Ave, Chicago, IL 60614, United States",
     "coordinates": [
       -87.63,
       41.878
@@ -20,7 +29,7 @@
   {
     "id": "BJH09881",
     "name": "Parlay Lincoln Park",
-    "address": "Parlay, Lincoln Park, Chicago, IL",
+    "address": "950 W Wrightwood Ave, Chicago, IL 60614, United States",
     "coordinates": [
       -87.64,
       41.92
@@ -29,7 +38,7 @@
   {
     "id": "BJH09883",
     "name": "Kelly's Pub",
-    "address": "Kelly's Pub, Chicago, IL",
+    "address": "949 W Webster Ave, Chicago, IL 60614, United States",
     "coordinates": [
       -87.65,
       41.93
@@ -38,7 +47,7 @@
   {
     "id": "DTA22033",
     "name": "Home Station",
-    "address": "Home Station Location, Chicago, IL",
+    "address": "827 N Mozart St, Chicago, IL 60622, United States",
     "coordinates": [
       -87.635,
       41.91

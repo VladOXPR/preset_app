@@ -634,7 +634,7 @@ app.put('/api/admin/stations/:id', async (req, res) => {
     const stationId = req.params.id;
     console.log('PUT /api/admin/stations/:id - Updating station:', stationId, req.body);
     
-    const { name, address, coordinates } = req.body;
+    const { id, name, address, coordinates } = req.body;
     
     // Validation
     if (coordinates && (!Array.isArray(coordinates) || coordinates.length !== 2)) {
@@ -651,7 +651,18 @@ app.put('/api/admin/stations/:id', async (req, res) => {
       return res.status(404).json({ error: 'Station not found' });
     }
     
+    // If ID is being changed, check if new ID already exists
+    if (id && id !== stationId) {
+      const existingStation = stations.find(s => s.id === id);
+      if (existingStation) {
+        return res.status(409).json({ error: 'Station with this ID already exists' });
+      }
+    }
+    
     // Update station fields
+    if (id !== undefined && id !== stationId) {
+      stations[stationIndex].id = id;
+    }
     if (name !== undefined) stations[stationIndex].name = name;
     if (address !== undefined) stations[stationIndex].address = address;
     if (coordinates !== undefined) stations[stationIndex].coordinates = coordinates;

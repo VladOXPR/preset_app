@@ -136,11 +136,21 @@ async function loadStationCoordinates() {
     const coordinatesMap = {};
     
     stations.forEach(station => {
-      if (station.id && station.coordinates && Array.isArray(station.coordinates) && station.coordinates.length === 2) {
-        coordinatesMap[station.id] = {
-          coordinates: station.coordinates,
-          address: station.address || ''
+      // Store station info by its 'id' field from stations.json
+      // This 'id' should match the pCabinetid or id from the API
+      if (station.id && station.address) {
+        const stationData = {
+          coordinates: station.coordinates || null,
+          address: station.address
         };
+        
+        // Store by 'id' (primary key from stations.json)
+        coordinatesMap[station.id] = stationData;
+        
+        // Also store by 'name' if it exists, for additional lookup flexibility
+        if (station.name) {
+          coordinatesMap[station.name] = stationData;
+        }
       }
     });
     
@@ -154,24 +164,44 @@ async function loadStationCoordinates() {
 
 /**
  * Opens Apple Maps directions to a location
- * @param {string} stationId - Station ID to look up coordinates
- * @param {string} stationTitle - Station title/name
+ * Searches for station by ID in stations.json and uses the address
+ * @param {string} stationId - Station ID (pCabinetid or id from API) to look up in stations.json
+ * @param {string} stationTitle - Station title/name (fallback)
  */
 window.openAppleMapsDirections = async function(stationId, stationTitle) {
   const coordinatesMap = await loadStationCoordinates();
-  const stationInfo = coordinatesMap[stationId];
   
-  if (!stationInfo || !stationInfo.coordinates) {
-    // Fallback: try to use address or station title
-    const address = stationInfo?.address || stationTitle;
-    const encodedAddress = encodeURIComponent(address);
-    window.location.href = `https://maps.apple.com/?q=${encodedAddress}`;
+  // Try to find station by exact ID match
+  let stationInfo = coordinatesMap[stationId];
+  
+  // If not found, try case-insensitive match
+  if (!stationInfo) {
+    const allStationIds = Object.keys(coordinatesMap);
+    const matchingId = allStationIds.find(id => id.toLowerCase() === stationId.toLowerCase());
+    if (matchingId) {
+      stationInfo = coordinatesMap[matchingId];
+    }
+  }
+  
+  // Prioritize address from stations.json
+  if (stationInfo && stationInfo.address) {
+    const encodedAddress = encodeURIComponent(stationInfo.address);
+    // Use daddr parameter for directions
+    window.location.href = `https://maps.apple.com/?daddr=${encodedAddress}`;
     return;
   }
   
-  const [lng, lat] = stationInfo.coordinates;
-  // Apple Maps URL format: https://maps.apple.com/?daddr=lat,lng
-  window.location.href = `https://maps.apple.com/?daddr=${lat},${lng}`;
+  // Fallback to coordinates if address not available
+  if (stationInfo && stationInfo.coordinates && Array.isArray(stationInfo.coordinates) && stationInfo.coordinates.length === 2) {
+    const [lng, lat] = stationInfo.coordinates;
+    // Apple Maps URL format: https://maps.apple.com/?daddr=lat,lng
+    window.location.href = `https://maps.apple.com/?daddr=${lat},${lng}`;
+    return;
+  }
+  
+  // Final fallback: use station title
+  const encodedTitle = encodeURIComponent(stationTitle);
+  window.location.href = `https://maps.apple.com/?q=${encodedTitle}`;
 }
 
 function displayStations(stationsData) {
@@ -231,7 +261,7 @@ function displayStations(stationsData) {
         cardClass = 'station-card station-card-red';
         buttonHTML = `
           <div class="pop-out-section">
-            <button class="service-btn service-btn-red" onclick="openAppleMapsDirections('${stationId}', '${stationTitle.replace(/'/g, "\\'")}')">SERVICE!</button>
+            <button class="service-btn service-btn-red" onclick="openAppleMapsDirections('${stationId}', '${stationTitle.replace(/'/g, "\\'")}')">Restock Now</button>
           </div>
         `;
       } else if (pBorrow <= pAlso) {
@@ -239,7 +269,7 @@ function displayStations(stationsData) {
         cardClass = 'station-card station-card-yellow';
         buttonHTML = `
           <div class="pop-out-section">
-            <button class="service-btn service-btn-yellow" onclick="openAppleMapsDirections('${stationId}', '${stationTitle.replace(/'/g, "\\'")}')">Service</button>
+            <button class="service-btn service-btn-yellow" onclick="openAppleMapsDirections('${stationId}', '${stationTitle.replace(/'/g, "\\'")}')">Restock Soon</button>
           </div>
         `;
       } else {
@@ -252,8 +282,12 @@ function displayStations(stationsData) {
       }
     }
     
+    // Add click handler for distributor accounts
+    const clickHandler = currentUserType === 'Distributor' ? `onclick="openStationModal('${stationId}', '${stationTitle.replace(/'/g, "\\'")}', ${pBorrow}, ${pAlso}, ${totalRents}, ${totalRevenue}, '${cardClass}')"` : '';
+    const cursorStyle = currentUserType === 'Distributor' ? 'style="cursor: pointer;"' : '';
+    
     return `
-      <div class="${cardClass}">
+      <div class="${cardClass}" ${clickHandler} ${cursorStyle}>
         <div class="station-header">
           <div class="station-title">
             <p class="station-id">${stationTitle}</p>
@@ -461,6 +495,255 @@ function dispenseBattery(stationId) {
         button.style.background = '';
       }, 2000);
     });
+}
+
+/**
+ * Opens the station modal with station details
+ * @param {string} stationId - Station ID
+ * @param {string} stationTitle - Station title
+ * @param {number} pBorrow - To take count
+ * @param {number} pAlso - To return count
+ * @param {number} totalRents - Total rents
+ * @param {number} totalRevenue - Total revenue
+ * @param {string} cardClass - Card class (for styling)
+ */
+window.openStationModal = async function(stationId, stationTitle, pBorrow, pAlso, totalRents, totalRevenue, cardClass) {
+  const modalOverlay = document.getElementById('station-modal-overlay');
+  const modal = document.getElementById('station-modal');
+  
+  // Load station data from stations.json
+  const coordinatesMap = await loadStationCoordinates();
+  const stationInfo = coordinatesMap[stationId] || {};
+  const currentId = stationId;
+  const currentAddress = stationInfo.address || '';
+  
+  // Determine restock button style (modal always stays grey)
+  let restockButtonClass = 'restock-btn-grey';
+  let restockButtonText = 'No restock needed';
+  
+  if (cardClass.includes('station-card-red')) {
+    restockButtonClass = 'restock-btn-red';
+    restockButtonText = 'Restock Now';
+  } else if (cardClass.includes('station-card-yellow')) {
+    restockButtonClass = 'restock-btn-yellow';
+    restockButtonText = 'Restock Soon';
+  }
+  
+  // Create modal content (always grey background and border)
+  modal.className = 'station-modal';
+  modal.innerHTML = `
+    <button class="station-modal-close" onclick="closeStationModal()">×</button>
+    <div class="station-header">
+      <div class="station-title">
+        <p class="station-id">${stationTitle}</p>
+      </div>
+      <div class="station-counts">
+        <div class="count-item">
+          <div class="count-circle blue"></div>
+          <div class="count-number">${pBorrow}</div>
+          <div class="count-label">To Take</div>
+        </div>
+        <div class="count-item">
+          <div class="count-circle grey"></div>
+          <div class="count-number">${pAlso}</div>
+          <div class="count-label">To Return</div>
+        </div>
+      </div>
+    </div>
+    <div class="station-footer">
+      <div class="revenue-section">
+        <div class="revenue-amount">$${Math.round(totalRevenue)}</div>
+        <div class="revenue-label">Revenue</div>
+      </div>
+      <div class="rents-section">
+        <div class="rents-number">${totalRents}</div>
+        <div class="rents-label">Rents</div>
+      </div>
+    </div>
+    <div class="station-modal-input-group">
+      <label for="modal-station-id">Station ID</label>
+      <input type="text" id="modal-station-id" value="${currentId}" data-original-id="${currentId}">
+    </div>
+    <div class="station-modal-input-group">
+      <label for="modal-station-address">Address</label>
+      <input type="text" id="modal-station-address" value="${currentAddress}" data-original-address="${currentAddress}">
+    </div>
+    <div class="station-modal-buttons">
+      <button class="pop-out-btn" onclick="dispenseBattery('${stationId}')">Pop out</button>
+      <button class="restock-btn ${restockButtonClass}" onclick="handleRestock('${stationId}')">${restockButtonText}</button>
+    </div>
+  `;
+  
+  // Add event listener for ID change
+  const idInput = document.getElementById('modal-station-id');
+  let saveTimeout;
+  idInput.addEventListener('input', function() {
+    clearTimeout(saveTimeout);
+    const newId = this.value.trim();
+    const originalId = this.getAttribute('data-original-id');
+    
+    if (newId && newId !== originalId) {
+      // Debounce: save after 1 second of no typing
+      saveTimeout = setTimeout(() => {
+        updateStationId(originalId, newId);
+      }, 1000);
+    }
+  });
+  
+  // Add event listener for address change
+  const addressInput = document.getElementById('modal-station-address');
+  addressInput.addEventListener('blur', function() {
+    const newAddress = this.value.trim();
+    const originalAddress = this.getAttribute('data-original-address');
+    const currentId = idInput.value.trim() || idInput.getAttribute('data-original-id');
+    
+    if (newAddress !== originalAddress) {
+      updateStationAddress(currentId, newAddress);
+    }
+  });
+  
+  // Show modal
+  modalOverlay.classList.add('active');
+  
+  // Close on overlay click (but not on modal click)
+  modalOverlay.addEventListener('click', function(e) {
+    if (e.target === modalOverlay) {
+      closeStationModal();
+    }
+  });
+}
+
+/**
+ * Closes the station modal
+ */
+window.closeStationModal = function() {
+  const modalOverlay = document.getElementById('station-modal-overlay');
+  modalOverlay.classList.remove('active');
+  // Clear cache to reload station data
+  stationCoordinatesCache = null;
+}
+
+/**
+ * Updates station ID in stations.json
+ * @param {string} oldId - Original station ID
+ * @param {string} newId - New station ID
+ */
+async function updateStationId(oldId, newId) {
+  try {
+    const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
+    const response = await fetch(apiUrl('/api/admin/stations'), {
+      credentials: 'include'
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to fetch stations:', response.status);
+      return;
+    }
+    
+    const stations = await response.json();
+    const stationIndex = stations.findIndex(s => s.id === oldId);
+    
+    if (stationIndex === -1) {
+      console.error('Station not found:', oldId);
+      return;
+    }
+    
+    // Update the ID
+    stations[stationIndex].id = newId;
+    
+    // Update via PUT request (use oldId in URL, newId in body)
+    const updateResponse = await fetch(apiUrl(`/api/admin/stations/${oldId}`), {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        id: newId,
+        name: stations[stationIndex].name || '',
+        address: stations[stationIndex].address || '',
+        coordinates: stations[stationIndex].coordinates || []
+      })
+    });
+    
+    if (updateResponse.ok) {
+      console.log('Station ID updated successfully:', oldId, '->', newId);
+      // Update the original ID attribute
+      document.getElementById('modal-station-id').setAttribute('data-original-id', newId);
+      // Clear cache to reload
+      stationCoordinatesCache = null;
+    } else {
+      console.error('Failed to update station ID:', await updateResponse.text());
+    }
+  } catch (error) {
+    console.error('Error updating station ID:', error);
+  }
+}
+
+/**
+ * Updates station address in stations.json
+ * @param {string} stationId - Station ID
+ * @param {string} newAddress - New address
+ */
+async function updateStationAddress(stationId, newAddress) {
+  try {
+    const apiUrl = window.API_CONFIG ? window.API_CONFIG.getApiUrl : (endpoint) => endpoint;
+    const response = await fetch(apiUrl('/api/admin/stations'), {
+      credentials: 'include'
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to fetch stations:', response.status);
+      return;
+    }
+    
+    const stations = await response.json();
+    const stationIndex = stations.findIndex(s => s.id === stationId);
+    
+    if (stationIndex === -1) {
+      console.error('Station not found:', stationId);
+      return;
+    }
+    
+    // Update the address
+    stations[stationIndex].address = newAddress;
+    
+    // Update via PUT request
+    const updateResponse = await fetch(apiUrl(`/api/admin/stations/${stationId}`), {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        name: stations[stationIndex].name,
+        address: newAddress,
+        coordinates: stations[stationIndex].coordinates
+      })
+    });
+    
+    if (updateResponse.ok) {
+      console.log('Station address updated successfully:', stationId);
+      // Update the original address attribute
+      document.getElementById('modal-station-address').setAttribute('data-original-address', newAddress);
+      // Clear cache to reload
+      stationCoordinatesCache = null;
+    } else {
+      console.error('Failed to update station address:', await updateResponse.text());
+    }
+  } catch (error) {
+    console.error('Error updating station address:', error);
+  }
+}
+
+/**
+ * Handles restock button click
+ * @param {string} stationId - Station ID
+ */
+window.handleRestock = function(stationId) {
+  // Placeholder for restock functionality
+  console.log('Restock requested for station:', stationId);
+  // You can add restock logic here
 }
 
  
