@@ -3,54 +3,270 @@
     "id": "DTN00872",
     "name": "DePaul, Lincoln Park Student Center",
     "address": "2400 N Sheffield Ave, Chicago, IL 60614, United States",
-    "coordinates": [
-      -87.653,
-      41.926
-    ]
+    "supplier": "chargenow"
   },
   {
     "id": "DTN00971",
     "name": "DePaul, Loop Student Center",
     "address": "DePaul University, 1 Historic Route 66, Chicago, IL 60604, United States",
-    "coordinates": [
-      -87.6298,
-      41.8776
-    ]
+    "supplier": "chargenow"
   },
   {
     "id": "DTN00970",
     "name": "DePaul, Theater School",
     "address": "2350 N Racine Ave, Chicago, IL 60614, United States",
-    "coordinates": [
-      -87.63,
-      41.878
-    ]
+    "supplier": "chargenow"
   },
   {
     "id": "BJH09881",
     "name": "Parlay Lincoln Park",
     "address": "950 W Wrightwood Ave, Chicago, IL 60614, United States",
-    "coordinates": [
-      -87.64,
-      41.92
-    ]
+    "supplier": "chargenow"
   },
   {
     "id": "BJH09883",
     "name": "Kelly's Pub",
     "address": "949 W Webster Ave, Chicago, IL 60614, United States",
-    "coordinates": [
-      -87.65,
-      41.93
-    ]
+    "supplier": "chargenow"
   },
   {
     "id": "DTA22033",
     "name": "Home Station",
     "address": "827 N Mozart St, Chicago, IL 60622, United States",
-    "coordinates": [
-      -87.635,
-      41.91
-    ]
+    "supplier": "chargenow"
+  },
+  {
+    "id": "RL3T062411030004",
+    "name": "Demo station",
+    "address": "827 N Mozart St, Chicago, IL 60622, United States",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBH242510000001",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBH242510000002",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000040",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBH482510000001",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000001",
+    "name": "Neon Gardens",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000002",
+    "name": "Sila's Meditiranian Restaurant",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000003",
+    "name": "DePaul, McCabe Hall",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000004",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000005",
+    "name": "Kelly's Pub",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000006",
+    "name": "DePaul, University Hall Dorm",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000007",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000008",
+    "name": "Halligan Bar",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000009",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000010",
+    "name": "Prost",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000011",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000012",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000013",
+    "name": "Slice Hut",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000014",
+    "name": "Maison Marcel",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000015",
+    "name": "Hello Jasmine Lincoln Park",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000016",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000017",
+    "name": "Parlay Lincoln Park",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000018",
+    "name": "DePaul, SAC",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000019",
+    "name": "Irish Eyes Pub",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000020",
+    "name": "SAADA",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000021",
+    "name": "Neva Hangry",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000022",
+    "name": "Harrigans Bar and Grill",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000023",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000024",
+    "name": "DePaul, Ozanam Hall Dorm",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000025",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000026",
+    "name": "Hook and Latter",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000027",
+    "name": "DePaul, Sancuary Hall Dorm",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000028",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000029",
+    "name": "Annoyance Theater",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000030",
+    "name": "Clover LP",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000031",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000032",
+    "name": "Bourgeois Pig Cafe",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000033",
+    "name": "",
+    "address": "",
+    "supplier": "energo"
+  },
+  {
+    "id": "CUBT062510000034",
+    "name": "Dog Hous Lincoln Park",
+    "address": "",
+    "supplier": "energo"
   }
 ]
