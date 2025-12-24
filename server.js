@@ -767,85 +767,101 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     console.log('User station_ids:', JSON.stringify(user.station_ids));
     console.log('=== END DEBUG ===');
     
-    // Determine supplier type - check stations.json for user's stations
-    let supplier = supplierAPI.determineSupplier(req.user.username);
-    
-    // Check if user's stations are Energo stations by looking up in stations.json
+    // Determine which suppliers the user needs based on their station assignments
     const userStationIds = Array.isArray(user.station_ids) ? user.station_ids : Object.keys(user.station_ids || {});
+    
+    let hasChargeNowStations = false;
+    let hasEnergoStations = false;
+    let energoStationIds = [];
+    let chargenowStationIds = [];
+    
     if (userStationIds.length > 0) {
       try {
         const stationsData = await fs.readFile(stationsFilePath, 'utf8');
         const stations = JSON.parse(stationsData);
         
-        // Check if any of the user's stations are Energo
-        const hasEnergoStation = userStationIds.some(stationId => {
+        // Categorize user's stations by supplier
+        userStationIds.forEach(stationId => {
           const station = stations.find(s => s.id === stationId);
-          return station && station.supplier === 'energo';
+          if (station) {
+            if (station.supplier === 'energo') {
+              hasEnergoStations = true;
+              energoStationIds.push(stationId);
+            } else {
+              hasChargeNowStations = true;
+              chargenowStationIds.push(stationId);
+            }
+          } else {
+            // If station not found in stations.json, assume ChargeNow (default)
+            hasChargeNowStations = true;
+            chargenowStationIds.push(stationId);
+          }
         });
         
-        if (hasEnergoStation) {
-          supplier = 'energo';
-          console.log(`⚡ User has Energo station(s) - using Energo API`);
-        }
+        console.log(`📊 User station breakdown: ${chargenowStationIds.length} ChargeNow, ${energoStationIds.length} Energo`);
       } catch (error) {
         console.error('Error checking stations.json for supplier:', error);
+        // Fallback: assume all are ChargeNow
+        hasChargeNowStations = true;
+        chargenowStationIds = userStationIds;
       }
     }
     
-    console.log(`Detected supplier: ${supplier} for user: ${req.user.username}`);
-    
-    // Use demo data for demo user, otherwise use cached station data or fetch Energo stations
+    // Use demo data for demo user, otherwise fetch from appropriate suppliers
     let result;
     if (req.user.username === 'demo') {
       console.log('🎭 Using demo station data for demo user');
       result = supplierAPI.generateDemoStationData();
-    } else if (supplier === 'energo') {
-      // For Energo, fetch stations individually based on user's station_ids
-      console.log('⚡ Fetching Energo stations for user');
-      const userStationIds = Array.isArray(user.station_ids) ? user.station_ids : Object.keys(user.station_ids || {});
-      console.log('⚡ User station IDs:', userStationIds);
+    } else {
+      // Fetch stations from both suppliers if user has stations from both
+      const allStations = [];
       
-      if (userStationIds.length === 0) {
-        console.log('⚠️ No station IDs found for Energo user');
-        result = JSON.stringify({ code: 0, msg: "success", data: [] });
-      } else {
-        // Fetch all Energo stations and combine them
-        console.log(`⚡ Fetching ${userStationIds.length} Energo station(s)...`);
-        const stationPromises = userStationIds.map(stationId => 
+      // Fetch ChargeNow stations if user has any
+      if (hasChargeNowStations) {
+        console.log('🔌 Fetching ChargeNow stations...');
+        let chargeNowResult;
+        if (latestStationData && lastFetchTime) {
+          console.log('📋 Using cached ChargeNow station data from:', lastFetchTime);
+          chargeNowResult = latestStationData;
+        } else {
+          console.log('🔄 No cached data available, fetching fresh ChargeNow station data...');
+          chargeNowResult = await supplierAPI.fetchChargeNowStations();
+        }
+        
+        try {
+          const parsed = typeof chargeNowResult === 'string' ? JSON.parse(chargeNowResult) : chargeNowResult;
+          if (parsed && parsed.data && Array.isArray(parsed.data)) {
+            allStations.push(...parsed.data);
+            console.log(`✅ Added ${parsed.data.length} ChargeNow station(s)`);
+          }
+        } catch (e) {
+          console.error('❌ Error parsing ChargeNow station data:', e);
+        }
+      }
+      
+      // Fetch Energo stations if user has any
+      if (hasEnergoStations && energoStationIds.length > 0) {
+        console.log(`⚡ Fetching ${energoStationIds.length} Energo station(s)...`);
+        const stationPromises = energoStationIds.map(stationId => 
           supplierAPI.fetchEnergoStation(stationId)
         );
         const stationResults = await Promise.all(stationPromises);
         
-        // Combine all station data
-        const allStations = [];
         stationResults.forEach((stationJson, index) => {
           try {
             const parsed = JSON.parse(stationJson);
-            console.log(`⚡ Energo station ${index + 1} response:`, {
-              code: parsed.code,
-              msg: parsed.msg,
-              dataLength: parsed.data ? parsed.data.length : 0
-            });
             if (parsed.data && Array.isArray(parsed.data)) {
               allStations.push(...parsed.data);
-              console.log(`⚡ Added ${parsed.data.length} station(s) from response ${index + 1}`);
-            } else {
-              console.warn(`⚠️ No data array in Energo station response ${index + 1}`);
+              console.log(`✅ Added ${parsed.data.length} Energo station(s) from response ${index + 1}`);
             }
           } catch (e) {
-            console.error(`❌ Error parsing Energo station data ${index + 1}:`, e, 'Raw response:', stationJson);
+            console.error(`❌ Error parsing Energo station data ${index + 1}:`, e);
           }
         });
-        
-        console.log(`⚡ Total Energo stations fetched: ${allStations.length}`);
-        result = JSON.stringify({ code: 0, msg: "success", data: allStations });
       }
-    } else if (latestStationData && lastFetchTime) {
-      console.log('📋 Using cached station data from:', lastFetchTime);
-      result = latestStationData;
-    } else {
-      console.log('🔄 No cached data available, fetching fresh station data...');
-      result = await supplierAPI.fetchChargeNowStations();
+      
+      console.log(`📦 Total stations fetched: ${allStations.length} (${hasChargeNowStations ? 'ChargeNow + ' : ''}${hasEnergoStations ? 'Energo' : ''})`);
+      result = JSON.stringify({ code: 0, msg: "success", data: allStations });
     }
     
     let formattedData;
@@ -886,38 +902,34 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       console.log('User station permissions:', user.station_ids);
       console.log('User station permissions type:', typeof user.station_ids);
       
-      // For Energo users, stations are already filtered (we only fetch their stations)
-      // So we can skip the filtering step
-      if (supplier === 'energo') {
-        console.log('⚡ Energo user detected - skipping filter (stations already filtered)');
-        filteredStations = stationsArray;
-      } else {
       // Handle both dictionary format (new) and array format (legacy)
-      let userStationIds = [];
+      let userStationIdsForFilter = [];
       if (typeof user.station_ids === 'object' && user.station_ids !== null) {
         if (Array.isArray(user.station_ids)) {
           // Legacy array format
-          userStationIds = user.station_ids;
+          userStationIdsForFilter = user.station_ids;
         } else {
           // New dictionary format - extract keys
-          userStationIds = Object.keys(user.station_ids);
+          userStationIdsForFilter = Object.keys(user.station_ids);
         }
       }
       
-      console.log('User station permissions length:', userStationIds.length);
+      console.log('User station permissions length:', userStationIdsForFilter.length);
       
-      if (userStationIds.length > 0) {
+      if (userStationIdsForFilter.length > 0) {
         // Filter to only show stations the user has access to
+        // Note: Energo stations are already filtered (we only fetch user's stations),
+        // but ChargeNow stations need filtering from the full list
         filteredStations = stationsArray.filter(station => {
           const stationId = station.pCabinetid || station.id;
-          console.log(`Checking station: ${stationId} (type: ${typeof stationId}) against user permissions: ${JSON.stringify(userStationIds)}`);
+          console.log(`Checking station: ${stationId} (type: ${typeof stationId}) against user permissions: ${JSON.stringify(userStationIdsForFilter)}`);
           
           // Check for exact match first
-          let hasAccess = userStationIds.includes(stationId);
+          let hasAccess = userStationIdsForFilter.includes(stationId);
           
           // If no exact match, try case-insensitive comparison
           if (!hasAccess) {
-            hasAccess = userStationIds.some(permittedId => 
+            hasAccess = userStationIdsForFilter.some(permittedId => 
               permittedId.toString().toLowerCase() === stationId.toString().toLowerCase()
             );
           }
@@ -927,10 +939,9 @@ app.get('/api/stations', verifyToken, async (req, res) => {
         });
         console.log(`Filtered stations: ${filteredStations.length} out of ${stationsArray.length}`);
         console.log('Filtered station IDs:', filteredStations.map(s => s.pCabinetid || s.id));
-        } else {
-          console.log('User has no station permissions, showing no stations');
-          filteredStations = [];
-        }
+      } else {
+        console.log('User has no station permissions, showing no stations');
+        filteredStations = [];
       }
       
       if (filteredStations.length > 0) {
