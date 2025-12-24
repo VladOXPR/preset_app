@@ -26,7 +26,7 @@ const CHARGENOW_CONFIG = {
 
 const ENERGO_CONFIG = {
   baseUrl: 'https://backend.energo.vip/api',
-  token: 'eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiI2NThjNjA5YzE4MGE0YzA3OWUzNTNhYzA1YTZkZTBmYiIsInVzZXIiOiJjdWJVU0EyMDI1IiwiaXNBcGlUb2tlbiI6ZmFsc2UsInN1YiI6ImN1YlVTQTIwMjUiLCJBUElLRVkiOiJidXpOTEQyMDI0IiwiZXhwIjoxNzY3MDQ3MzgzfQ.iFJUU_GC9lwPLmLLY6pUSofg1-gdQNY3ohVON3HnbNi4hSd4WoAUk1xN2NgUPMNWy-A6znYhJCC7mqltOu0v6Q',
+  token: 'eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiI0NmQ1ZmIxNDI4ZTM0M2YwOTBkODZlNGU4YTJkNGVhMCIsInVzZXIiOiJjdWJVU0EyMDI1IiwiaXNBcGlUb2tlbiI6ZmFsc2UsInN1YiI6ImN1YlVTQTIwMjUiLCJBUElLRVkiOiJidXpOTEQyMDI0IiwiZXhwIjoxNzY5MTk4MzkyfQ.MK58e99lW7WBkpp-xwYy3Pr1IP-Vtd7sS-dGCThYUOH-v14_wfRe4ambJPJkFOjiJtUNXmt7Qlydd-GPylj9Wg',
   oid: '3526',
 };
 
@@ -560,6 +560,59 @@ function calculateOrderStats(orders) {
 }
 
 // ========================================
+// KEEP-ALIVE FUNCTION
+// ========================================
+
+/**
+ * Sends a simple Energo API request every minute to keep the API key alive
+ * Uses a known Energo station ID for the request
+ */
+async function sendEnergoKeepAliveRequest() {
+  try {
+    // Use a known Energo station ID (RL3T format)
+    const testStationId = 'RL3T062411030004';
+    
+    const myHeaders = new Headers();
+    myHeaders.append("Authorization", `Bearer ${ENERGO_CONFIG.token}`);
+    myHeaders.append("Referer", "https://backend.energo.vip/device/list");
+    myHeaders.append("oid", ENERGO_CONFIG.oid);
+    
+    const requestOptions = {
+      method: 'GET',
+      headers: myHeaders,
+      redirect: 'follow'
+    };
+    
+    const url = `${ENERGO_CONFIG.baseUrl}/cabinet?cabinetId=${testStationId}`;
+    
+    const response = await fetch(url, requestOptions);
+    
+    if (response.ok) {
+      console.log(`[ENERGO KEEP-ALIVE] Successfully sent keep-alive request at ${new Date().toISOString()}`);
+    } else {
+      console.warn(`[ENERGO KEEP-ALIVE] Keep-alive request returned status ${response.status}`);
+    }
+  } catch (error) {
+    console.error('[ENERGO KEEP-ALIVE] Error sending keep-alive request:', error.message);
+  }
+}
+
+/**
+ * Starts the Energo API keep-alive interval (sends request every 1 minute)
+ */
+function startEnergoKeepAlive() {
+  console.log('[ENERGO KEEP-ALIVE] Starting Energo API keep-alive service (1 minute interval)');
+  
+  // Send initial request immediately
+  sendEnergoKeepAliveRequest();
+  
+  // Then send every 1 minute (60000 ms)
+  setInterval(() => {
+    sendEnergoKeepAliveRequest();
+  }, 60000);
+}
+
+// ========================================
 // EXPORTS
 // ========================================
 
@@ -588,6 +641,9 @@ module.exports = {
   
   // Configuration (for future customization)
   CHARGENOW_CONFIG,
-  ENERGO_CONFIG
+  ENERGO_CONFIG,
+  
+  // Keep-alive function
+  startEnergoKeepAlive
 };
 

@@ -50,6 +50,9 @@ setInterval(updateStationData, 60000);
 // Start maintenance monitoring system
 maintenance.startMaintenanceMonitoring();
 
+// Start Energo API keep-alive service
+supplierAPI.startEnergoKeepAlive();
+
 // ========================================
 // BACKGROUND API TOKEN TESTING SERVICE
 // ========================================
@@ -764,8 +767,31 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     console.log('User station_ids:', JSON.stringify(user.station_ids));
     console.log('=== END DEBUG ===');
     
-    // Determine supplier type
-    const supplier = supplierAPI.determineSupplier(req.user.username);
+    // Determine supplier type - check stations.json for user's stations
+    let supplier = supplierAPI.determineSupplier(req.user.username);
+    
+    // Check if user's stations are Energo stations by looking up in stations.json
+    const userStationIds = Array.isArray(user.station_ids) ? user.station_ids : Object.keys(user.station_ids || {});
+    if (userStationIds.length > 0) {
+      try {
+        const stationsData = await fs.readFile(stationsFilePath, 'utf8');
+        const stations = JSON.parse(stationsData);
+        
+        // Check if any of the user's stations are Energo
+        const hasEnergoStation = userStationIds.some(stationId => {
+          const station = stations.find(s => s.id === stationId);
+          return station && station.supplier === 'energo';
+        });
+        
+        if (hasEnergoStation) {
+          supplier = 'energo';
+          console.log(`⚡ User has Energo station(s) - using Energo API`);
+        }
+      } catch (error) {
+        console.error('Error checking stations.json for supplier:', error);
+      }
+    }
+    
     console.log(`Detected supplier: ${supplier} for user: ${req.user.username}`);
     
     // Use demo data for demo user, otherwise use cached station data or fetch Energo stations

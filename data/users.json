@@ -19,7 +19,7 @@
     "password": "$2b$10$7gq7uiUnLiFp0.S7eHGH/uGrPsyNoS3nihWbl45aHV9D.IAXu2I0K",
     "userType": "Host",
     "station_ids": {
-      "BJH09881": "Parlay Lincoln Park"
+      "BJH09881": "Parlay Lincoln Park" 
     },
     "created_at": "2025-08-23T18:41:12.148Z"
   },
@@ -80,9 +80,32 @@
     "phone": "7739460236",
     "password": "$2b$10$Jo9LsM7RLfWpe0nLvYwMW.npHgrF.VduoabIOxT2YNtuFEO1x4uX.",
     "station_ids": {
-      "RL3T062411030004": "Demo station"
+      "RL3T062411030004": "Demo station",
+      "CUBT062510000005": "Kelly's Pub"
     },
     "station_titles": {},
     "created_at": "2025-11-29T22:48:04.455Z"
+  },
+  {
+    "id": 8,
+    "username": "HelloJasmine",
+    "phone": "7739460236",
+    "password": "$2b$10$s0C2cww7izs7NXhERFpXOeZrr2lkC2IpIuS8maZdINJDFgs50arq6",
+    "userType": "Host",
+    "station_ids": {
+      "CUBT062510000030": "Hello Jasmine Lincoln Park"
+    },
+    "created_at": "2025-01-30T00:00:00.000Z"
+  },
+  {
+    "id": 9,
+    "username": "GeorgeStPub",
+    "phone": "7739460236",
+    "password": "$2b$10$LAnOfIGbLGUbEc2MM2eFo.0SLf9sdWZW8/jItTjD3KlxlrEa20Tay",
+    "userType": "Host",
+    "station_ids": {
+      "CUBT062510000025": "Gearge St. Pub"
+    },
+    "created_at": "2025-01-30T00:00:00.000Z"
   }
 ]
