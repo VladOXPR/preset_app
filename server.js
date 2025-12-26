@@ -273,6 +273,61 @@ app.get('/qr-generator', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/html/qr-generator.html'));
 });
 
+app.get('/key', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/html/key.html'));
+});
+
+// Energo token management endpoints
+const energoConfigPath = path.join(__dirname, 'data/energo-config.json');
+
+// Get current Energo token
+app.get('/api/energo-token', async (req, res) => {
+  try {
+    const configData = await fs.readFile(energoConfigPath, 'utf8');
+    const config = JSON.parse(configData);
+    res.json({ token: config.token });
+  } catch (error) {
+    console.error('Error reading Energo config:', error);
+    res.status(500).json({ error: 'Failed to read token' });
+  }
+});
+
+// Update Energo token
+app.post('/api/energo-token', async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ error: 'Token is required' });
+    }
+    
+    // Read current config
+    let config;
+    try {
+      const configData = await fs.readFile(energoConfigPath, 'utf8');
+      config = JSON.parse(configData);
+    } catch (error) {
+      // If file doesn't exist, create default config
+      config = { oid: '3526' };
+    }
+    
+    // Update token
+    config.token = token;
+    
+    // Write back to file
+    await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
+    
+    // Reload the config in supplierApi module
+    // We'll need to update supplierApi.js to read from file dynamically
+    
+    console.log('✅ Energo token updated successfully');
+    res.json({ success: true, message: 'Token updated successfully' });
+  } catch (error) {
+    console.error('Error updating Energo token:', error);
+    res.status(500).json({ error: 'Failed to update token' });
+  }
+});
+
 // Admin password validation endpoint
 app.post('/api/validate-admin-password', (req, res) => {
   const { password } = req.body;
@@ -999,26 +1054,16 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 success: orderData.code === 0
               };
               
-              // Calculate total revenue and count from records
-              // For Energo, totalRevenue is already calculated in the API response
-              if (orderData.page?.totalRevenue !== undefined) {
-                // For Energo, filter out zero amounts from the content array
-                if (orderData.page?.records && Array.isArray(orderData.page.records)) {
-                  const validRecords = orderData.page.records.filter(record => {
-                    const amount = parseFloat(record.totalPay || record.settledAmount || 0);
-                    return amount > 0;
-                  });
-                  station.orderData.totalRecords = validRecords.length;
-                  station.orderData.totalRevenue = validRecords.reduce((sum, record) => {
-                    return sum + (parseFloat(record.totalPay || record.settledAmount) || 0);
-                  }, 0);
-                } else {
-                  // Fallback to API total if records not available
-                  station.orderData.totalRevenue = orderData.page.totalRevenue;
-                  station.orderData.totalRecords = orderData.page?.total || 0;
-                }
+              // For Energo: Use totals directly from API (already calculated correctly)
+              // For ChargeNow: Calculate from records
+              if (orderData.page?.total !== undefined && orderData.page?.totalRevenue !== undefined) {
+                // API provides totals directly (Energo format)
+                // Use the totals from the API response
+                station.orderData.totalRecords = orderData.page.total || 0;
+                station.orderData.totalRevenue = orderData.page.totalRevenue || 0;
+                console.log(`[ENERGO] Using API totals: ${station.orderData.totalRecords} rents, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
               } else if (orderData.page?.records && Array.isArray(orderData.page.records)) {
-                // For ChargeNow, filter out records where settledAmount is 0
+                // For ChargeNow, calculate from records
                 const validRecords = orderData.page.records.filter(record => {
                   const settledAmount = parseFloat(record.settledAmount || 0);
                   return settledAmount > 0;
@@ -1031,6 +1076,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 station.orderData.totalRevenue = validRecords.reduce((sum, record) => {
                   return sum + (parseFloat(record.settledAmount) || 0);
                 }, 0);
+                console.log(`[CHARGENOW] Calculated from records: ${station.orderData.totalRecords} rents, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
               }
               
               console.log(`[MAIN] Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (rounded: $${Math.round(station.orderData.totalRevenue)})`);

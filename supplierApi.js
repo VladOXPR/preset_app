@@ -15,6 +15,10 @@ if (typeof globalThis.fetch === 'undefined') {
   fetch = globalThis.fetch;
 }
 
+// File system for reading config
+const fs = require('fs').promises;
+const path = require('path');
+
 // ========================================
 // CONFIGURATION
 // ========================================
@@ -24,23 +28,83 @@ const CHARGENOW_CONFIG = {
   credentials: 'Basic VmxhZFZhbGNoa292OlZWMTIxMg==', // Base64 encoded credentials
 };
 
-const ENERGO_CONFIG = {
+// Energo config path
+const energoConfigPath = path.join(__dirname, 'data/energo-config.json');
+
+// Default Energo config (fallback if file doesn't exist)
+const DEFAULT_ENERGO_CONFIG = {
   baseUrl: 'https://backend.energo.vip/api',
   token: 'eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJlNDFlMGRiMmRjZDU0M2NkYjVmOTE3NDAxNDA3ZTNlNSIsInVzZXIiOiJjdWJVU0EyMDI1IiwiaXNBcGlUb2tlbiI6ZmFsc2UsInN1YiI6ImN1YlVTQTIwMjUiLCJBUElLRVkiOiJidXpOTEQyMDI0IiwiZXhwIjoxNzY5MjExNzM2fQ.KVNoSiFb-4BfgViNuBJGMrit8iw2XEsHVIJk4msNgJ6OOt23_OPwcvDdYrj2d7HEap-x8raEUqmutIYr4nfy9g',
   oid: '3526',
 };
 
+/**
+ * Get Energo configuration from file (reads dynamically)
+ * @returns {Promise<Object>} Energo config object
+ */
+async function getEnergoConfig() {
+  try {
+    const configData = await fs.readFile(energoConfigPath, 'utf8');
+    const config = JSON.parse(configData);
+    return {
+      baseUrl: 'https://backend.energo.vip/api',
+      token: config.token || DEFAULT_ENERGO_CONFIG.token,
+      oid: config.oid || DEFAULT_ENERGO_CONFIG.oid,
+    };
+  } catch (error) {
+    console.warn('⚠️  Could not read Energo config file, using default:', error.message);
+    return DEFAULT_ENERGO_CONFIG;
+  }
+}
+
 // ========================================
 // API DETECTION HELPERS
 // ========================================
 
+const stationsFilePath = path.join(__dirname, 'data/stations.json');
+
 /**
- * Determines which API to use based on username or station ID
+ * Determines which API to use based on username, station ID, or stations.json
+ * @param {string} username - The username
+ * @param {string} stationId - The station ID (optional)
+ * @returns {Promise<string>} - 'energo' or 'chargenow'
+ */
+async function determineSupplier(username, stationId = null) {
+  // Check if username is Relink (case-insensitive)
+  if (username && username.toLowerCase() === 'relink') {
+    return 'energo';
+  }
+  
+  // Check if station ID starts with RL3T (Energo format)
+  if (stationId && stationId.startsWith('RL3T')) {
+    return 'energo';
+  }
+  
+  // Check stations.json for supplier information
+  if (stationId) {
+    try {
+      const stationsData = await fs.readFile(stationsFilePath, 'utf8');
+      const stations = JSON.parse(stationsData);
+      const station = stations.find(s => s.id === stationId);
+      if (station && station.supplier === 'energo') {
+        return 'energo';
+      }
+    } catch (error) {
+      console.warn('Could not read stations.json for supplier detection:', error.message);
+    }
+  }
+  
+  // Default to ChargeNow
+  return 'chargenow';
+}
+
+/**
+ * Synchronous version for backward compatibility (uses only username/ID prefix)
  * @param {string} username - The username
  * @param {string} stationId - The station ID (optional)
  * @returns {string} - 'energo' or 'chargenow'
  */
-function determineSupplier(username, stationId = null) {
+function determineSupplierSync(username, stationId = null) {
   // Check if username is Relink (case-insensitive)
   if (username && username.toLowerCase() === 'relink') {
     return 'energo';
@@ -270,10 +334,11 @@ function dateToEpoch(dateStr) {
  * @returns {Promise<Object>} - Object containing response and result with returnNum and borrowNum
  */
 async function fetchEnergoStationAvailability(cabinetId) {
+  const energoConfig = await getEnergoConfig();
   const myHeaders = new Headers();
-  myHeaders.append("Authorization", `Bearer ${ENERGO_CONFIG.token}`);
+  myHeaders.append("Authorization", `Bearer ${energoConfig.token}`);
   myHeaders.append("Referer", "https://backend.energo.vip/device/list");
-  myHeaders.append("oid", ENERGO_CONFIG.oid);
+  myHeaders.append("oid", energoConfig.oid);
   
   const requestOptions = {
     method: 'GET',
@@ -281,7 +346,7 @@ async function fetchEnergoStationAvailability(cabinetId) {
     redirect: 'follow'
   };
   
-  const url = `${ENERGO_CONFIG.baseUrl}/cabinet?cabinetId=${cabinetId}`;
+  const url = `${energoConfig.baseUrl}/cabinet?cabinetId=${cabinetId}`;
   console.log('Making API call to Energo: /cabinet for station:', cabinetId);
   
   const response = await fetch(url, requestOptions);
@@ -319,10 +384,11 @@ async function fetchEnergoStationAvailability(cabinetId) {
  * @returns {Promise<Object>} - Object containing response and result with totalPay and totalElements
  */
 async function fetchEnergoStationRentalHistory(cabinetId, sTime, eTime) {
+  const energoConfig = await getEnergoConfig();
   const myHeaders = new Headers();
-  myHeaders.append("Authorization", `Bearer ${ENERGO_CONFIG.token}`);
+  myHeaders.append("Authorization", `Bearer ${energoConfig.token}`);
   myHeaders.append("Referer", "https://backend.energo.vip/device/list");
-  myHeaders.append("oid", ENERGO_CONFIG.oid);
+  myHeaders.append("oid", energoConfig.oid);
   
   const requestOptions = {
     method: 'GET',
@@ -335,7 +401,7 @@ async function fetchEnergoStationRentalHistory(cabinetId, sTime, eTime) {
   const endEpoch = dateToEpoch(eTime);
   
   // URL encode the array brackets
-  const url = `${ENERGO_CONFIG.baseUrl}/order?page=0&size=0&createTime%5B0%5D=${startEpoch}&createTime%5B1%5D=${endEpoch}&cabinetid=${cabinetId}&sort=id%2Cdesc`;
+  const url = `${energoConfig.baseUrl}/order?page=0&size=0&createTime%5B0%5D=${startEpoch}&createTime%5B1%5D=${endEpoch}&cabinetid=${cabinetId}&sort=id%2Cdesc`;
   console.log('Making API call to Energo: /order for station:', cabinetId);
   console.log('Date range:', sTime, 'to', eTime, `(${startEpoch} to ${endEpoch})`);
   
@@ -417,7 +483,7 @@ async function fetchEnergoStation(cabinetId) {
  * @returns {Promise<string>} - JSON string of station data
  */
 async function fetchStations(username) {
-  const supplier = determineSupplier(username);
+  const supplier = determineSupplierSync(username);
   
   if (supplier === 'energo') {
     // For Energo, we need to fetch individual stations
@@ -440,10 +506,12 @@ async function fetchStations(username) {
  * @returns {Promise<Object>} - Object containing response and result in unified format
  */
 async function fetchStationRentalHistory(username, stationId, sTime, eTime, page = 1, limit = 1000) {
-  const supplier = determineSupplier(username, stationId);
+  const supplier = await determineSupplier(username, stationId);
   
   if (supplier === 'energo') {
     const { response, result } = await fetchEnergoStationRentalHistory(stationId, sTime, eTime);
+    
+    console.log(`[ENERGO RENTAL HISTORY] Station ${stationId}: totalElements=${result.totalElements}, totalPay=${result.totalPay}`);
     
     // Convert Energo format to ChargeNow-compatible format
     return {
@@ -452,10 +520,10 @@ async function fetchStationRentalHistory(username, stationId, sTime, eTime, page
         code: response.ok ? 0 : -1,
         msg: response.ok ? 'success' : 'error',
         page: {
-          total: result.totalElements || 0,
+          total: result.totalElements || 0,  // Number of rents
           records: result.content || [],
-          // Map totalPay to settledAmount for compatibility
-          totalRevenue: result.totalPay || 0
+          // totalPay is already the sum of all order.totalPay values from fetchEnergoStationRentalHistory
+          totalRevenue: result.totalPay || 0  // Total revenue (sum of all totalPay)
         }
       }
     };
@@ -569,13 +637,14 @@ function calculateOrderStats(orders) {
  */
 async function sendEnergoKeepAliveRequest() {
   try {
+    const energoConfig = await getEnergoConfig();
     // Use a known Energo station ID (RL3T format)
     const testStationId = 'RL3T062411030004';
     
     const myHeaders = new Headers();
-    myHeaders.append("Authorization", `Bearer ${ENERGO_CONFIG.token}`);
+    myHeaders.append("Authorization", `Bearer ${energoConfig.token}`);
     myHeaders.append("Referer", "https://backend.energo.vip/device/list");
-    myHeaders.append("oid", ENERGO_CONFIG.oid);
+    myHeaders.append("oid", energoConfig.oid);
     
     const requestOptions = {
       method: 'GET',
@@ -583,7 +652,7 @@ async function sendEnergoKeepAliveRequest() {
       redirect: 'follow'
     };
     
-    const url = `${ENERGO_CONFIG.baseUrl}/cabinet?cabinetId=${testStationId}`;
+    const url = `${energoConfig.baseUrl}/cabinet?cabinetId=${testStationId}`;
     
     const response = await fetch(url, requestOptions);
     
@@ -641,7 +710,7 @@ module.exports = {
   
   // Configuration (for future customization)
   CHARGENOW_CONFIG,
-  ENERGO_CONFIG,
+  getEnergoConfig,
   
   // Keep-alive function
   startEnergoKeepAlive

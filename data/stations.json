@@ -67,19 +67,19 @@
   },
   {
     "id": "CUBT062510000001",
-    "name": "Neon Gardens",
+    "name": "",
     "address": "",
     "supplier": "energo"
   },
   {
     "id": "CUBT062510000002",
-    "name": "Sila's Meditiranian Restaurant",
+    "name": "",
     "address": "",
     "supplier": "energo"
   },
   {
     "id": "CUBT062510000003",
-    "name": "DePaul, McCabe Hall",
+    "name": "",
     "address": "",
     "supplier": "energo"
   },
@@ -91,25 +91,25 @@
   },
   {
     "id": "CUBT062510000005",
-    "name": "Kelly's Pub",
+    "name": "",
     "address": "",
     "supplier": "energo"
   },
   {
     "id": "CUBT062510000006",
-    "name": "DePaul, University Hall Dorm",
+    "name": "",
     "address": "",
     "supplier": "energo"
   },
   {
     "id": "CUBT062510000007",
-    "name": "Loop Student center",
+    "name": "",
     "address": "",
     "supplier": "energo"
   },
   {
     "id": "CUBT062510000008",
-    "name": "Halligan Bar",
+    "name": "",
     "address": "",
     "supplier": "energo"
   },
@@ -121,7 +121,7 @@
   },
   {
     "id": "CUBT062510000010",
-    "name": "Prost",
+    "name": "",
     "address": "",
     "supplier": "energo"
   },
@@ -139,13 +139,13 @@
   },
   {
     "id": "CUBT062510000013",
-    "name": "Slice Hut",
+    "name": "",
     "address": "",
     "supplier": "energo"
   },
   {
     "id": "CUBT062510000014",
-    "name": "Maison Marcel",
+    "name": "",
     "address": "",
     "supplier": "energo"
   },
@@ -169,7 +169,7 @@
   },
   {
     "id": "CUBT062510000018",
-    "name": "DePaul, SAC",
+    "name": "SAADA",
     "address": "",
     "supplier": "energo"
   },
@@ -181,7 +181,7 @@
   },
   {
     "id": "CUBT062510000020",
-    "name": "SAADA",
+    "name": "",
     "address": "",
     "supplier": "energo"
   },
@@ -223,7 +223,7 @@
   },
   {
     "id": "CUBT062510000027",
-    "name": "DePaul, Sancuary Hall Dorm",
+    "name": "Maison Marcel",
     "address": "",
     "supplier": "energo"
   },

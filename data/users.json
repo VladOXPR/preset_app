@@ -109,5 +109,27 @@
       "CUBT062510000025": "Gearge St. Pub"
     },
     "created_at": "2025-01-30T00:00:00.000Z"
+  },
+  {
+    "id": 10,
+    "username": "MaisonMarcel",
+    "phone": "7739460236",
+    "password": "$2b$10$LCFWz9utja7sP6Rh2ywRGu4xLNAtcSGzc9SH2keqbqqOzvYONKKD2",
+    "userType": "Host",
+    "station_ids": {
+      "CUBT062510000027": "Maison Marcel"
+    },
+    "created_at": "2025-01-30T00:00:00.000Z"
+  },
+  {
+    "id": 11,
+    "username": "SAADA",
+    "phone": "7739460236",
+    "password": "$2b$10$szU1z3/BoWRHs1zbwyB8geBrCjj8qd2Q7NFbGL7B4/wdsAlGmts1C",
+    "userType": "Host",
+    "station_ids": {
+      "CUBT062510000018": "SAADA Beauty Salon"
+    },
+    "created_at": "2025-01-30T00:00:00.000Z"
   }
 ]
