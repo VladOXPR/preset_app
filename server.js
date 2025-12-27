@@ -1052,27 +1052,32 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       // Fetch Energo stations if user has any
       if (hasEnergoStations && energoStationIds.length > 0) {
         console.log(`⚡ Fetching ${energoStationIds.length} Energo station(s)...`);
-        const stationPromises = energoStationIds.map(stationId => 
-          supplierAPI.fetchEnergoStation(stationId).catch(error => {
-            console.error(`❌ Error fetching Energo station ${stationId}:`, error.message);
-            return null; // Return null on error
-          })
-        );
-        const stationResults = await Promise.all(stationPromises);
-        
-        stationResults.forEach((stationJson, index) => {
-          if (stationJson) {
-            try {
-              const parsed = JSON.parse(stationJson);
-              if (parsed.data && Array.isArray(parsed.data)) {
-                allStations.push(...parsed.data);
-                console.log(`✅ Added ${parsed.data.length} Energo station(s) from response ${index + 1}`);
+        try {
+          const stationPromises = energoStationIds.map(stationId => 
+            supplierAPI.fetchEnergoStation(stationId).catch(error => {
+              console.error(`❌ Error fetching Energo station ${stationId}:`, error.message);
+              return null; // Return null on error
+            })
+          );
+          const stationResults = await Promise.all(stationPromises);
+          
+          stationResults.forEach((stationJson, index) => {
+            if (stationJson) {
+              try {
+                const parsed = JSON.parse(stationJson);
+                if (parsed.data && Array.isArray(parsed.data)) {
+                  allStations.push(...parsed.data);
+                  console.log(`✅ Added ${parsed.data.length} Energo station(s) from response ${index + 1}`);
+                }
+              } catch (e) {
+                console.error(`❌ Error parsing Energo station data ${index + 1}:`, e);
               }
-            } catch (e) {
-              console.error(`❌ Error parsing Energo station data ${index + 1}:`, e);
             }
-          }
-        });
+          });
+        } catch (error) {
+          console.error('❌ Error in Energo station fetch batch:', error.message);
+          // Continue to cache check below
+        }
       }
       
       // If no stations were fetched from API, try to load from cache
@@ -1393,6 +1398,55 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       console.log('No stations found in API response');
     }
     
+    // FINAL FALLBACK: If filteredStations is empty, check cache and create stations from cache
+    if (filteredStations.length === 0) {
+      console.log('⚠️  No stations in filteredStations, checking cache as final fallback...');
+      const cachedMetrics = await db.getAllUserStationMetrics(req.user.username);
+      
+      if (Object.keys(cachedMetrics).length > 0) {
+        console.log(`📦 Found ${Object.keys(cachedMetrics).length} cached station(s), creating stations from cache...`);
+        
+        // Get user's station permissions to filter cached stations
+        let userStationIdsForFilter = [];
+        if (typeof user.station_ids === 'object' && user.station_ids !== null) {
+          if (Array.isArray(user.station_ids)) {
+            userStationIdsForFilter = user.station_ids;
+          } else {
+            userStationIdsForFilter = Object.keys(user.station_ids);
+          }
+        }
+        
+        // Create station objects from cached metrics, only for stations user has access to
+        for (const [stationId, metrics] of Object.entries(cachedMetrics)) {
+          // Only include stations the user has permission for
+          if (userStationIdsForFilter.length === 0 || userStationIdsForFilter.includes(stationId)) {
+            filteredStations.push({
+              pCabinetid: stationId,
+              id: stationId,
+              pBorrow: metrics.pBorrow || 0,
+              pAlso: metrics.pAlso || 0,
+              stationTitle: metrics.stationTitle || (typeof user.station_ids === 'object' && user.station_ids !== null && !Array.isArray(user.station_ids) && user.station_ids[stationId] ? user.station_ids[stationId] : stationId),
+              orderData: {
+                totalRecords: metrics.totalRecords || 0,
+                totalRevenue: metrics.totalRevenue || 0,
+                success: true,
+                fromCache: true
+              },
+              _fromCache: true // Flag to indicate this is from cache
+            });
+          }
+        }
+        
+        if (filteredStations.length > 0) {
+          console.log(`✅ Created ${filteredStations.length} station(s) from cache as final fallback`);
+        } else {
+          console.log('⚠️  Cached stations found but none match user permissions');
+        }
+      } else {
+        console.log('⚠️  No cached metrics found in final fallback check');
+      }
+    }
+    
     // Calculate totals for debugging (same as frontend)
     let debugTotalRevenue = 0;
     let debugTotalRents = 0;
@@ -1423,6 +1477,63 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching stations:', error);
+    
+    // Final fallback: try to load from cache even on error
+    try {
+      const cachedMetrics = await db.getAllUserStationMetrics(req.user.username);
+      
+      if (Object.keys(cachedMetrics).length > 0) {
+        console.log(`📦 Error occurred, but found ${Object.keys(cachedMetrics).length} cached station(s), using cache...`);
+        
+        // Get user's station permissions
+        const user = await db.getUserByUsername(req.user.username);
+        let userStationIdsForFilter = [];
+        if (user && typeof user.station_ids === 'object' && user.station_ids !== null) {
+          if (Array.isArray(user.station_ids)) {
+            userStationIdsForFilter = user.station_ids;
+          } else {
+            userStationIdsForFilter = Object.keys(user.station_ids);
+          }
+        }
+        
+        // Create station objects from cached metrics
+        const cachedStations = [];
+        for (const [stationId, metrics] of Object.entries(cachedMetrics)) {
+          // Only include stations the user has permission for
+          if (userStationIdsForFilter.length === 0 || userStationIdsForFilter.includes(stationId)) {
+            cachedStations.push({
+              pCabinetid: stationId,
+              id: stationId,
+              pBorrow: metrics.pBorrow || 0,
+              pAlso: metrics.pAlso || 0,
+              stationTitle: metrics.stationTitle || stationId,
+              orderData: {
+                totalRecords: metrics.totalRecords || 0,
+                totalRevenue: metrics.totalRevenue || 0,
+                success: true,
+                fromCache: true
+              },
+              _fromCache: true
+            });
+          }
+        }
+        
+        if (cachedStations.length > 0) {
+          console.log(`✅ Returning ${cachedStations.length} station(s) from cache after error`);
+          return res.json({ 
+            success: true, 
+            data: cachedStations,
+            fromCache: true,
+            error: 'API error occurred, using cached data',
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    } catch (cacheError) {
+      console.error('Error loading from cache:', cacheError);
+    }
+    
+    // If no cache available, return error
     res.status(500).json({ 
       success: false, 
       error: error.message,
