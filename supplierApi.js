@@ -17,6 +17,7 @@ if (typeof globalThis.fetch === 'undefined') {
 
 // File system for reading config
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 
 // ========================================
@@ -30,6 +31,8 @@ const CHARGENOW_CONFIG = {
 
 // Energo config path
 const energoConfigPath = path.join(__dirname, 'data/energo-config.json');
+// Users file path
+const usersFilePath = path.join(__dirname, 'data/users.json');
 
 // Default Energo config (fallback if file doesn't exist)
 const DEFAULT_ENERGO_CONFIG = {
@@ -244,7 +247,7 @@ async function fetchStationAvailability(stationId) {
  * @param {number} limit - Items per page (default: 1000)
  * @returns {Promise<Object>} - Object containing response and result
  */
-async function fetchChargeNowStationRentalHistory(stationId, sTime, eTime, page = 1, limit = 1000) {
+async function fetchChargeNowStationRentalHistory(stationId, sTime, eTime, page = 1, limit = 1000, username = null) {
   const myHeaders = new Headers();
   myHeaders.append("Authorization", CHARGENOW_CONFIG.credentials);
   myHeaders.append("Content-Type", "application/json");
@@ -259,20 +262,96 @@ async function fetchChargeNowStationRentalHistory(stationId, sTime, eTime, page 
   const url = `${CHARGENOW_CONFIG.baseUrl}/order/list?page=${page}&limit=${limit}&sTime=${encodeURIComponent(sTime)}&eTime=${encodeURIComponent(eTime)}&pCabinetid=${stationId}`;
   console.log('Making API call to ChargeNow: /order/list for station:', stationId);
   
-  const response = await fetch(url, requestOptions);
-  const result = await response.text();
-  
-  console.log('ChargeNow rental history response status:', response.status);
-  
-  // Parse the result
-  let parsedResult;
   try {
-    parsedResult = JSON.parse(result);
-  } catch (e) {
-    parsedResult = { code: -1, msg: 'Failed to parse order data' };
+    const response = await fetch(url, requestOptions);
+    const result = await response.text();
+    
+    console.log('ChargeNow rental history response status:', response.status);
+    
+    // Parse the result
+    let parsedResult;
+    try {
+      parsedResult = JSON.parse(result);
+    } catch (e) {
+      parsedResult = { code: -1, msg: 'Failed to parse order data' };
+    }
+    
+    // Check if fetch was successful
+    if (response.ok && parsedResult.code === 0 && parsedResult.page) {
+      // Calculate totals from records
+      const records = parsedResult.page.records || [];
+      const validRecords = records.filter(record => {
+        const settledAmount = parseFloat(record.settledAmount || 0);
+        return settledAmount > 0;
+      });
+      
+      const totalRecords = validRecords.length;
+      const totalRevenue = validRecords.reduce((sum, record) => {
+        return sum + (parseFloat(record.settledAmount) || 0);
+      }, 0);
+      
+      // Save successful data to cache
+      if (username) {
+        const cachedMetrics = getCachedStationMetrics(username, stationId) || {};
+        saveStationMetricsToCache(username, stationId, {
+          ...cachedMetrics,
+          totalRecords: totalRecords,
+          totalRevenue: totalRevenue
+        });
+      }
+      
+      return { response, result: parsedResult };
+    } else {
+      // Fetch failed, try to get from cache
+      console.log(`⚠️  API fetch failed for station ${stationId} rental history, checking cache...`);
+      if (username) {
+        const cachedMetrics = getCachedStationMetrics(username, stationId);
+        if (cachedMetrics && (cachedMetrics.totalRecords !== undefined || cachedMetrics.totalRevenue !== undefined)) {
+          console.log(`📦 Using cached rental history for station ${stationId}`);
+          return {
+            response: { ok: true, status: 200 },
+            result: {
+              code: 0,
+              msg: 'success',
+              page: {
+                total: cachedMetrics.totalRecords || 0,
+                records: [],
+                totalRevenue: cachedMetrics.totalRevenue || 0
+              }
+            }
+          };
+        }
+      }
+      
+      // No cache available, return error response
+      return { response, result: parsedResult };
+    }
+  } catch (error) {
+    console.error(`❌ Error fetching ChargeNow rental history for ${stationId}:`, error.message);
+    
+    // Try to get from cache
+    if (username) {
+      const cachedMetrics = getCachedStationMetrics(username, stationId);
+      if (cachedMetrics && (cachedMetrics.totalRecords !== undefined || cachedMetrics.totalRevenue !== undefined)) {
+        console.log(`📦 Using cached rental history after error for station ${stationId}`);
+        return {
+          response: { ok: true, status: 200 },
+          result: {
+            code: 0,
+            msg: 'success',
+            page: {
+              total: cachedMetrics.totalRecords || 0,
+              records: [],
+              totalRevenue: cachedMetrics.totalRevenue || 0
+            }
+          }
+        };
+      }
+    }
+    
+    // No cache available, return error
+    throw error;
   }
-  
-  return { response, result: parsedResult };
 }
 
 /**
@@ -353,6 +432,70 @@ async function ejectBatteryByRepair(stationId, slotNum = 0) {
  * @param {string} dateStr - Date string in format "YYYY-MM-DD HH:mm:ss" (assumed to be UTC)
  * @returns {number} - Epoch timestamp in milliseconds
  */
+// ========================================
+// USER DATA CACHE HELPERS
+// ========================================
+
+/**
+ * Get cached station metrics from users.json for a specific user and station
+ * Works for ALL user types (Host, Distributor, etc.) - no userType filtering
+ * @param {string} username - The username (works for all user types)
+ * @param {string} stationId - The station ID
+ * @returns {Object|null} - Cached metrics or null if not found
+ */
+function getCachedStationMetrics(username, stationId) {
+  try {
+    const usersData = fsSync.readFileSync(usersFilePath, 'utf8');
+    const users = JSON.parse(usersData);
+    const user = users.find(u => u.username === username);
+    
+    if (!user || !user.stationMetrics || !user.stationMetrics[stationId]) {
+      return null;
+    }
+    
+    return user.stationMetrics[stationId];
+  } catch (error) {
+    console.error('Error reading cached station metrics:', error);
+    return null;
+  }
+}
+
+/**
+ * Save station metrics to users.json for a specific user and station
+ * Works for ALL user types (Host, Distributor, etc.) - no userType filtering
+ * @param {string} username - The username (works for all user types)
+ * @param {string} stationId - The station ID
+ * @param {Object} metrics - The metrics to save (pBorrow, pAlso, totalRecords, totalRevenue, stationTitle)
+ */
+function saveStationMetricsToCache(username, stationId, metrics) {
+  try {
+    const usersData = fsSync.readFileSync(usersFilePath, 'utf8');
+    const users = JSON.parse(usersData);
+    const userIndex = users.findIndex(u => u.username === username);
+    
+    if (userIndex === -1) {
+      console.error(`User ${username} not found in users.json`);
+      return;
+    }
+    
+    // Initialize stationMetrics if it doesn't exist
+    if (!users[userIndex].stationMetrics) {
+      users[userIndex].stationMetrics = {};
+    }
+    
+    // Save metrics
+    users[userIndex].stationMetrics[stationId] = {
+      ...metrics,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    fsSync.writeFileSync(usersFilePath, JSON.stringify(users, null, 2), 'utf8');
+    console.log(`💾 Saved metrics to cache for user ${username}, station ${stationId}`);
+  } catch (error) {
+    console.error('Error saving station metrics to cache:', error);
+  }
+}
+
 function dateToEpoch(dateStr) {
   // Parse date string: "YYYY-MM-DD HH:mm:ss"
   // Since getDateRange returns UTC dates, parse as UTC
@@ -368,9 +511,10 @@ function dateToEpoch(dateStr) {
 /**
  * Fetches station battery availability from Energo API
  * @param {string} cabinetId - The cabinet/station ID
+ * @param {string} username - The username (for cache lookup)
  * @returns {Promise<Object>} - Object containing response and result with returnNum and borrowNum
  */
-async function fetchEnergoStationAvailability(cabinetId) {
+async function fetchEnergoStationAvailability(cabinetId, username = null) {
   const energoConfig = await getEnergoConfig();
   const myHeaders = new Headers();
   myHeaders.append("Authorization", `Bearer ${energoConfig.token}`);
@@ -386,31 +530,105 @@ async function fetchEnergoStationAvailability(cabinetId) {
   const url = `${energoConfig.baseUrl}/cabinet?cabinetId=${cabinetId}`;
   console.log('Making API call to Energo: /cabinet for station:', cabinetId);
   
-  const response = await fetch(url, requestOptions);
-  const result = await response.json();
-  
-  console.log('Energo station availability response status:', response.status);
-  
-  // Extract returnNum and borrowNum from positionInfo
-  let returnNum = 0;
-  let borrowNum = 0;
-  
-  if (result.content && result.content.length > 0) {
-    const stationData = result.content[0];
-    if (stationData.positionInfo) {
-      returnNum = stationData.positionInfo.returnNum || 0;
-      borrowNum = stationData.positionInfo.borrowNum || 0;
+  try {
+    const response = await fetch(url, requestOptions);
+    const result = await response.json();
+    
+    console.log('Energo station availability response status:', response.status);
+    
+    // Check if fetch was successful
+    if (response.ok && result.content && result.content.length > 0) {
+      // Extract returnNum and borrowNum from positionInfo
+      const stationData = result.content[0];
+      let returnNum = 0;
+      let borrowNum = 0;
+      
+      if (stationData.positionInfo) {
+        returnNum = stationData.positionInfo.returnNum || 0;
+        borrowNum = stationData.positionInfo.borrowNum || 0;
+      }
+      
+      // Save successful data to cache
+      if (username) {
+        saveStationMetricsToCache(username, cabinetId, {
+          pBorrow: borrowNum,
+          pAlso: returnNum,
+          stationTitle: stationData.shopName || cabinetId
+        });
+      }
+      
+      return { 
+        response, 
+        result: {
+          ...result,
+          returnNum,
+          borrowNum
+        }
+      };
+    } else {
+      // Fetch failed, try to get from cache
+      console.log(`⚠️  API fetch failed for station ${cabinetId}, checking cache...`);
+      if (username) {
+        const cachedMetrics = getCachedStationMetrics(username, cabinetId);
+        if (cachedMetrics) {
+          console.log(`📦 Using cached metrics for station ${cabinetId}`);
+          return {
+            response: { ok: true, status: 200 },
+            result: {
+              content: [{
+                cabinetId: cabinetId,
+                shopName: cachedMetrics.stationTitle || cabinetId,
+                positionInfo: {
+                  returnNum: cachedMetrics.pAlso || 0,
+                  borrowNum: cachedMetrics.pBorrow || 0
+                }
+              }],
+              returnNum: cachedMetrics.pAlso || 0,
+              borrowNum: cachedMetrics.pBorrow || 0
+            }
+          };
+        }
+      }
+      
+      // No cache available, return error response
+      return {
+        response: { ok: false, status: response.status || 500 },
+        result: {
+          ...result,
+          returnNum: 0,
+          borrowNum: 0
+        }
+      };
     }
+  } catch (error) {
+    console.error(`❌ Error fetching Energo station availability for ${cabinetId}:`, error.message);
+    
+    // Try to get from cache
+    if (username) {
+      const cachedMetrics = getCachedStationMetrics(username, cabinetId);
+      if (cachedMetrics) {
+        console.log(`📦 Using cached metrics after error for station ${cabinetId}`);
+        return {
+          response: { ok: true, status: 200 },
+          result: {
+            content: [{
+              cabinetId: cabinetId,
+              shopName: cachedMetrics.stationTitle || cabinetId,
+              positionInfo: {
+                returnNum: cachedMetrics.pAlso || 0,
+                borrowNum: cachedMetrics.pBorrow || 0
+              }
+            }],
+            returnNum: cachedMetrics.pAlso || 0,
+            borrowNum: cachedMetrics.pBorrow || 0
+          }
+        };
+      }
+    }
+    
+    // No cache available, return error
+    throw error;
   }
-  
-  return { 
-    response, 
-    result: {
-      ...result,
-      returnNum,
-      borrowNum
-    }
-  };
 }
 
 /**
@@ -418,9 +636,10 @@ async function fetchEnergoStationAvailability(cabinetId) {
  * @param {string} cabinetId - The cabinet/station ID
  * @param {string} sTime - Start time (format: "YYYY-MM-DD HH:mm:ss")
  * @param {string} eTime - End time (format: "YYYY-MM-DD HH:mm:ss")
+ * @param {string} username - The username (for cache lookup)
  * @returns {Promise<Object>} - Object containing response and result with totalPay and totalElements
  */
-async function fetchEnergoStationRentalHistory(cabinetId, sTime, eTime) {
+async function fetchEnergoStationRentalHistory(cabinetId, sTime, eTime, username = null) {
   const energoConfig = await getEnergoConfig();
   const myHeaders = new Headers();
   myHeaders.append("Authorization", `Bearer ${energoConfig.token}`);
@@ -442,31 +661,94 @@ async function fetchEnergoStationRentalHistory(cabinetId, sTime, eTime) {
   console.log('Making API call to Energo: /order for station:', cabinetId);
   console.log('Date range:', sTime, 'to', eTime, `(${startEpoch} to ${endEpoch})`);
   
-  const response = await fetch(url, requestOptions);
-  const result = await response.json();
-  
-  console.log('Energo rental history response status:', response.status);
-  
-  // Extract totalPay and totalElements
-  let totalPay = 0;
-  let totalElements = 0;
-  
-  if (result.content && Array.isArray(result.content)) {
-    // Sum all totalPay values from orders
-    totalPay = result.content.reduce((sum, order) => {
-      return sum + (parseFloat(order.totalPay) || 0);
-    }, 0);
-    totalElements = result.totalElements || result.content.length;
-  }
-  
-  return { 
-    response, 
-    result: {
-      ...result,
-      totalPay,
-      totalElements
+  try {
+    const response = await fetch(url, requestOptions);
+    const result = await response.json();
+    
+    console.log('Energo rental history response status:', response.status);
+    
+    // Check if fetch was successful
+    if (response.ok) {
+      // Extract totalPay and totalElements
+      let totalPay = 0;
+      let totalElements = 0;
+      
+      if (result.content && Array.isArray(result.content)) {
+        // Sum all totalPay values from orders
+        totalPay = result.content.reduce((sum, order) => {
+          return sum + (parseFloat(order.totalPay) || 0);
+        }, 0);
+        totalElements = result.totalElements || result.content.length;
+      }
+      
+      // Save successful data to cache
+      if (username) {
+        const cachedMetrics = getCachedStationMetrics(username, cabinetId) || {};
+        saveStationMetricsToCache(username, cabinetId, {
+          ...cachedMetrics,
+          totalRecords: totalElements,
+          totalRevenue: totalPay
+        });
+      }
+      
+      return { 
+        response, 
+        result: {
+          ...result,
+          totalPay,
+          totalElements
+        }
+      };
+    } else {
+      // Fetch failed, try to get from cache
+      console.log(`⚠️  API fetch failed for station ${cabinetId} rental history, checking cache...`);
+      if (username) {
+        const cachedMetrics = getCachedStationMetrics(username, cabinetId);
+        if (cachedMetrics && (cachedMetrics.totalRecords !== undefined || cachedMetrics.totalRevenue !== undefined)) {
+          console.log(`📦 Using cached rental history for station ${cabinetId}`);
+          return {
+            response: { ok: true, status: 200 },
+            result: {
+              content: [],
+              totalPay: cachedMetrics.totalRevenue || 0,
+              totalElements: cachedMetrics.totalRecords || 0
+            }
+          };
+        }
+      }
+      
+      // No cache available, return error response
+      return {
+        response: { ok: false, status: response.status || 500 },
+        result: {
+          ...result,
+          totalPay: 0,
+          totalElements: 0
+        }
+      };
     }
-  };
+  } catch (error) {
+    console.error(`❌ Error fetching Energo rental history for ${cabinetId}:`, error.message);
+    
+    // Try to get from cache
+    if (username) {
+      const cachedMetrics = getCachedStationMetrics(username, cabinetId);
+      if (cachedMetrics && (cachedMetrics.totalRecords !== undefined || cachedMetrics.totalRevenue !== undefined)) {
+        console.log(`📦 Using cached rental history after error for station ${cabinetId}`);
+        return {
+          response: { ok: true, status: 200 },
+          result: {
+            content: [],
+            totalPay: cachedMetrics.totalRevenue || 0,
+            totalElements: cachedMetrics.totalRecords || 0
+          }
+        };
+      }
+    }
+    
+    // No cache available, return error
+    throw error;
+  }
 }
 
 /**
@@ -475,9 +757,9 @@ async function fetchEnergoStationRentalHistory(cabinetId, sTime, eTime) {
  * @param {string} cabinetId - The cabinet/station ID
  * @returns {Promise<string>} - JSON string of station data in ChargeNow format
  */
-async function fetchEnergoStation(cabinetId) {
+async function fetchEnergoStation(cabinetId, username = null) {
   try {
-    const { result } = await fetchEnergoStationAvailability(cabinetId);
+    const { result } = await fetchEnergoStationAvailability(cabinetId, username);
     
     if (!result.content || result.content.length === 0) {
       return JSON.stringify({ code: -1, msg: 'Station not found', data: [] });
@@ -546,7 +828,7 @@ async function fetchStationRentalHistory(username, stationId, sTime, eTime, page
   const supplier = await determineSupplier(username, stationId);
   
   if (supplier === 'energo') {
-    const { response, result } = await fetchEnergoStationRentalHistory(stationId, sTime, eTime);
+    const { response, result } = await fetchEnergoStationRentalHistory(stationId, sTime, eTime, username);
     
     console.log(`[ENERGO RENTAL HISTORY] Station ${stationId}: totalElements=${result.totalElements}, totalPay=${result.totalPay}`);
     
@@ -567,7 +849,7 @@ async function fetchStationRentalHistory(username, stationId, sTime, eTime, page
   }
   
   // Default to ChargeNow
-  return await fetchChargeNowStationRentalHistory(stationId, sTime, eTime, page, limit);
+  return await fetchChargeNowStationRentalHistory(stationId, sTime, eTime, page, limit, username);
 }
 
 // ========================================

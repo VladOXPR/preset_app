@@ -49,7 +49,65 @@
       "CUBT062510000025": "Gearge St. Pub",
       "CUBT062510000030": "Hello Jasmine Lincoln Park"
     },
-    "created_at": "2025-08-29T20:32:53.681Z"
+    "created_at": "2025-08-29T20:32:53.681Z",
+    "stationMetrics": {
+      "BJH09883": {
+        "pBorrow": 3,
+        "pAlso": 5,
+        "totalRecords": 2,
+        "totalRevenue": 6,
+        "stationTitle": "Kelly’s Pub",
+        "lastUpdated": "2025-12-27T21:53:41.495Z"
+      },
+      "BJH09881": {
+        "pBorrow": 3,
+        "pAlso": 5,
+        "totalRecords": 26,
+        "totalRevenue": 78,
+        "stationTitle": "Parlay Lincoln Park",
+        "lastUpdated": "2025-12-27T21:53:42.131Z"
+      },
+      "DTN00872": {
+        "pBorrow": 18,
+        "pAlso": 6,
+        "totalRecords": 11,
+        "totalRevenue": 51,
+        "stationTitle": "DePaul, Lincoln Park Student Center",
+        "lastUpdated": "2025-12-27T21:53:42.462Z"
+      },
+      "DTN00970": {
+        "pBorrow": 3,
+        "pAlso": 21,
+        "totalRecords": 3,
+        "totalRevenue": 9,
+        "stationTitle": "Theater School",
+        "lastUpdated": "2025-12-27T21:53:42.756Z"
+      },
+      "DTN00971": {
+        "pBorrow": 7,
+        "pAlso": 17,
+        "totalRecords": 2,
+        "totalRevenue": 6,
+        "stationTitle": "DePaul, Loop Student CenterDePaul",
+        "lastUpdated": "2025-12-27T21:53:43.059Z"
+      },
+      "CUBT062510000025": {
+        "pBorrow": 4,
+        "pAlso": 2,
+        "totalRecords": 2,
+        "totalRevenue": 6,
+        "stationTitle": "Gearge St. Pub",
+        "lastUpdated": "2025-12-27T21:50:10.756Z"
+      },
+      "CUBT062510000030": {
+        "pBorrow": 4,
+        "pAlso": 2,
+        "totalRecords": 2,
+        "totalRevenue": 6,
+        "stationTitle": "Hello Jasmine Lincoln Park",
+        "lastUpdated": "2025-12-27T21:50:10.822Z"
+      }
+    }
   },
   {
     "id": 5,
@@ -119,7 +177,17 @@
     "station_ids": {
       "CUBT062510000027": "Maison Marcel"
     },
-    "created_at": "2025-01-30T00:00:00.000Z"
+    "created_at": "2025-01-30T00:00:00.000Z",
+    "stationMetrics": {
+      "CUBT062510000027": {
+        "pBorrow": 4,
+        "pAlso": 2,
+        "totalRecords": 1,
+        "totalRevenue": 3,
+        "stationTitle": "Maison Marcel",
+        "lastUpdated": "2025-12-27T21:46:25.205Z"
+      }
+    }
   },
   {
     "id": 11,
@@ -170,7 +238,7 @@
         "totalRecords": 0,
         "totalRevenue": 0,
         "stationTitle": "Neva Hangry",
-        "lastUpdated": "2025-12-27T21:20:06.286Z"
+        "lastUpdated": "2025-12-27T21:48:01.547Z"
       }
     }
   }
