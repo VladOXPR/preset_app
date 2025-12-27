@@ -280,12 +280,33 @@ app.get('/key', (req, res) => {
 // Energo token management endpoints
 const energoConfigPath = path.join(__dirname, 'data/energo-config.json');
 
+// Check if we're running on Vercel (read-only filesystem)
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+
 // Get current Energo token
 app.get('/api/energo-token', async (req, res) => {
   try {
-    const configData = await fs.readFile(energoConfigPath, 'utf8');
-    const config = JSON.parse(configData);
-    res.json({ token: config.token });
+    // Priority 1: Environment variable (Vercel/production)
+    if (process.env.ENERGO_TOKEN) {
+      return res.json({ 
+        token: process.env.ENERGO_TOKEN,
+        source: 'environment',
+        isVercel: !!isVercel
+      });
+    }
+    
+    // Priority 2: Config file (local development)
+    try {
+      const configData = await fs.readFile(energoConfigPath, 'utf8');
+      const config = JSON.parse(configData);
+      return res.json({ 
+        token: config.token,
+        source: 'file',
+        isVercel: false
+      });
+    } catch (error) {
+      return res.status(404).json({ error: 'Token not found' });
+    }
   } catch (error) {
     console.error('Error reading Energo config:', error);
     res.status(500).json({ error: 'Failed to read token' });
@@ -301,7 +322,16 @@ app.post('/api/energo-token', async (req, res) => {
       return res.status(400).json({ error: 'Token is required' });
     }
     
-    // Read current config
+    // On Vercel, we can't write to files - need to use environment variables
+    if (isVercel) {
+      return res.status(400).json({ 
+        error: 'Cannot update token on Vercel. Please update the ENERGO_TOKEN environment variable in Vercel dashboard.',
+        isVercel: true,
+        instructions: 'Go to Vercel Dashboard > Your Project > Settings > Environment Variables and update ENERGO_TOKEN'
+      });
+    }
+    
+    // Local development: Update config file
     let config;
     try {
       const configData = await fs.readFile(energoConfigPath, 'utf8');
@@ -317,14 +347,16 @@ app.post('/api/energo-token', async (req, res) => {
     // Write back to file
     await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
     
-    // Reload the config in supplierApi module
-    // We'll need to update supplierApi.js to read from file dynamically
-    
     console.log('✅ Energo token updated successfully');
-    res.json({ success: true, message: 'Token updated successfully' });
+    res.json({ 
+      success: true, 
+      message: 'Token updated successfully',
+      source: 'file',
+      isVercel: false
+    });
   } catch (error) {
     console.error('Error updating Energo token:', error);
-    res.status(500).json({ error: 'Failed to update token' });
+    res.status(500).json({ error: 'Failed to update token: ' + error.message });
   }
 });
 

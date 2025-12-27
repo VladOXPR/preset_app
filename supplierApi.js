@@ -39,10 +39,20 @@ const DEFAULT_ENERGO_CONFIG = {
 };
 
 /**
- * Get Energo configuration from file (reads dynamically)
+ * Get Energo configuration (reads from env var first, then file, then default)
  * @returns {Promise<Object>} Energo config object
  */
 async function getEnergoConfig() {
+  // Priority 1: Environment variable (for Vercel/production)
+  if (process.env.ENERGO_TOKEN) {
+    return {
+      baseUrl: 'https://backend.energo.vip/api',
+      token: process.env.ENERGO_TOKEN,
+      oid: process.env.ENERGO_OID || DEFAULT_ENERGO_CONFIG.oid,
+    };
+  }
+  
+  // Priority 2: Config file (for local development)
   try {
     const configData = await fs.readFile(energoConfigPath, 'utf8');
     const config = JSON.parse(configData);
