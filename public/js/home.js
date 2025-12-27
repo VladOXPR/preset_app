@@ -101,11 +101,13 @@ async function fetchStations() {
       displayStations(result.data);
     } else {
       console.error('Failed to fetch stations:', result);
-      document.getElementById('station-list').innerHTML = '<p>Error loading stations</p>';
+      // Try to display whatever data we got, even if empty
+      displayStations(result.data || []);
     }
   } catch (error) {
     console.error('Error fetching stations:', error);
-    document.getElementById('station-list').innerHTML = '<p>Error loading stations</p>';
+    // Display empty array gracefully - backend should always return data
+    displayStations([]);
   }
 }
 
@@ -227,10 +229,8 @@ function displayStations(stationsData) {
     }
   }
   
-  if (stations.length === 0) {
-    stationList.innerHTML = '<p>No stations assigned to your account. Please contact an administrator to get access to stations.</p>';
-    return;
-  }
+  // Always display stations, even if empty array (will show empty state gracefully)
+  // Never show "no stations assigned" message - backend always returns stations from cache or defaults
   
   console.log('Processing stations:', stations);
   

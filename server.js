@@ -1080,34 +1080,69 @@ app.get('/api/stations', verifyToken, async (req, res) => {
         }
       }
       
-      // If no stations were fetched from API, try to load from cache
+      // If no stations were fetched from API, try to load from cache or create from user permissions
       if (allStations.length === 0) {
-        console.log('⚠️  No stations fetched from API, attempting to load from cache...');
+        console.log('⚠️  No stations fetched from API, attempting to load from cache or user permissions...');
         const cachedMetrics = await db.getAllUserStationMetrics(req.user.username);
+        
+        // Get user's station permissions
+        let userStationIdsForStations = [];
+        if (typeof user.station_ids === 'object' && user.station_ids !== null) {
+          if (Array.isArray(user.station_ids)) {
+            userStationIdsForStations = user.station_ids;
+          } else {
+            userStationIdsForStations = Object.keys(user.station_ids);
+          }
+        }
         
         if (Object.keys(cachedMetrics).length > 0) {
           console.log(`📦 Found ${Object.keys(cachedMetrics).length} cached station(s), creating station objects from cache...`);
           
           // Create station objects from cached metrics
           for (const [stationId, metrics] of Object.entries(cachedMetrics)) {
+            // Only include stations user has permission for
+            if (userStationIdsForStations.length === 0 || userStationIdsForStations.includes(stationId)) {
+              allStations.push({
+                pCabinetid: stationId,
+                id: stationId,
+                pBorrow: metrics.pBorrow || 0,
+                pAlso: metrics.pAlso || 0,
+                stationTitle: metrics.stationTitle || (typeof user.station_ids === 'object' && user.station_ids !== null && !Array.isArray(user.station_ids) && user.station_ids[stationId] ? user.station_ids[stationId] : stationId),
+                orderData: {
+                  totalRecords: metrics.totalRecords || 0,
+                  totalRevenue: metrics.totalRevenue || 0,
+                  success: true,
+                  fromCache: true
+                },
+                _fromCache: true // Flag to indicate this is from cache
+              });
+            }
+          }
+          console.log(`✅ Created ${allStations.length} station(s) from cache`);
+        }
+        
+        // If still no stations, create from user permissions with zeros
+        if (allStations.length === 0 && userStationIdsForStations.length > 0) {
+          console.log(`📦 No cache found, creating ${userStationIdsForStations.length} station(s) from user permissions with default zeros...`);
+          for (const stationId of userStationIdsForStations) {
             allStations.push({
               pCabinetid: stationId,
               id: stationId,
-              pBorrow: metrics.pBorrow || 0,
-              pAlso: metrics.pAlso || 0,
-              stationTitle: metrics.stationTitle || stationId,
+              pBorrow: 0,
+              pAlso: 0,
+              stationTitle: typeof user.station_ids === 'object' && user.station_ids !== null && !Array.isArray(user.station_ids) && user.station_ids[stationId] ? user.station_ids[stationId] : stationId,
               orderData: {
-                totalRecords: metrics.totalRecords || 0,
-                totalRevenue: metrics.totalRevenue || 0,
-                success: true,
-                fromCache: true
+                totalRecords: 0,
+                totalRevenue: 0,
+                success: false,
+                fromCache: false,
+                defaultData: true
               },
-              _fromCache: true // Flag to indicate this is from cache
+              _fromCache: false,
+              _defaultData: true
             });
           }
-          console.log(`✅ Created ${allStations.length} station(s) from cache`);
-        } else {
-          console.log('⚠️  No cached metrics found either');
+          console.log(`✅ Created ${allStations.length} station(s) with default zeros`);
         }
       }
       
@@ -1191,8 +1226,8 @@ app.get('/api/stations', verifyToken, async (req, res) => {
         console.log(`Filtered stations: ${filteredStations.length} out of ${stationsArray.length}`);
         console.log('Filtered station IDs:', filteredStations.map(s => s.pCabinetid || s.id));
       } else {
-        console.log('User has no station permissions, showing no stations');
-        filteredStations = [];
+        console.log('User has no station permissions in userStationIdsForFilter, will check cache or user permissions');
+        // Don't set filteredStations = [] here, let the fallback logic handle it
       }
       
       if (filteredStations.length > 0) {
@@ -1391,30 +1426,31 @@ app.get('/api/stations', verifyToken, async (req, res) => {
         }
         
       } else {
-        console.log('User has no station permissions, showing no stations');
-        filteredStations = [];
+        console.log('User has no station permissions in filteredStations check, will check cache or user permissions');
+        // Don't set filteredStations = [] here, let the fallback logic handle it
       }
     } else {
-      console.log('No stations found in API response');
+      console.log('No stations found in API response, will use cache or user permissions');
+      // Don't do anything here, let the fallback logic handle it
     }
     
-    // FINAL FALLBACK: If filteredStations is empty, check cache and create stations from cache
+    // FINAL FALLBACK: If filteredStations is empty, check cache or create from user permissions
     if (filteredStations.length === 0) {
-      console.log('⚠️  No stations in filteredStations, checking cache as final fallback...');
+      console.log('⚠️  No stations in filteredStations, checking cache or user permissions as final fallback...');
       const cachedMetrics = await db.getAllUserStationMetrics(req.user.username);
+      
+      // Get user's station permissions
+      let userStationIdsForFilter = [];
+      if (typeof user.station_ids === 'object' && user.station_ids !== null) {
+        if (Array.isArray(user.station_ids)) {
+          userStationIdsForFilter = user.station_ids;
+        } else {
+          userStationIdsForFilter = Object.keys(user.station_ids);
+        }
+      }
       
       if (Object.keys(cachedMetrics).length > 0) {
         console.log(`📦 Found ${Object.keys(cachedMetrics).length} cached station(s), creating stations from cache...`);
-        
-        // Get user's station permissions to filter cached stations
-        let userStationIdsForFilter = [];
-        if (typeof user.station_ids === 'object' && user.station_ids !== null) {
-          if (Array.isArray(user.station_ids)) {
-            userStationIdsForFilter = user.station_ids;
-          } else {
-            userStationIdsForFilter = Object.keys(user.station_ids);
-          }
-        }
         
         // Create station objects from cached metrics, only for stations user has access to
         for (const [stationId, metrics] of Object.entries(cachedMetrics)) {
@@ -1439,11 +1475,31 @@ app.get('/api/stations', verifyToken, async (req, res) => {
         
         if (filteredStations.length > 0) {
           console.log(`✅ Created ${filteredStations.length} station(s) from cache as final fallback`);
-        } else {
-          console.log('⚠️  Cached stations found but none match user permissions');
         }
-      } else {
-        console.log('⚠️  No cached metrics found in final fallback check');
+      }
+      
+      // If still no stations, create from user permissions with zeros
+      if (filteredStations.length === 0 && userStationIdsForFilter.length > 0) {
+        console.log(`📦 No cache found, creating ${userStationIdsForFilter.length} station(s) from user permissions with default zeros...`);
+        for (const stationId of userStationIdsForFilter) {
+          filteredStations.push({
+            pCabinetid: stationId,
+            id: stationId,
+            pBorrow: 0,
+            pAlso: 0,
+            stationTitle: typeof user.station_ids === 'object' && user.station_ids !== null && !Array.isArray(user.station_ids) && user.station_ids[stationId] ? user.station_ids[stationId] : stationId,
+            orderData: {
+              totalRecords: 0,
+              totalRevenue: 0,
+              success: false,
+              fromCache: false,
+              defaultData: true
+            },
+            _fromCache: false,
+            _defaultData: true
+          });
+        }
+        console.log(`✅ Created ${filteredStations.length} station(s) with default zeros as final fallback`);
       }
     }
     
@@ -1529,11 +1585,44 @@ app.get('/api/stations', verifyToken, async (req, res) => {
           });
         }
       }
+      
+      // If no cache, create stations from user permissions with zeros
+      if (user && userStationIdsForFilter.length > 0) {
+        console.log(`📦 No cache found after error, creating ${userStationIdsForFilter.length} station(s) from user permissions with default zeros...`);
+        const defaultStations = [];
+        for (const stationId of userStationIdsForFilter) {
+          defaultStations.push({
+            pCabinetid: stationId,
+            id: stationId,
+            pBorrow: 0,
+            pAlso: 0,
+            stationTitle: typeof user.station_ids === 'object' && user.station_ids !== null && !Array.isArray(user.station_ids) && user.station_ids[stationId] ? user.station_ids[stationId] : stationId,
+            orderData: {
+              totalRecords: 0,
+              totalRevenue: 0,
+              success: false,
+              fromCache: false,
+              defaultData: true
+            },
+            _fromCache: false,
+            _defaultData: true
+          });
+        }
+        console.log(`✅ Returning ${defaultStations.length} station(s) with default zeros after error`);
+        return res.json({ 
+          success: true, 
+          data: defaultStations,
+          fromCache: false,
+          defaultData: true,
+          error: 'API error occurred, using default zeros',
+          timestamp: new Date().toISOString()
+        });
+      }
     } catch (cacheError) {
       console.error('Error loading from cache:', cacheError);
     }
     
-    // If no cache available, return error
+    // If no cache and no user permissions, return error (should never happen if user has stations)
     res.status(500).json({ 
       success: false, 
       error: error.message,
