@@ -131,5 +131,17 @@
       "CUBT062510000018": "SAADA Beauty Salon"
     },
     "created_at": "2025-01-30T00:00:00.000Z"
+  },
+  {
+    "id": 12,
+    "username": "IrishEyes",
+    "phone": "7739460236",
+    "password": "$2b$10$pS0n/MQLDEsDPxM1ZI/n8.DZjWCc92wQmV65pqx8KbjrAiNZpfbAa",
+    "userType": "Host",
+    "station_ids": {
+      "CUBT062510000019": "Irish Eyes Pub"
+    },
+    "created_at": "2025-01-30T00:00:00.000Z"
   }
+  
 ]
