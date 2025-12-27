@@ -34,7 +34,7 @@ const energoConfigPath = path.join(__dirname, 'data/energo-config.json');
 // Default Energo config (fallback if file doesn't exist)
 const DEFAULT_ENERGO_CONFIG = {
   baseUrl: 'https://backend.energo.vip/api',
-  token: 'eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJlNDFlMGRiMmRjZDU0M2NkYjVmOTE3NDAxNDA3ZTNlNSIsInVzZXIiOiJjdWJVU0EyMDI1IiwiaXNBcGlUb2tlbiI6ZmFsc2UsInN1YiI6ImN1YlVTQTIwMjUiLCJBUElLRVkiOiJidXpOTEQyMDI0IiwiZXhwIjoxNzY5MjExNzM2fQ.KVNoSiFb-4BfgViNuBJGMrit8iw2XEsHVIJk4msNgJ6OOt23_OPwcvDdYrj2d7HEap-x8raEUqmutIYr4nfy9g',
+  token: 'eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiI3MzdiZmNkYjYyZGI0MDliOTQxNjAxNzkwY2EwMjkyYiIsInVzZXIiOiJjdWJVU0EyMDI1IiwiaXNBcGlUb2tlbiI6ZmFsc2UsInN1YiI6ImN1YlVTQTIwMjUiLCJBUElLRVkiOiJidXpOTEQyMDI0IiwiZXhwIjoxNzY5Mzk3ODAyfQ.VVxwyYKqPn4ejra_Zm_Xgq4tSkNv8fHLwfC-21Ef99GaAq1VP_yWq8aXyfcjTjAO7aF08KpBoiWX35XKtXCA2g',
   oid: '3526',
 };
 
