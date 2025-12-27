@@ -154,17 +154,6 @@
   <div class="key-container">
     <div class="key-form">
       <h1>Energo API Token</h1>
-      <div id="vercelNotice" class="vercel-notice">
-        <strong>⚠️ Running on Vercel</strong>
-        <p>Token updates must be done via Vercel Dashboard:</p>
-        <ol>
-          <li>Go to <a href="https://vercel.com/dashboard" target="_blank">Vercel Dashboard</a></li>
-          <li>Select your project</li>
-          <li>Go to Settings → Environment Variables</li>
-          <li>Update or add <code>ENERGO_TOKEN</code></li>
-          <li>Redeploy your application</li>
-        </ol>
-      </div>
       <form id="tokenForm">
         <label for="token">API Token:</label>
         <input type="text" id="token" name="token" placeholder="Enter new token..." required>
@@ -190,13 +179,6 @@
           const data = await response.json();
           if (data.token) {
             tokenInput.value = data.token;
-          }
-          // Show Vercel notice if running on Vercel
-          if (data.isVercel) {
-            document.getElementById('vercelNotice').classList.add('show');
-            saveButton.disabled = true;
-            saveButton.textContent = 'Update via Vercel Dashboard';
-            saveButton.style.cursor = 'not-allowed';
           }
         }
       } catch (error) {

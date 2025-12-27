@@ -38,12 +38,39 @@ const DEFAULT_ENERGO_CONFIG = {
   oid: '3526',
 };
 
+// In-memory token cache (shared with server.js via module-level variable)
+// This allows immediate use of updated tokens on Vercel
+let tokenCache = null;
+
 /**
- * Get Energo configuration (reads from env var first, then file, then default)
+ * Set token cache (called from server.js after update)
+ */
+function setTokenCache(token) {
+  tokenCache = token;
+}
+
+/**
+ * Get token cache (for reading current cached token)
+ */
+function getTokenCache() {
+  return tokenCache;
+}
+
+/**
+ * Get Energo configuration (reads from cache first, then env var, then file, then default)
  * @returns {Promise<Object>} Energo config object
  */
 async function getEnergoConfig() {
-  // Priority 1: Environment variable (for Vercel/production)
+  // Priority 1: In-memory cache (for immediate use after update on Vercel)
+  if (tokenCache) {
+    return {
+      baseUrl: 'https://backend.energo.vip/api',
+      token: tokenCache,
+      oid: process.env.ENERGO_OID || DEFAULT_ENERGO_CONFIG.oid,
+    };
+  }
+  
+  // Priority 2: Environment variable (for Vercel/production)
   if (process.env.ENERGO_TOKEN) {
     return {
       baseUrl: 'https://backend.energo.vip/api',
@@ -52,7 +79,7 @@ async function getEnergoConfig() {
     };
   }
   
-  // Priority 2: Config file (for local development)
+  // Priority 3: Config file (for local development)
   try {
     const configData = await fs.readFile(energoConfigPath, 'utf8');
     const config = JSON.parse(configData);
@@ -696,6 +723,10 @@ function startEnergoKeepAlive() {
 // ========================================
 
 module.exports = {
+  // Token cache management
+  setTokenCache,
+  getTokenCache,
+  
   // Unified API functions (auto-detect supplier)
   fetchStations,
   fetchStationRentalHistory,
