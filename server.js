@@ -1025,22 +1025,27 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       if (hasChargeNowStations) {
         console.log('🔌 Fetching ChargeNow stations...');
         let chargeNowResult;
-        if (latestStationData && lastFetchTime) {
-          console.log('📋 Using cached ChargeNow station data from:', lastFetchTime);
-          chargeNowResult = latestStationData;
-        } else {
-          console.log('🔄 No cached data available, fetching fresh ChargeNow station data...');
-          chargeNowResult = await supplierAPI.fetchChargeNowStations();
-        }
-        
         try {
-          const parsed = typeof chargeNowResult === 'string' ? JSON.parse(chargeNowResult) : chargeNowResult;
-          if (parsed && parsed.data && Array.isArray(parsed.data)) {
-            allStations.push(...parsed.data);
-            console.log(`✅ Added ${parsed.data.length} ChargeNow station(s)`);
+          if (latestStationData && lastFetchTime) {
+            console.log('📋 Using cached ChargeNow station data from:', lastFetchTime);
+            chargeNowResult = latestStationData;
+          } else {
+            console.log('🔄 No cached data available, fetching fresh ChargeNow station data...');
+            chargeNowResult = await supplierAPI.fetchChargeNowStations();
           }
-        } catch (e) {
-          console.error('❌ Error parsing ChargeNow station data:', e);
+          
+          try {
+            const parsed = typeof chargeNowResult === 'string' ? JSON.parse(chargeNowResult) : chargeNowResult;
+            if (parsed && parsed.data && Array.isArray(parsed.data)) {
+              allStations.push(...parsed.data);
+              console.log(`✅ Added ${parsed.data.length} ChargeNow station(s)`);
+            }
+          } catch (e) {
+            console.error('❌ Error parsing ChargeNow station data:', e);
+          }
+        } catch (error) {
+          console.error('❌ Error fetching ChargeNow stations:', error.message);
+          // Will fall through to cache check below
         }
       }
       
@@ -1048,21 +1053,57 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       if (hasEnergoStations && energoStationIds.length > 0) {
         console.log(`⚡ Fetching ${energoStationIds.length} Energo station(s)...`);
         const stationPromises = energoStationIds.map(stationId => 
-          supplierAPI.fetchEnergoStation(stationId)
+          supplierAPI.fetchEnergoStation(stationId).catch(error => {
+            console.error(`❌ Error fetching Energo station ${stationId}:`, error.message);
+            return null; // Return null on error
+          })
         );
         const stationResults = await Promise.all(stationPromises);
         
         stationResults.forEach((stationJson, index) => {
-          try {
-            const parsed = JSON.parse(stationJson);
-            if (parsed.data && Array.isArray(parsed.data)) {
-              allStations.push(...parsed.data);
-              console.log(`✅ Added ${parsed.data.length} Energo station(s) from response ${index + 1}`);
+          if (stationJson) {
+            try {
+              const parsed = JSON.parse(stationJson);
+              if (parsed.data && Array.isArray(parsed.data)) {
+                allStations.push(...parsed.data);
+                console.log(`✅ Added ${parsed.data.length} Energo station(s) from response ${index + 1}`);
+              }
+            } catch (e) {
+              console.error(`❌ Error parsing Energo station data ${index + 1}:`, e);
             }
-          } catch (e) {
-            console.error(`❌ Error parsing Energo station data ${index + 1}:`, e);
           }
         });
+      }
+      
+      // If no stations were fetched from API, try to load from cache
+      if (allStations.length === 0) {
+        console.log('⚠️  No stations fetched from API, attempting to load from cache...');
+        const cachedMetrics = await db.getAllUserStationMetrics(req.user.username);
+        
+        if (Object.keys(cachedMetrics).length > 0) {
+          console.log(`📦 Found ${Object.keys(cachedMetrics).length} cached station(s), creating station objects from cache...`);
+          
+          // Create station objects from cached metrics
+          for (const [stationId, metrics] of Object.entries(cachedMetrics)) {
+            allStations.push({
+              pCabinetid: stationId,
+              id: stationId,
+              pBorrow: metrics.pBorrow || 0,
+              pAlso: metrics.pAlso || 0,
+              stationTitle: metrics.stationTitle || stationId,
+              orderData: {
+                totalRecords: metrics.totalRecords || 0,
+                totalRevenue: metrics.totalRevenue || 0,
+                success: true,
+                fromCache: true
+              },
+              _fromCache: true // Flag to indicate this is from cache
+            });
+          }
+          console.log(`✅ Created ${allStations.length} station(s) from cache`);
+        } else {
+          console.log('⚠️  No cached metrics found either');
+        }
       }
       
       console.log(`📦 Total stations fetched: ${allStations.length} (${hasChargeNowStations ? 'ChargeNow + ' : ''}${hasEnergoStations ? 'Energo' : ''})`);
@@ -1163,6 +1204,24 @@ app.get('/api/stations', verifyToken, async (req, res) => {
             const stationId = station.pCabinetid || station.id;
             console.log(`Fetching orders for station: ${stationId}`);
             
+            // Check if station is missing availability data and try to get from cache
+            if ((!station.pBorrow && station.pBorrow !== 0) || (!station.pAlso && station.pAlso !== 0)) {
+              const cachedMetrics = await db.getUserStationMetrics(req.user.username, stationId);
+              if (cachedMetrics) {
+                if ((!station.pBorrow && station.pBorrow !== 0) && cachedMetrics.pBorrow !== undefined) {
+                  station.pBorrow = cachedMetrics.pBorrow;
+                  console.log(`📦 Using cached pBorrow (${cachedMetrics.pBorrow}) for station ${stationId}`);
+                }
+                if ((!station.pAlso && station.pAlso !== 0) && cachedMetrics.pAlso !== undefined) {
+                  station.pAlso = cachedMetrics.pAlso;
+                  console.log(`📦 Using cached pAlso (${cachedMetrics.pAlso}) for station ${stationId}`);
+                }
+                if (!station.stationTitle && cachedMetrics.stationTitle) {
+                  station.stationTitle = cachedMetrics.stationTitle;
+                }
+              }
+            }
+            
             // Add station title - prefer user's custom title, then API title, then station ID
             if (typeof user.station_ids === 'object' && user.station_ids !== null && !Array.isArray(user.station_ids) && user.station_ids[stationId]) {
               // User has a custom title for this station - use it
@@ -1189,19 +1248,63 @@ app.get('/api/stations', verifyToken, async (req, res) => {
               
               console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (DEMO DATA)`);
             } else {
-              // Use unified API that automatically routes to correct supplier
-              const { response, result: orderData } = await supplierAPI.fetchStationRentalHistory(
-                req.user.username,
-                stationId,
-                sTime,
-                eTime
-              );
+              let orderDataSuccess = false;
+              let orderData = null;
               
+              try {
+                // Use unified API that automatically routes to correct supplier
+                const { response, result: orderDataResult } = await supplierAPI.fetchStationRentalHistory(
+                  req.user.username,
+                  stationId,
+                  sTime,
+                  eTime
+                );
+                
+                orderData = orderDataResult;
+                orderDataSuccess = orderData.code === 0;
+              } catch (error) {
+                console.error(`❌ Error fetching orders for station ${stationId}:`, error.message);
+                orderDataSuccess = false;
+                
+                // Try to load from cache
+                const cachedMetrics = await db.getUserStationMetrics(req.user.username, stationId);
+                if (cachedMetrics) {
+                  console.log(`📦 Using cached metrics for station ${stationId}`);
+                  station.orderData = {
+                    totalRecords: cachedMetrics.totalRecords || 0,
+                    totalRevenue: cachedMetrics.totalRevenue || 0,
+                    success: true,
+                    fromCache: true
+                  };
+                  // Also use cached availability data if available
+                  if (cachedMetrics.pBorrow !== undefined) {
+                    station.pBorrow = cachedMetrics.pBorrow;
+                  }
+                  if (cachedMetrics.pAlso !== undefined) {
+                    station.pAlso = cachedMetrics.pAlso;
+                  }
+                  if (cachedMetrics.stationTitle) {
+                    station.stationTitle = cachedMetrics.stationTitle;
+                  }
+                  continue; // Skip to next station
+                } else {
+                  console.log(`⚠️  No cached metrics found for station ${stationId}`);
+                  station.orderData = {
+                    totalRecords: 0,
+                    totalRevenue: 0,
+                    success: false,
+                    error: error.message
+                  };
+                  continue; // Skip to next station
+                }
+              }
+              
+              // If we got here, API call succeeded
               // Add order data to station
               station.orderData = {
                 totalRecords: 0,
                 totalRevenue: 0,
-                success: orderData.code === 0
+                success: orderDataSuccess
               };
               
               // For Energo: Use totals directly from API (already calculated correctly)
@@ -1229,17 +1332,56 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 console.log(`[CHARGENOW] Calculated from records: ${station.orderData.totalRecords} rents, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
               }
               
+              // Save successful metrics to cache
+              if (orderDataSuccess) {
+                try {
+                  await db.updateUserStationMetrics(req.user.username, stationId, {
+                    pBorrow: parseInt(station.pBorrow) || 0,
+                    pAlso: parseInt(station.pAlso) || 0,
+                    totalRecords: station.orderData.totalRecords,
+                    totalRevenue: station.orderData.totalRevenue,
+                    stationTitle: station.stationTitle || stationId
+                  });
+                  console.log(`💾 Saved metrics to cache for station ${stationId}`);
+                } catch (cacheError) {
+                  console.error(`Error saving metrics to cache for station ${stationId}:`, cacheError);
+                }
+              }
+              
               console.log(`[MAIN] Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (rounded: $${Math.round(station.orderData.totalRevenue)})`);
             }
             
           } catch (error) {
-            console.error(`Error fetching orders for station ${station.pCabinetid}:`, error);
-            station.orderData = {
-              totalRecords: 0,
-              totalRevenue: 0,
-              success: false,
-              error: error.message
-            };
+            console.error(`Error processing station ${station.pCabinetid || station.id}:`, error);
+            
+            // Try to load from cache as last resort
+            const stationId = station.pCabinetid || station.id;
+            const cachedMetrics = await db.getUserStationMetrics(req.user.username, stationId);
+            if (cachedMetrics) {
+              console.log(`📦 Using cached metrics as fallback for station ${stationId}`);
+              station.orderData = {
+                totalRecords: cachedMetrics.totalRecords || 0,
+                totalRevenue: cachedMetrics.totalRevenue || 0,
+                success: true,
+                fromCache: true
+              };
+              if (cachedMetrics.pBorrow !== undefined) {
+                station.pBorrow = cachedMetrics.pBorrow;
+              }
+              if (cachedMetrics.pAlso !== undefined) {
+                station.pAlso = cachedMetrics.pAlso;
+              }
+              if (cachedMetrics.stationTitle) {
+                station.stationTitle = cachedMetrics.stationTitle;
+              }
+            } else {
+              station.orderData = {
+                totalRecords: 0,
+                totalRevenue: 0,
+                success: false,
+                error: error.message
+              };
+            }
           }
         }
         

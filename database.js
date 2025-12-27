@@ -215,6 +215,70 @@ async function deleteUser(userId) {
   }
 }
 
+// Function to update user's cached station metrics
+async function updateUserStationMetrics(username, stationId, metrics) {
+  try {
+    const users = readJsonFile(USERS_FILE);
+    const userIndex = users.findIndex(user => user.username === username);
+    
+    if (userIndex === -1) {
+      throw new Error('User not found');
+    }
+    
+    // Initialize stationMetrics if it doesn't exist
+    if (!users[userIndex].stationMetrics) {
+      users[userIndex].stationMetrics = {};
+    }
+    
+    // Update metrics for this station
+    users[userIndex].stationMetrics[stationId] = {
+      ...metrics,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    writeJsonFile(USERS_FILE, users);
+    
+    return users[userIndex].stationMetrics[stationId];
+  } catch (error) {
+    console.error('Error updating user station metrics:', error);
+    throw error;
+  }
+}
+
+// Function to get user's cached station metrics
+async function getUserStationMetrics(username, stationId) {
+  try {
+    const users = readJsonFile(USERS_FILE);
+    const user = users.find(user => user.username === username);
+    
+    if (!user || !user.stationMetrics) {
+      return null;
+    }
+    
+    return user.stationMetrics[stationId] || null;
+  } catch (error) {
+    console.error('Error getting user station metrics:', error);
+    return null;
+  }
+}
+
+// Function to get all cached station metrics for a user
+async function getAllUserStationMetrics(username) {
+  try {
+    const users = readJsonFile(USERS_FILE);
+    const user = users.find(user => user.username === username);
+    
+    if (!user || !user.stationMetrics) {
+      return {};
+    }
+    
+    return user.stationMetrics;
+  } catch (error) {
+    console.error('Error getting all user station metrics:', error);
+    return {};
+  }
+}
+
 // Initialize database when module is loaded
 initDatabase()
   .then(() => console.log('Database ready'))
@@ -227,5 +291,8 @@ module.exports = {
   getAllUsersWithPasswords,
   getUserById,
   updateUserStations,
-  deleteUser
+  deleteUser,
+  updateUserStationMetrics,
+  getUserStationMetrics,
+  getAllUserStationMetrics
 }; 
