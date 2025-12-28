@@ -1,4 +1,23 @@
-const puppeteer = require('puppeteer');
+// Use puppeteer-core for Vercel compatibility (doesn't bundle Chromium)
+// On Vercel, we'll use @sparticuz/chromium
+// Check if we're on Vercel/serverless environment
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+let puppeteer;
+
+if (isVercel) {
+  // On Vercel, use puppeteer-core with @sparticuz/chromium
+  try {
+    puppeteer = require('puppeteer-core');
+  } catch (e) {
+    // Fallback to regular puppeteer if puppeteer-core not available
+    console.warn('⚠️  puppeteer-core not available, using puppeteer:', e.message);
+    puppeteer = require('puppeteer');
+  }
+} else {
+  // Local development, use regular puppeteer
+  puppeteer = require('puppeteer');
+}
+
 const path = require('path');
 
 // Load environment variables for local development
@@ -216,11 +235,39 @@ async function loginToEnergo({ username, password, captcha, openaiApiKey, headle
     let browser = null;
     
     try {
-        // Launch browser
-        browser = await puppeteer.launch({
+        // Configure browser launch options
+        const launchOptions = {
             headless: headless,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--no-first-run', '--no-zygote', '--single-process', '--disable-gpu']
+        };
+        
+        // On Vercel, use @sparticuz/chromium
+        if (isVercel) {
+            try {
+                const chromium = require('@sparticuz/chromium');
+                // Set executable path for Vercel (handle both sync and async)
+                const executablePath = chromium.executablePath();
+                if (executablePath instanceof Promise) {
+                    launchOptions.executablePath = await executablePath;
+                } else {
+                    launchOptions.executablePath = executablePath;
+                }
+                // Add additional args for serverless
+                launchOptions.args = [
+                    ...launchOptions.args,
+                    ...(chromium.args || []),
+                    '--disable-web-security',
+                    '--disable-features=IsolateOrigins,site-per-process'
+                ];
+                console.log('✅ Using @sparticuz/chromium for Vercel environment');
+            } catch (chromiumError) {
+                console.warn('⚠️  @sparticuz/chromium not available, trying default puppeteer:', chromiumError.message);
+                // Continue with default puppeteer (might fail on Vercel)
+            }
+        }
+        
+        // Launch browser
+        browser = await puppeteer.launch(launchOptions);
 
         const page = await browser.newPage();
         
