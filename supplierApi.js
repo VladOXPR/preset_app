@@ -41,6 +41,24 @@ const DEFAULT_ENERGO_CONFIG = {
   oid: '3526',
 };
 
+// In-memory token cache (shared with server.js via module-level variable)
+// This allows immediate use of updated tokens on Vercel
+let tokenCache = null;
+
+/**
+ * Set token cache (called from server.js after update)
+ */
+function setTokenCache(token) {
+  tokenCache = token;
+}
+
+/**
+ * Get token cache (for reading current cached token)
+ */
+function getTokenCache() {
+  return tokenCache;
+}
+
 /**
  * Update Energo token in config file
  * @param {string} token - The new token to save
@@ -123,10 +141,20 @@ async function refreshEnergoToken() {
 }
 
 /**
- * Get Energo configuration (reads from config file, falls back to default)
+ * Get Energo configuration (reads from cache first, then file, then default)
  * @returns {Promise<Object>} Energo config object
  */
 async function getEnergoConfig() {
+  // Priority 1: In-memory cache (for immediate use after update on Vercel)
+  if (tokenCache) {
+    return {
+      baseUrl: 'https://backend.energo.vip/api',
+      token: tokenCache,
+      oid: DEFAULT_ENERGO_CONFIG.oid,
+    };
+  }
+  
+  // Priority 2: Config file (local development or initial load)
   try {
     const configData = await fs.readFile(energoConfigPath, 'utf8');
     const config = JSON.parse(configData);
@@ -950,6 +978,9 @@ function startEnergoKeepAlive() {
 // ========================================
 
 module.exports = {
+  // Token cache management
+  setTokenCache,
+  getTokenCache,
   // Unified API functions (auto-detect supplier)
   fetchStations,
   fetchStationRentalHistory,

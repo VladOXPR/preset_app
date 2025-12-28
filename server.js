@@ -280,18 +280,36 @@ app.get('/key', (req, res) => {
 // Energo token management endpoints
 const energoConfigPath = path.join(__dirname, 'data/energo-config.json');
 
+// In-memory token cache (for immediate use after update on Vercel)
+// This allows the token to be used immediately even though file writes don't persist
+let tokenCache = null;
+
 // Get current Energo token
 app.get('/api/energo-token', async (req, res) => {
   try {
-    const configData = await fs.readFile(energoConfigPath, 'utf8');
-    const config = JSON.parse(configData);
-    return res.json({ 
-      token: config.token,
-      source: 'file'
-    });
+    // Priority 1: In-memory cache (for immediate use after update on Vercel)
+    const cachedToken = supplierAPI.getTokenCache ? supplierAPI.getTokenCache() : tokenCache;
+    if (cachedToken) {
+      return res.json({ 
+        token: cachedToken,
+        source: 'cache'
+      });
+    }
+    
+    // Priority 2: Config file (local development or initial load)
+    try {
+      const configData = await fs.readFile(energoConfigPath, 'utf8');
+      const config = JSON.parse(configData);
+      return res.json({ 
+        token: config.token,
+        source: 'file'
+      });
+    } catch (error) {
+      return res.status(404).json({ error: 'Token not found' });
+    }
   } catch (error) {
     console.error('Error reading Energo config:', error);
-    return res.status(404).json({ error: 'Token not found' });
+    res.status(500).json({ error: 'Failed to read token' });
   }
 });
 
@@ -304,23 +322,31 @@ app.post('/api/energo-token', async (req, res) => {
       return res.status(400).json({ error: 'Token is required' });
     }
     
-    // Read existing config or create default
-    let config;
-    try {
-      const configData = await fs.readFile(energoConfigPath, 'utf8');
-      config = JSON.parse(configData);
-    } catch (error) {
-      // If file doesn't exist, create default config
-      config = { oid: '3526' };
+    // Store in cache for immediate use (works on Vercel)
+    tokenCache = token;
+    if (supplierAPI.setTokenCache) {
+      supplierAPI.setTokenCache(token);
     }
     
-    // Update token
-    config.token = token;
+    // Try to write to file (works in local dev, fails gracefully on Vercel)
+    try {
+      let config;
+      try {
+        const configData = await fs.readFile(energoConfigPath, 'utf8');
+        config = JSON.parse(configData);
+      } catch (error) {
+        // If file doesn't exist, create default config
+        config = { oid: '3526' };
+      }
+      
+      config.token = token;
+      await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
+      console.log('✅ Energo token updated in file and cache');
+    } catch (writeError) {
+      // File write failed (likely read-only on Vercel), but cache is set
+      console.log('✅ Energo token updated in cache (file write not available)');
+    }
     
-    // Write back to file
-    await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
-    
-    console.log('✅ Energo token updated successfully');
     res.json({ 
       success: true, 
       message: 'Token updated successfully'
