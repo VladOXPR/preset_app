@@ -280,136 +280,18 @@ app.get('/key', (req, res) => {
 // Energo token management endpoints
 const energoConfigPath = path.join(__dirname, 'data/energo-config.json');
 
-// Check if we're running on Vercel (read-only filesystem)
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
-
-// In-memory token cache (for immediate use after update, before redeploy)
-// This allows the token to be used immediately even though env var requires redeploy
-let tokenCache = null;
-
-/**
- * Update Energo token via Vercel Management API
- * Requires: VERCEL_TOKEN, VERCEL_PROJECT_ID, VERCEL_TEAM_ID (optional)
- */
-async function updateVercelEnvironmentVariable(token) {
-  const vercelToken = process.env.VERCEL_TOKEN;
-  const projectId = process.env.VERCEL_PROJECT_ID;
-  const teamId = process.env.VERCEL_TEAM_ID;
-  
-  if (!vercelToken || !projectId) {
-    throw new Error('VERCEL_TOKEN and VERCEL_PROJECT_ID must be set to update token on Vercel');
-  }
-  
-  const url = teamId 
-    ? `https://api.vercel.com/v10/projects/${projectId}/env?teamId=${teamId}`
-    : `https://api.vercel.com/v10/projects/${projectId}/env`;
-  
-  // First, get existing env vars to find the ENERGO_TOKEN entry
-  const getResponse = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${vercelToken}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  
-  if (!getResponse.ok) {
-    const errorText = await getResponse.text();
-    throw new Error(`Failed to fetch environment variables: ${getResponse.status} ${errorText}`);
-  }
-  
-  const envVars = await getResponse.json();
-  const energoTokenVar = envVars.envs?.find(env => env.key === 'ENERGO_TOKEN');
-  
-  let updateUrl;
-  if (energoTokenVar) {
-    // Update existing variable
-    updateUrl = teamId
-      ? `https://api.vercel.com/v10/projects/${projectId}/env/${energoTokenVar.id}?teamId=${teamId}`
-      : `https://api.vercel.com/v10/projects/${projectId}/env/${energoTokenVar.id}`;
-    
-    const updateResponse = await fetch(updateUrl, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${vercelToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        value: token,
-        type: 'encrypted', // Use encrypted for sensitive data
-        target: ['production', 'preview', 'development'] // Apply to all environments
-      })
-    });
-    
-    if (!updateResponse.ok) {
-      const errorText = await updateResponse.text();
-      throw new Error(`Failed to update environment variable: ${updateResponse.status} ${errorText}`);
-    }
-  } else {
-    // Create new variable
-    const createResponse = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${vercelToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        key: 'ENERGO_TOKEN',
-        value: token,
-        type: 'encrypted',
-        target: ['production', 'preview', 'development']
-      })
-    });
-    
-    if (!createResponse.ok) {
-      const errorText = await createResponse.text();
-      throw new Error(`Failed to create environment variable: ${createResponse.status} ${errorText}`);
-    }
-  }
-  
-  // Store in cache for immediate use (both locally and in supplierApi module)
-  tokenCache = token;
-  supplierAPI.setTokenCache(token);
-  
-  return true;
-}
-
 // Get current Energo token
 app.get('/api/energo-token', async (req, res) => {
   try {
-    // Priority 1: In-memory cache (for immediate use after update on Vercel)
-    const cachedToken = supplierAPI.getTokenCache() || tokenCache;
-    if (cachedToken) {
-      return res.json({ 
-        token: cachedToken,
-        source: 'cache',
-        isVercel: !!isVercel
-      });
-    }
-    
-    // Priority 2: Environment variable (Vercel/production)
-    if (process.env.ENERGO_TOKEN) {
-      return res.json({ 
-        token: process.env.ENERGO_TOKEN,
-        source: 'environment',
-        isVercel: !!isVercel
-      });
-    }
-    
-    // Priority 3: Config file (local development)
-    try {
-      const configData = await fs.readFile(energoConfigPath, 'utf8');
-      const config = JSON.parse(configData);
-      return res.json({ 
-        token: config.token,
-        source: 'file',
-        isVercel: false
-      });
-    } catch (error) {
-      return res.status(404).json({ error: 'Token not found' });
-    }
+    const configData = await fs.readFile(energoConfigPath, 'utf8');
+    const config = JSON.parse(configData);
+    return res.json({ 
+      token: config.token,
+      source: 'file'
+    });
   } catch (error) {
     console.error('Error reading Energo config:', error);
-    res.status(500).json({ error: 'Failed to read token' });
+    return res.status(404).json({ error: 'Token not found' });
   }
 });
 
@@ -422,34 +304,7 @@ app.post('/api/energo-token', async (req, res) => {
       return res.status(400).json({ error: 'Token is required' });
     }
     
-    // On Vercel, update via Management API
-    if (isVercel) {
-      try {
-        await updateVercelEnvironmentVariable(token);
-        console.log('✅ Energo token updated via Vercel API and cached');
-        return res.json({ 
-          success: true, 
-          message: 'Token updated successfully via Vercel API. It will be available immediately via cache, and permanently after redeploy.',
-          source: 'vercel-api',
-          isVercel: true,
-          note: 'Token is cached for immediate use. Environment variable will be updated after redeploy.'
-        });
-      } catch (error) {
-        console.error('Error updating token via Vercel API:', error);
-        // Fallback: just cache it for immediate use
-        tokenCache = token;
-        supplierAPI.setTokenCache(token);
-        return res.json({
-          success: true,
-          message: 'Token cached for immediate use. Vercel API update failed - please set VERCEL_TOKEN and VERCEL_PROJECT_ID environment variables, or update manually in Vercel dashboard.',
-          source: 'cache-only',
-          isVercel: true,
-          warning: error.message
-        });
-      }
-    }
-    
-    // Local development: Update config file
+    // Read existing config or create default
     let config;
     try {
       const configData = await fs.readFile(energoConfigPath, 'utf8');
@@ -469,8 +324,7 @@ app.post('/api/energo-token', async (req, res) => {
     res.json({ 
       success: true, 
       message: 'Token updated successfully',
-      source: 'file',
-      isVercel: false
+      source: 'file'
     });
   } catch (error) {
     console.error('Error updating Energo token:', error);

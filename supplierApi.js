@@ -17,8 +17,10 @@ if (typeof globalThis.fetch === 'undefined') {
 
 // File system for reading config
 const fs = require('fs').promises;
-const fsSync = require('fs');
 const path = require('path');
+
+// Import energoLogin for token refresh
+const { loginToEnergo, closeBrowser } = require('./public/js/energoLogin');
 
 // ========================================
 // CONFIGURATION
@@ -31,8 +33,6 @@ const CHARGENOW_CONFIG = {
 
 // Energo config path
 const energoConfigPath = path.join(__dirname, 'data/energo-config.json');
-// Users file path
-const usersFilePath = path.join(__dirname, 'data/users.json');
 
 // Default Energo config (fallback if file doesn't exist)
 const DEFAULT_ENERGO_CONFIG = {
@@ -41,48 +41,85 @@ const DEFAULT_ENERGO_CONFIG = {
   oid: '3526',
 };
 
-// In-memory token cache (shared with server.js via module-level variable)
-// This allows immediate use of updated tokens on Vercel
-let tokenCache = null;
-
 /**
- * Set token cache (called from server.js after update)
+ * Update Energo token in config file
+ * @param {string} token - The new token to save
+ * @returns {Promise<void>}
  */
-function setTokenCache(token) {
-  tokenCache = token;
+async function updateEnergoTokenStorage(token) {
+  try {
+    let config;
+    try {
+      const configData = await fs.readFile(energoConfigPath, 'utf8');
+      config = JSON.parse(configData);
+    } catch (error) {
+      // If file doesn't exist, create default config
+      config = { oid: DEFAULT_ENERGO_CONFIG.oid };
+    }
+    
+    // Update token
+    config.token = token;
+    
+    // Write back to file
+    await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
+    console.log('✅ Energo token updated in config file');
+  } catch (error) {
+    console.error('⚠️  Could not update Energo token in config file:', error.message);
+    throw error;
+  }
 }
 
 /**
- * Get token cache (for reading current cached token)
+ * Refresh Energo authorization token by logging in
+ * @returns {Promise<string>} The new authorization token
  */
-function getTokenCache() {
-  return tokenCache;
+async function refreshEnergoToken() {
+  console.log('🔄 Refreshing Energo authorization token...');
+  
+  try {
+    // Get credentials from environment variables or use defaults
+    const username = process.env.ENERGO_USERNAME || 'cubUSA2025';
+    const password = process.env.ENERGO_PASSWORD || 'cubUSA2025i^5Ft';
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    
+    // Call loginToEnergo to get a new token
+    const result = await loginToEnergo({
+      username: username,
+      password: password,
+      captcha: undefined, // Let it solve with OpenAI
+      openaiApiKey: openaiApiKey,
+      headless: true, // Always run headless for automatic refresh
+      timeout: 30000
+    });
+    
+    // Close the browser to free resources
+    if (result && result.browser) {
+      await closeBrowser(result);
+    }
+    
+    // Check if we got a token
+    if (!result || !result.token) {
+      throw new Error('Failed to extract token from login result');
+    }
+    
+    const newToken = result.token;
+    console.log('✅ Successfully refreshed Energo token');
+    
+    // Update token in config file
+    await updateEnergoTokenStorage(newToken);
+    
+    return newToken;
+  } catch (error) {
+    console.error('❌ Error refreshing Energo token:', error.message);
+    throw error;
+  }
 }
 
 /**
- * Get Energo configuration (reads from cache first, then env var, then file, then default)
+ * Get Energo configuration (reads from config file, falls back to default)
  * @returns {Promise<Object>} Energo config object
  */
 async function getEnergoConfig() {
-  // Priority 1: In-memory cache (for immediate use after update on Vercel)
-  if (tokenCache) {
-    return {
-      baseUrl: 'https://backend.energo.vip/api',
-      token: tokenCache,
-      oid: process.env.ENERGO_OID || DEFAULT_ENERGO_CONFIG.oid,
-    };
-  }
-  
-  // Priority 2: Environment variable (for Vercel/production)
-  if (process.env.ENERGO_TOKEN) {
-    return {
-      baseUrl: 'https://backend.energo.vip/api',
-      token: process.env.ENERGO_TOKEN,
-      oid: process.env.ENERGO_OID || DEFAULT_ENERGO_CONFIG.oid,
-    };
-  }
-  
-  // Priority 3: Config file (for local development)
   try {
     const configData = await fs.readFile(energoConfigPath, 'utf8');
     const config = JSON.parse(configData);
@@ -276,80 +313,9 @@ async function fetchChargeNowStationRentalHistory(stationId, sTime, eTime, page 
       parsedResult = { code: -1, msg: 'Failed to parse order data' };
     }
     
-    // Check if fetch was successful
-    if (response.ok && parsedResult.code === 0 && parsedResult.page) {
-      // Calculate totals from records
-      const records = parsedResult.page.records || [];
-      const validRecords = records.filter(record => {
-        const settledAmount = parseFloat(record.settledAmount || 0);
-        return settledAmount > 0;
-      });
-      
-      const totalRecords = validRecords.length;
-      const totalRevenue = validRecords.reduce((sum, record) => {
-        return sum + (parseFloat(record.settledAmount) || 0);
-      }, 0);
-      
-      // Save successful data to cache
-      if (username) {
-        const cachedMetrics = getCachedStationMetrics(username, stationId) || {};
-        saveStationMetricsToCache(username, stationId, {
-          ...cachedMetrics,
-          totalRecords: totalRecords,
-          totalRevenue: totalRevenue
-        });
-      }
-      
-      return { response, result: parsedResult };
-    } else {
-      // Fetch failed, try to get from cache
-      console.log(`⚠️  API fetch failed for station ${stationId} rental history, checking cache...`);
-      if (username) {
-        const cachedMetrics = getCachedStationMetrics(username, stationId);
-        if (cachedMetrics && (cachedMetrics.totalRecords !== undefined || cachedMetrics.totalRevenue !== undefined)) {
-          console.log(`📦 Using cached rental history for station ${stationId}`);
-          return {
-            response: { ok: true, status: 200 },
-            result: {
-              code: 0,
-              msg: 'success',
-              page: {
-                total: cachedMetrics.totalRecords || 0,
-                records: [],
-                totalRevenue: cachedMetrics.totalRevenue || 0
-              }
-            }
-          };
-        }
-      }
-      
-      // No cache available, return error response
-      return { response, result: parsedResult };
-    }
+    return { response, result: parsedResult };
   } catch (error) {
     console.error(`❌ Error fetching ChargeNow rental history for ${stationId}:`, error.message);
-    
-    // Try to get from cache
-    if (username) {
-      const cachedMetrics = getCachedStationMetrics(username, stationId);
-      if (cachedMetrics && (cachedMetrics.totalRecords !== undefined || cachedMetrics.totalRevenue !== undefined)) {
-        console.log(`📦 Using cached rental history after error for station ${stationId}`);
-        return {
-          response: { ok: true, status: 200 },
-          result: {
-            code: 0,
-            msg: 'success',
-            page: {
-              total: cachedMetrics.totalRecords || 0,
-              records: [],
-              totalRevenue: cachedMetrics.totalRevenue || 0
-            }
-          }
-        };
-      }
-    }
-    
-    // No cache available, return error
     throw error;
   }
 }
@@ -428,74 +394,104 @@ async function ejectBatteryByRepair(stationId, slotNum = 0) {
 // ========================================
 
 /**
+ * Helper function to check if an API error is authentication-related
+ * @param {Response} response - The fetch response object
+ * @param {Object} result - The parsed JSON result (if available)
+ * @returns {boolean} True if the error is authentication-related
+ */
+function isAuthError(response, result) {
+  // Check HTTP status codes first
+  if (response.status === 401 || response.status === 403) {
+    console.log('🔐 Auth error detected: HTTP status', response.status);
+    return true;
+  }
+  
+  // Check if response is not OK (any non-2xx status) - treat as potential auth error
+  if (!response.ok) {
+    console.log('🔐 Response not OK, treating as potential auth error. Status:', response.status);
+    return true;
+  }
+  
+  // Check for common auth error messages in response body
+  if (result) {
+    const errorMsg = (result.message || result.msg || result.error || JSON.stringify(result)).toLowerCase();
+    if (errorMsg.includes('unauthorized') || 
+        errorMsg.includes('forbidden') || 
+        (errorMsg.includes('token') && (errorMsg.includes('expired') || errorMsg.includes('invalid') || errorMsg.includes('invalid')))) {
+      console.log('🔐 Auth error detected in response message:', errorMsg.substring(0, 100));
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Wrapper function for making ENERGO API requests with automatic token refresh on failure
+ * @param {Function} requestFn - Async function that makes the API request and returns { response, result }
+ * @returns {Promise<Object>} Object containing response and result
+ */
+async function makeEnergoRequest(requestFn) {
+  try {
+    // Make the initial request
+    const { response, result } = await requestFn();
+    
+    console.log(`[ENERGO REQUEST] Status: ${response.status}, OK: ${response.ok}`);
+    if (result) {
+      console.log(`[ENERGO REQUEST] Result preview:`, JSON.stringify(result).substring(0, 200));
+    }
+    
+    // Check if request failed due to authentication
+    // We check for auth errors regardless of response.ok status
+    if (isAuthError(response, result)) {
+      console.log('⚠️  Energo API request failed with auth error, refreshing token...');
+      console.log('Response details:', { status: response.status, statusText: response.statusText, result: result ? JSON.stringify(result).substring(0, 200) : 'null' });
+      
+      try {
+        // Refresh the token
+        await refreshEnergoToken();
+        
+        // Retry the request once with the new token
+        console.log('🔄 Retrying Energo API request with new token...');
+        return await requestFn();
+      } catch (refreshError) {
+        console.error('❌ Failed to refresh token:', refreshError.message);
+        // Return the original error if refresh failed
+        return { response, result };
+      }
+    }
+    
+    // Request succeeded or failed for non-auth reasons
+    return { response, result };
+  } catch (error) {
+    // Handle JSON parsing errors or other exceptions
+    // If it's a JSON parse error and we got a response, check if it's an auth error
+    if (error.message && error.message.includes('JSON') && error.response) {
+      console.log('⚠️  JSON parsing error, checking if it might be an auth error...');
+      if (isAuthError(error.response, null)) {
+        console.log('⚠️  Treating JSON parse error as auth error, refreshing token...');
+        try {
+          await refreshEnergoToken();
+          console.log('🔄 Retrying Energo API request with new token...');
+          return await requestFn();
+        } catch (refreshError) {
+          console.error('❌ Failed to refresh token:', refreshError.message);
+          throw error; // Re-throw original error
+        }
+      }
+    }
+    
+    // For other network errors or exceptions, don't attempt token refresh
+    console.error('❌ Energo API request error:', error.message);
+    throw error;
+  }
+}
+
+/**
  * Converts date string to Epoch timestamp (milliseconds)
  * @param {string} dateStr - Date string in format "YYYY-MM-DD HH:mm:ss" (assumed to be UTC)
  * @returns {number} - Epoch timestamp in milliseconds
  */
-// ========================================
-// USER DATA CACHE HELPERS
-// ========================================
-
-/**
- * Get cached station metrics from users.json for a specific user and station
- * Works for ALL user types (Host, Distributor, etc.) - no userType filtering
- * @param {string} username - The username (works for all user types)
- * @param {string} stationId - The station ID
- * @returns {Object|null} - Cached metrics or null if not found
- */
-function getCachedStationMetrics(username, stationId) {
-  try {
-    const usersData = fsSync.readFileSync(usersFilePath, 'utf8');
-    const users = JSON.parse(usersData);
-    const user = users.find(u => u.username === username);
-    
-    if (!user || !user.stationMetrics || !user.stationMetrics[stationId]) {
-      return null;
-    }
-    
-    return user.stationMetrics[stationId];
-  } catch (error) {
-    console.error('Error reading cached station metrics:', error);
-    return null;
-  }
-}
-
-/**
- * Save station metrics to users.json for a specific user and station
- * Works for ALL user types (Host, Distributor, etc.) - no userType filtering
- * @param {string} username - The username (works for all user types)
- * @param {string} stationId - The station ID
- * @param {Object} metrics - The metrics to save (pBorrow, pAlso, totalRecords, totalRevenue, stationTitle)
- */
-function saveStationMetricsToCache(username, stationId, metrics) {
-  try {
-    const usersData = fsSync.readFileSync(usersFilePath, 'utf8');
-    const users = JSON.parse(usersData);
-    const userIndex = users.findIndex(u => u.username === username);
-    
-    if (userIndex === -1) {
-      console.error(`User ${username} not found in users.json`);
-      return;
-    }
-    
-    // Initialize stationMetrics if it doesn't exist
-    if (!users[userIndex].stationMetrics) {
-      users[userIndex].stationMetrics = {};
-    }
-    
-    // Save metrics
-    users[userIndex].stationMetrics[stationId] = {
-      ...metrics,
-      lastUpdated: new Date().toISOString()
-    };
-    
-    fsSync.writeFileSync(usersFilePath, JSON.stringify(users, null, 2), 'utf8');
-    console.log(`💾 Saved metrics to cache for user ${username}, station ${stationId}`);
-  } catch (error) {
-    console.error('Error saving station metrics to cache:', error);
-  }
-}
-
 function dateToEpoch(dateStr) {
   // Parse date string: "YYYY-MM-DD HH:mm:ss"
   // Since getDateRange returns UTC dates, parse as UTC
@@ -511,123 +507,79 @@ function dateToEpoch(dateStr) {
 /**
  * Fetches station battery availability from Energo API
  * @param {string} cabinetId - The cabinet/station ID
- * @param {string} username - The username (for cache lookup)
+ * @param {string} username - The username (optional, for backward compatibility)
  * @returns {Promise<Object>} - Object containing response and result with returnNum and borrowNum
  */
 async function fetchEnergoStationAvailability(cabinetId, username = null) {
-  const energoConfig = await getEnergoConfig();
-  const myHeaders = new Headers();
-  myHeaders.append("Authorization", `Bearer ${energoConfig.token}`);
-  myHeaders.append("Referer", "https://backend.energo.vip/device/list");
-  myHeaders.append("oid", energoConfig.oid);
-  
-  const requestOptions = {
-    method: 'GET',
-    headers: myHeaders,
-    redirect: 'follow'
-  };
-  
-  const url = `${energoConfig.baseUrl}/cabinet?cabinetId=${cabinetId}`;
+  const url = `${(await getEnergoConfig()).baseUrl}/cabinet?cabinetId=${cabinetId}`;
   console.log('Making API call to Energo: /cabinet for station:', cabinetId);
   
-  try {
+  // Wrap the API request with automatic token refresh on failure
+  const { response, result } = await makeEnergoRequest(async () => {
+    const energoConfig = await getEnergoConfig();
+    const myHeaders = new Headers();
+    myHeaders.append("Authorization", `Bearer ${energoConfig.token}`);
+    myHeaders.append("Referer", "https://backend.energo.vip/device/list");
+    myHeaders.append("oid", energoConfig.oid);
+    
+    const requestOptions = {
+      method: 'GET',
+      headers: myHeaders,
+      redirect: 'follow'
+    };
+    
     const response = await fetch(url, requestOptions);
-    const result = await response.json();
+    
+    // Try to parse JSON, but handle errors gracefully
+    let result = null;
+    try {
+      const text = await response.text();
+      try {
+        result = JSON.parse(text);
+      } catch (parseError) {
+        // If JSON parsing fails, create an error result object
+        console.warn('Failed to parse JSON response:', text.substring(0, 200));
+        result = { error: 'Failed to parse response', raw: text.substring(0, 200) };
+      }
+    } catch (error) {
+      console.error('Error reading response:', error.message);
+      result = { error: 'Failed to read response', message: error.message };
+    }
     
     console.log('Energo station availability response status:', response.status);
+    return { response, result };
+  });
+  
+  // Check if fetch was successful
+  if (response.ok && result.content && result.content.length > 0) {
+    // Extract returnNum and borrowNum from positionInfo
+    const stationData = result.content[0];
+    let returnNum = 0;
+    let borrowNum = 0;
     
-    // Check if fetch was successful
-    if (response.ok && result.content && result.content.length > 0) {
-      // Extract returnNum and borrowNum from positionInfo
-      const stationData = result.content[0];
-      let returnNum = 0;
-      let borrowNum = 0;
-      
-      if (stationData.positionInfo) {
-        returnNum = stationData.positionInfo.returnNum || 0;
-        borrowNum = stationData.positionInfo.borrowNum || 0;
-      }
-      
-      // Save successful data to cache
-      if (username) {
-        saveStationMetricsToCache(username, cabinetId, {
-          pBorrow: borrowNum,
-          pAlso: returnNum,
-          stationTitle: stationData.shopName || cabinetId
-        });
-      }
-      
-      return { 
-        response, 
-        result: {
-          ...result,
-          returnNum,
-          borrowNum
-        }
-      };
-    } else {
-      // Fetch failed, try to get from cache
-      console.log(`⚠️  API fetch failed for station ${cabinetId}, checking cache...`);
-      if (username) {
-        const cachedMetrics = getCachedStationMetrics(username, cabinetId);
-        if (cachedMetrics) {
-          console.log(`📦 Using cached metrics for station ${cabinetId}`);
-          return {
-            response: { ok: true, status: 200 },
-            result: {
-              content: [{
-                cabinetId: cabinetId,
-                shopName: cachedMetrics.stationTitle || cabinetId,
-                positionInfo: {
-                  returnNum: cachedMetrics.pAlso || 0,
-                  borrowNum: cachedMetrics.pBorrow || 0
-                }
-              }],
-              returnNum: cachedMetrics.pAlso || 0,
-              borrowNum: cachedMetrics.pBorrow || 0
-            }
-          };
-        }
-      }
-      
-      // No cache available, return error response
-      return {
-        response: { ok: false, status: response.status || 500 },
-        result: {
-          ...result,
-          returnNum: 0,
-          borrowNum: 0
-        }
-      };
-    }
-  } catch (error) {
-    console.error(`❌ Error fetching Energo station availability for ${cabinetId}:`, error.message);
-    
-    // Try to get from cache
-    if (username) {
-      const cachedMetrics = getCachedStationMetrics(username, cabinetId);
-      if (cachedMetrics) {
-        console.log(`📦 Using cached metrics after error for station ${cabinetId}`);
-        return {
-          response: { ok: true, status: 200 },
-          result: {
-            content: [{
-              cabinetId: cabinetId,
-              shopName: cachedMetrics.stationTitle || cabinetId,
-              positionInfo: {
-                returnNum: cachedMetrics.pAlso || 0,
-                borrowNum: cachedMetrics.pBorrow || 0
-              }
-            }],
-            returnNum: cachedMetrics.pAlso || 0,
-            borrowNum: cachedMetrics.pBorrow || 0
-          }
-        };
-      }
+    if (stationData.positionInfo) {
+      returnNum = stationData.positionInfo.returnNum || 0;
+      borrowNum = stationData.positionInfo.borrowNum || 0;
     }
     
-    // No cache available, return error
-    throw error;
+    return { 
+      response, 
+      result: {
+        ...result,
+        returnNum,
+        borrowNum
+      }
+    };
+  } else {
+    // Fetch failed, return error response
+    return {
+      response: { ok: false, status: response.status || 500 },
+      result: {
+        ...result,
+        returnNum: 0,
+        borrowNum: 0
+      }
+    };
   }
 }
 
@@ -636,118 +588,87 @@ async function fetchEnergoStationAvailability(cabinetId, username = null) {
  * @param {string} cabinetId - The cabinet/station ID
  * @param {string} sTime - Start time (format: "YYYY-MM-DD HH:mm:ss")
  * @param {string} eTime - End time (format: "YYYY-MM-DD HH:mm:ss")
- * @param {string} username - The username (for cache lookup)
+ * @param {string} username - The username (optional, for backward compatibility)
  * @returns {Promise<Object>} - Object containing response and result with totalPay and totalElements
  */
 async function fetchEnergoStationRentalHistory(cabinetId, sTime, eTime, username = null) {
-  const energoConfig = await getEnergoConfig();
-  const myHeaders = new Headers();
-  myHeaders.append("Authorization", `Bearer ${energoConfig.token}`);
-  myHeaders.append("Referer", "https://backend.energo.vip/device/list");
-  myHeaders.append("oid", energoConfig.oid);
-  
-  const requestOptions = {
-    method: 'GET',
-    headers: myHeaders,
-    redirect: 'follow'
-  };
-  
   // Convert dates to Epoch format
   const startEpoch = dateToEpoch(sTime);
   const endEpoch = dateToEpoch(eTime);
   
   // URL encode the array brackets
-  const url = `${energoConfig.baseUrl}/order?page=0&size=0&createTime%5B0%5D=${startEpoch}&createTime%5B1%5D=${endEpoch}&cabinetid=${cabinetId}&sort=id%2Cdesc`;
+  const url = `${(await getEnergoConfig()).baseUrl}/order?page=0&size=0&createTime%5B0%5D=${startEpoch}&createTime%5B1%5D=${endEpoch}&cabinetid=${cabinetId}&sort=id%2Cdesc`;
   console.log('Making API call to Energo: /order for station:', cabinetId);
   console.log('Date range:', sTime, 'to', eTime, `(${startEpoch} to ${endEpoch})`);
   
-  try {
+  // Wrap the API request with automatic token refresh on failure
+  const { response, result } = await makeEnergoRequest(async () => {
+    const energoConfig = await getEnergoConfig();
+    const myHeaders = new Headers();
+    myHeaders.append("Authorization", `Bearer ${energoConfig.token}`);
+    myHeaders.append("Referer", "https://backend.energo.vip/device/list");
+    myHeaders.append("oid", energoConfig.oid);
+    
+    const requestOptions = {
+      method: 'GET',
+      headers: myHeaders,
+      redirect: 'follow'
+    };
+    
     const response = await fetch(url, requestOptions);
-    const result = await response.json();
+    
+    // Try to parse JSON, but handle errors gracefully
+    let result = null;
+    try {
+      const text = await response.text();
+      try {
+        result = JSON.parse(text);
+      } catch (parseError) {
+        // If JSON parsing fails, create an error result object
+        console.warn('Failed to parse JSON response:', text.substring(0, 200));
+        result = { error: 'Failed to parse response', raw: text.substring(0, 200) };
+      }
+    } catch (error) {
+      console.error('Error reading response:', error.message);
+      result = { error: 'Failed to read response', message: error.message };
+    }
     
     console.log('Energo rental history response status:', response.status);
+    return { response, result };
+  });
+  
+  // Check if fetch was successful
+  if (response.ok) {
+    // Extract totalPay and totalElements
+    let totalPay = 0;
+    let totalElements = 0;
     
-    // Check if fetch was successful
-    if (response.ok) {
-      // Extract totalPay and totalElements
-      let totalPay = 0;
-      let totalElements = 0;
-      
-      if (result.content && Array.isArray(result.content)) {
-        // Sum all totalPay values from orders
-        totalPay = result.content.reduce((sum, order) => {
-          return sum + (parseFloat(order.totalPay) || 0);
-        }, 0);
-        totalElements = result.totalElements || result.content.length;
-      }
-      
-      // Save successful data to cache
-      if (username) {
-        const cachedMetrics = getCachedStationMetrics(username, cabinetId) || {};
-        saveStationMetricsToCache(username, cabinetId, {
-          ...cachedMetrics,
-          totalRecords: totalElements,
-          totalRevenue: totalPay
-        });
-      }
-      
-      return { 
-        response, 
-        result: {
-          ...result,
-          totalPay,
-          totalElements
-        }
-      };
-    } else {
-      // Fetch failed, try to get from cache
-      console.log(`⚠️  API fetch failed for station ${cabinetId} rental history, checking cache...`);
-      if (username) {
-        const cachedMetrics = getCachedStationMetrics(username, cabinetId);
-        if (cachedMetrics && (cachedMetrics.totalRecords !== undefined || cachedMetrics.totalRevenue !== undefined)) {
-          console.log(`📦 Using cached rental history for station ${cabinetId}`);
-          return {
-            response: { ok: true, status: 200 },
-            result: {
-              content: [],
-              totalPay: cachedMetrics.totalRevenue || 0,
-              totalElements: cachedMetrics.totalRecords || 0
-            }
-          };
-        }
-      }
-      
-      // No cache available, return error response
-      return {
-        response: { ok: false, status: response.status || 500 },
-        result: {
-          ...result,
-          totalPay: 0,
-          totalElements: 0
-        }
-      };
-    }
-  } catch (error) {
-    console.error(`❌ Error fetching Energo rental history for ${cabinetId}:`, error.message);
-    
-    // Try to get from cache
-    if (username) {
-      const cachedMetrics = getCachedStationMetrics(username, cabinetId);
-      if (cachedMetrics && (cachedMetrics.totalRecords !== undefined || cachedMetrics.totalRevenue !== undefined)) {
-        console.log(`📦 Using cached rental history after error for station ${cabinetId}`);
-        return {
-          response: { ok: true, status: 200 },
-          result: {
-            content: [],
-            totalPay: cachedMetrics.totalRevenue || 0,
-            totalElements: cachedMetrics.totalRecords || 0
-          }
-        };
-      }
+    if (result.content && Array.isArray(result.content)) {
+      // Sum all totalPay values from orders
+      totalPay = result.content.reduce((sum, order) => {
+        return sum + (parseFloat(order.totalPay) || 0);
+      }, 0);
+      totalElements = result.totalElements || result.content.length;
     }
     
-    // No cache available, return error
-    throw error;
+    return { 
+      response, 
+      result: {
+        ...result,
+        totalPay,
+        totalElements
+      }
+    };
+  } else {
+    // Fetch failed, return error response
+    return {
+      response: { ok: false, status: response.status || 500 },
+      result: {
+        ...result,
+        totalPay: 0,
+        totalElements: 0
+      }
+    };
   }
 }
 
@@ -956,24 +877,41 @@ function calculateOrderStats(orders) {
  */
 async function sendEnergoKeepAliveRequest() {
   try {
-    const energoConfig = await getEnergoConfig();
     // Use a known Energo station ID (RL3T format)
     const testStationId = 'RL3T062411030004';
+    const url = `${(await getEnergoConfig()).baseUrl}/cabinet?cabinetId=${testStationId}`;
     
-    const myHeaders = new Headers();
-    myHeaders.append("Authorization", `Bearer ${energoConfig.token}`);
-    myHeaders.append("Referer", "https://backend.energo.vip/device/list");
-    myHeaders.append("oid", energoConfig.oid);
-    
-    const requestOptions = {
-      method: 'GET',
-      headers: myHeaders,
-      redirect: 'follow'
-    };
-    
-    const url = `${energoConfig.baseUrl}/cabinet?cabinetId=${testStationId}`;
-    
-    const response = await fetch(url, requestOptions);
+    // Wrap the API request with automatic token refresh on failure
+    const { response } = await makeEnergoRequest(async () => {
+      const energoConfig = await getEnergoConfig();
+      const myHeaders = new Headers();
+      myHeaders.append("Authorization", `Bearer ${energoConfig.token}`);
+      myHeaders.append("Referer", "https://backend.energo.vip/device/list");
+      myHeaders.append("oid", energoConfig.oid);
+      
+      const requestOptions = {
+        method: 'GET',
+        headers: myHeaders,
+        redirect: 'follow'
+      };
+      
+      const response = await fetch(url, requestOptions);
+      
+      // Try to parse JSON, but handle errors gracefully
+      let result = null;
+      try {
+        const text = await response.text();
+        try {
+          result = JSON.parse(text);
+        } catch (parseError) {
+          result = { error: 'Failed to parse response' };
+        }
+      } catch (error) {
+        result = { error: 'Failed to read response', message: error.message };
+      }
+      
+      return { response, result };
+    });
     
     if (response.ok) {
       console.log(`[ENERGO KEEP-ALIVE] Successfully sent keep-alive request at ${new Date().toISOString()}`);
@@ -1005,10 +943,6 @@ function startEnergoKeepAlive() {
 // ========================================
 
 module.exports = {
-  // Token cache management
-  setTokenCache,
-  getTokenCache,
-  
   // Unified API functions (auto-detect supplier)
   fetchStations,
   fetchStationRentalHistory,
