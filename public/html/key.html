@@ -121,6 +121,13 @@
       display: block;
     }
     
+    .message.warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+      display: block;
+    }
+    
     .vercel-notice {
       background: #fff3cd;
       color: #856404;
@@ -212,9 +219,14 @@
         const data = await response.json();
         
         if (response.ok) {
-          showMessage('Token updated successfully!', 'success');
+          if (data.warning) {
+            // Show warning message if token won't persist
+            showMessage(data.message, 'warning');
+          } else {
+            showMessage('Token updated successfully!', 'success');
+          }
         } else {
-          // Show detailed error message, especially for Vercel
+          // Show detailed error message
           let errorMsg = data.error || 'Failed to update token';
           if (data.instructions) {
             errorMsg += '\n\n' + data.instructions;

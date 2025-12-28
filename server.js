@@ -280,41 +280,19 @@ app.get('/key', (req, res) => {
 // Energo token management endpoints
 const energoConfigPath = path.join(__dirname, 'data/energo-config.json');
 
-// In-memory cache for token (used in production where filesystem is read-only)
-let energoTokenCache = null;
-
 // Check if we're running in a read-only environment (Vercel serverless)
 const isReadOnlyEnvironment = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
 
 // Get current Energo token
 app.get('/api/energo-token', async (req, res) => {
   try {
-    // In production, check cache first, then try to read from file (deployed with code)
-    if (isReadOnlyEnvironment && energoTokenCache) {
-      return res.json({ 
-        token: energoTokenCache,
-        source: 'cache'
-      });
-    }
-    
-    // Try to read from file
-    try {
-      const configData = await fs.readFile(energoConfigPath, 'utf8');
-      const config = JSON.parse(configData);
-      return res.json({ 
-        token: config.token,
-        source: 'file'
-      });
-    } catch (error) {
-      // If file read fails and we have cache, use cache
-      if (energoTokenCache) {
-        return res.json({ 
-          token: energoTokenCache,
-          source: 'cache'
-        });
-      }
-      throw error;
-    }
+    // Always try to read from file (the deployed file is the source of truth)
+    const configData = await fs.readFile(energoConfigPath, 'utf8');
+    const config = JSON.parse(configData);
+    return res.json({ 
+      token: config.token,
+      source: 'file'
+    });
   } catch (error) {
     console.error('Error reading Energo config:', error);
     return res.status(404).json({ error: 'Token not found' });
@@ -330,18 +308,7 @@ app.post('/api/energo-token', async (req, res) => {
       return res.status(400).json({ error: 'Token is required' });
     }
     
-    // In production/read-only environment, use in-memory cache only
-    if (isReadOnlyEnvironment) {
-      energoTokenCache = token;
-      console.log('✅ Energo token updated in memory cache (read-only environment)');
-      return res.json({ 
-        success: true, 
-        message: 'Token updated successfully (in memory - will reset on next deployment)',
-        source: 'cache'
-      });
-    }
-    
-    // In local development, write to file
+    // Try to read existing config or create default
     let config;
     try {
       const configData = await fs.readFile(energoConfigPath, 'utf8');
@@ -354,24 +321,35 @@ app.post('/api/energo-token', async (req, res) => {
     // Update token
     config.token = token;
     
-    // Write back to file
+    // Try to write to file (will fail gracefully in read-only environments)
     try {
       await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
-      energoTokenCache = token; // Also update cache
       console.log('✅ Energo token updated successfully in file');
-      res.json({ 
+      return res.json({ 
         success: true, 
         message: 'Token updated successfully',
         source: 'file'
       });
     } catch (writeError) {
-      // If file write fails, fall back to cache
-      energoTokenCache = token;
-      console.warn('⚠️  Could not write to file, using cache:', writeError.message);
-      res.json({ 
+      // File write failed (likely read-only filesystem on Vercel)
+      // Still return success, but inform user it won't persist
+      console.warn('⚠️  Could not write to file (read-only filesystem):', writeError.message);
+      
+      if (isReadOnlyEnvironment) {
+        return res.json({ 
+          success: true, 
+          message: 'Token update attempted, but cannot persist in this environment. Changes will be lost on next deployment. For permanent storage, update the token in the codebase and redeploy.',
+          source: 'file',
+          warning: true
+        });
+      }
+      
+      // If not read-only environment, still return success but warn
+      return res.json({ 
         success: true, 
-        message: 'Token updated in memory cache (file write failed)',
-        source: 'cache'
+        message: 'Token update attempted, but file write failed. Changes may not persist.',
+        source: 'file',
+        warning: true
       });
     }
   } catch (error) {
