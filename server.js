@@ -381,7 +381,15 @@ app.get('/api/energo-token', async (req, res) => {
       });
     }
     
-    // Priority 2: Config file (local development or initial load)
+    // Priority 2: Environment variable (for Vercel/production)
+    if (process.env.ENERGO_TOKEN) {
+      return res.json({ 
+        token: process.env.ENERGO_TOKEN,
+        source: 'environment'
+      });
+    }
+    
+    // Priority 3: Config file (local development or initial load)
     try {
       const configData = await fs.readFile(energoConfigPath, 'utf8');
       const config = JSON.parse(configData);

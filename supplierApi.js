@@ -141,7 +141,7 @@ async function refreshEnergoToken() {
 }
 
 /**
- * Get Energo configuration (reads from cache first, then file, then default)
+ * Get Energo configuration (reads from cache first, then env var, then file, then default)
  * @returns {Promise<Object>} Energo config object
  */
 async function getEnergoConfig() {
@@ -154,7 +154,16 @@ async function getEnergoConfig() {
     };
   }
   
-  // Priority 2: Config file (local development or initial load)
+  // Priority 2: Environment variable (for Vercel/production)
+  if (process.env.ENERGO_TOKEN) {
+    return {
+      baseUrl: 'https://backend.energo.vip/api',
+      token: process.env.ENERGO_TOKEN,
+      oid: process.env.ENERGO_OID || DEFAULT_ENERGO_CONFIG.oid,
+    };
+  }
+  
+  // Priority 3: Config file (local development or initial load)
   try {
     const configData = await fs.readFile(energoConfigPath, 'utf8');
     const config = JSON.parse(configData);
