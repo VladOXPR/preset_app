@@ -41,23 +41,7 @@ const DEFAULT_ENERGO_CONFIG = {
   oid: '3526',
 };
 
-// In-memory token cache (shared with server.js via module-level variable)
-// This allows immediate use of updated tokens on Vercel
-let tokenCache = null;
-
-/**
- * Set token cache (called from server.js after update)
- */
-function setTokenCache(token) {
-  tokenCache = token;
-}
-
-/**
- * Get token cache (for reading current cached token)
- */
-function getTokenCache() {
-  return tokenCache;
-}
+// Cache removed - tokens are now always updated in environment variables
 
 /**
  * Update ENERGO_TOKEN environment variable in Vercel via Management API
@@ -143,26 +127,19 @@ async function updateVercelEnvironmentVariable(token) {
 }
 
 /**
- * Update Energo token storage (cache, Vercel env var, and file)
+ * Update Energo token storage (always updates Vercel env var, and file if possible)
  * @param {string} token - The new token to save
  * @returns {Promise<void>}
  */
 async function updateEnergoTokenStorage(token) {
-  // Always update cache first (works everywhere, immediate)
-  tokenCache = token;
-  
-  // Check if we're on Vercel
-  const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
-  
-  // On Vercel, try to update environment variable automatically
-  if (isVercel) {
-    try {
-      await updateVercelEnvironmentVariable(token);
-      console.log('✅ Energo token updated via Vercel API and cached');
-    } catch (error) {
-      console.warn('⚠️  Could not update token via Vercel API:', error.message);
-      console.warn('⚠️  Token is cached for immediate use, but env var update failed. Ensure VERCEL_TOKEN and VERCEL_PROJECT_ID are set.');
-    }
+  // Always try to update environment variable via Vercel API (works in all stages)
+  try {
+    await updateVercelEnvironmentVariable(token);
+    console.log('✅ Energo token updated via Vercel API');
+  } catch (error) {
+    console.warn('⚠️  Could not update token via Vercel API:', error.message);
+    console.warn('⚠️  Ensure VERCEL_TOKEN and VERCEL_PROJECT_ID are set.');
+    // Continue to try file update even if Vercel API fails
   }
   
   // Try to write to file (works in local dev, fails gracefully on Vercel)
@@ -181,8 +158,8 @@ async function updateEnergoTokenStorage(token) {
     console.log('✅ Energo token updated in config file');
   } catch (writeError) {
     // File write failed (likely read-only filesystem on Vercel)
-    // This is fine - we've already cached it and updated env var if on Vercel
-    console.log('✅ Energo token updated in cache (file write not available on Vercel)');
+    // This is fine - we've already updated env var via Vercel API
+    console.log('✅ Energo token updated in env var (file write not available)');
   }
 }
 
@@ -233,20 +210,11 @@ async function refreshEnergoToken() {
 }
 
 /**
- * Get Energo configuration (reads from cache first, then env var, then file, then default)
+ * Get Energo configuration (reads from env var first, then file, then default)
  * @returns {Promise<Object>} Energo config object
  */
 async function getEnergoConfig() {
-  // Priority 1: In-memory cache (for immediate use after update on Vercel)
-  if (tokenCache) {
-    return {
-      baseUrl: 'https://backend.energo.vip/api',
-      token: tokenCache,
-      oid: DEFAULT_ENERGO_CONFIG.oid,
-    };
-  }
-  
-  // Priority 2: Environment variable (for Vercel/production)
+  // Priority 1: Environment variable (always used when available)
   if (process.env.ENERGO_TOKEN) {
     return {
       baseUrl: 'https://backend.energo.vip/api',
@@ -255,7 +223,7 @@ async function getEnergoConfig() {
     };
   }
   
-  // Priority 3: Config file (local development or initial load)
+  // Priority 2: Config file (local development or initial load)
   try {
     const configData = await fs.readFile(energoConfigPath, 'utf8');
     const config = JSON.parse(configData);
@@ -577,14 +545,13 @@ async function makeEnergoRequest(requestFn) {
       console.log(`[ENERGO REQUEST] Result preview:`, JSON.stringify(result).substring(0, 200));
     }
     
-    // Check if request failed due to authentication
-    // We check for auth errors regardless of response.ok status
-    if (isAuthError(response, result)) {
-      console.log('⚠️  Energo API request failed with auth error, refreshing token...');
+    // Check if request failed - refresh token on any failure
+    if (!response.ok || isAuthError(response, result)) {
+      console.log('⚠️  Energo API request failed, refreshing token and updating env var...');
       console.log('Response details:', { status: response.status, statusText: response.statusText, result: result ? JSON.stringify(result).substring(0, 200) : 'null' });
       
       try {
-        // Refresh the token
+        // Refresh the token (this will update the env var via updateEnergoTokenStorage)
         await refreshEnergoToken();
         
         // Retry the request once with the new token
@@ -597,29 +564,33 @@ async function makeEnergoRequest(requestFn) {
       }
     }
     
-    // Request succeeded or failed for non-auth reasons
+    // Request succeeded
     return { response, result };
   } catch (error) {
     // Handle JSON parsing errors or other exceptions
-    // If it's a JSON parse error and we got a response, check if it's an auth error
+    // If it's a JSON parse error and we got a response, refresh token
     if (error.message && error.message.includes('JSON') && error.response) {
-      console.log('⚠️  JSON parsing error, checking if it might be an auth error...');
-      if (isAuthError(error.response, null)) {
-        console.log('⚠️  Treating JSON parse error as auth error, refreshing token...');
-        try {
-          await refreshEnergoToken();
-          console.log('🔄 Retrying Energo API request with new token...');
-          return await requestFn();
-        } catch (refreshError) {
-          console.error('❌ Failed to refresh token:', refreshError.message);
-          throw error; // Re-throw original error
-        }
+      console.log('⚠️  JSON parsing error, refreshing token...');
+      try {
+        await refreshEnergoToken();
+        console.log('🔄 Retrying Energo API request with new token...');
+        return await requestFn();
+      } catch (refreshError) {
+        console.error('❌ Failed to refresh token:', refreshError.message);
+        throw error;
       }
     }
     
-    // For other network errors or exceptions, don't attempt token refresh
-    console.error('❌ Energo API request error:', error.message);
-    throw error;
+    // For other network errors, also try refreshing token
+    console.error('❌ Energo API request error, attempting token refresh:', error.message);
+    try {
+      await refreshEnergoToken();
+      console.log('🔄 Retrying Energo API request with new token...');
+      return await requestFn();
+    } catch (refreshError) {
+      console.error('❌ Failed to refresh token:', refreshError.message);
+      throw error;
+    }
   }
 }
 
@@ -1079,9 +1050,6 @@ function startEnergoKeepAlive() {
 // ========================================
 
 module.exports = {
-  // Token cache management
-  setTokenCache,
-  getTokenCache,
   // Unified API functions (auto-detect supplier)
   fetchStations,
   fetchStationRentalHistory,
