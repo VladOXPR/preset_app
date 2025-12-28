@@ -41,12 +41,26 @@ const DEFAULT_ENERGO_CONFIG = {
   oid: '3526',
 };
 
+// In-memory cache for token (used in production where filesystem is read-only)
+let energoTokenCache = null;
+
+// Check if we're running in a read-only environment (Vercel serverless)
+const isReadOnlyEnvironment = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+
 /**
- * Update Energo token in config file
+ * Update Energo token in config file or cache
  * @param {string} token - The new token to save
  * @returns {Promise<void>}
  */
 async function updateEnergoTokenStorage(token) {
+  // In production/read-only environment, use in-memory cache only
+  if (isReadOnlyEnvironment) {
+    energoTokenCache = token;
+    console.log('✅ Energo token updated in memory cache (read-only environment)');
+    return;
+  }
+  
+  // In local development, try to write to file
   try {
     let config;
     try {
@@ -61,11 +75,19 @@ async function updateEnergoTokenStorage(token) {
     config.token = token;
     
     // Write back to file
-    await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
-    console.log('✅ Energo token updated in config file');
+    try {
+      await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
+      energoTokenCache = token; // Also update cache
+      console.log('✅ Energo token updated in config file');
+    } catch (writeError) {
+      // If file write fails, fall back to cache
+      energoTokenCache = token;
+      console.warn('⚠️  Could not write to file, using cache:', writeError.message);
+    }
   } catch (error) {
-    console.error('⚠️  Could not update Energo token in config file:', error.message);
-    throw error;
+    // Fallback to cache if file operations fail
+    energoTokenCache = token;
+    console.warn('⚠️  Could not update Energo token in config file, using cache:', error.message);
   }
 }
 
@@ -116,19 +138,41 @@ async function refreshEnergoToken() {
 }
 
 /**
- * Get Energo configuration (reads from config file, falls back to default)
+ * Get Energo configuration (reads from cache, file, or falls back to default)
  * @returns {Promise<Object>} Energo config object
  */
 async function getEnergoConfig() {
+  // In production, check cache first
+  if (isReadOnlyEnvironment && energoTokenCache) {
+    return {
+      baseUrl: 'https://backend.energo.vip/api',
+      token: energoTokenCache,
+      oid: DEFAULT_ENERGO_CONFIG.oid,
+    };
+  }
+  
+  // Try to read from file
   try {
     const configData = await fs.readFile(energoConfigPath, 'utf8');
     const config = JSON.parse(configData);
+    // Update cache if we successfully read from file
+    if (config.token) {
+      energoTokenCache = config.token;
+    }
     return {
       baseUrl: 'https://backend.energo.vip/api',
       token: config.token || DEFAULT_ENERGO_CONFIG.token,
       oid: config.oid || DEFAULT_ENERGO_CONFIG.oid,
     };
   } catch (error) {
+    // If file read fails and we have cache, use cache
+    if (energoTokenCache) {
+      return {
+        baseUrl: 'https://backend.energo.vip/api',
+        token: energoTokenCache,
+        oid: DEFAULT_ENERGO_CONFIG.oid,
+      };
+    }
     console.warn('⚠️  Could not read Energo config file, using default:', error.message);
     return DEFAULT_ENERGO_CONFIG;
   }

@@ -280,15 +280,41 @@ app.get('/key', (req, res) => {
 // Energo token management endpoints
 const energoConfigPath = path.join(__dirname, 'data/energo-config.json');
 
+// In-memory cache for token (used in production where filesystem is read-only)
+let energoTokenCache = null;
+
+// Check if we're running in a read-only environment (Vercel serverless)
+const isReadOnlyEnvironment = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+
 // Get current Energo token
 app.get('/api/energo-token', async (req, res) => {
   try {
-    const configData = await fs.readFile(energoConfigPath, 'utf8');
-    const config = JSON.parse(configData);
-    return res.json({ 
-      token: config.token,
-      source: 'file'
-    });
+    // In production, check cache first, then try to read from file (deployed with code)
+    if (isReadOnlyEnvironment && energoTokenCache) {
+      return res.json({ 
+        token: energoTokenCache,
+        source: 'cache'
+      });
+    }
+    
+    // Try to read from file
+    try {
+      const configData = await fs.readFile(energoConfigPath, 'utf8');
+      const config = JSON.parse(configData);
+      return res.json({ 
+        token: config.token,
+        source: 'file'
+      });
+    } catch (error) {
+      // If file read fails and we have cache, use cache
+      if (energoTokenCache) {
+        return res.json({ 
+          token: energoTokenCache,
+          source: 'cache'
+        });
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error reading Energo config:', error);
     return res.status(404).json({ error: 'Token not found' });
@@ -304,7 +330,18 @@ app.post('/api/energo-token', async (req, res) => {
       return res.status(400).json({ error: 'Token is required' });
     }
     
-    // Read existing config or create default
+    // In production/read-only environment, use in-memory cache only
+    if (isReadOnlyEnvironment) {
+      energoTokenCache = token;
+      console.log('✅ Energo token updated in memory cache (read-only environment)');
+      return res.json({ 
+        success: true, 
+        message: 'Token updated successfully (in memory - will reset on next deployment)',
+        source: 'cache'
+      });
+    }
+    
+    // In local development, write to file
     let config;
     try {
       const configData = await fs.readFile(energoConfigPath, 'utf8');
@@ -318,14 +355,25 @@ app.post('/api/energo-token', async (req, res) => {
     config.token = token;
     
     // Write back to file
-    await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
-    
-    console.log('✅ Energo token updated successfully');
-    res.json({ 
-      success: true, 
-      message: 'Token updated successfully',
-      source: 'file'
-    });
+    try {
+      await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
+      energoTokenCache = token; // Also update cache
+      console.log('✅ Energo token updated successfully in file');
+      res.json({ 
+        success: true, 
+        message: 'Token updated successfully',
+        source: 'file'
+      });
+    } catch (writeError) {
+      // If file write fails, fall back to cache
+      energoTokenCache = token;
+      console.warn('⚠️  Could not write to file, using cache:', writeError.message);
+      res.json({ 
+        success: true, 
+        message: 'Token updated in memory cache (file write failed)',
+        source: 'cache'
+      });
+    }
   } catch (error) {
     console.error('Error updating Energo token:', error);
     res.status(500).json({ error: 'Failed to update token: ' + error.message });
