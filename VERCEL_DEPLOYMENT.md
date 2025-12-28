@@ -48,10 +48,37 @@ vercel
 
 ### 3. Environment Variables
 Add these environment variables in Vercel dashboard:
+
+**How to set environment variables in Vercel:**
+1. Go to your project in Vercel dashboard
+2. Click on **Settings** tab
+3. Click on **Environment Variables** in the sidebar
+4. Add each variable with its value:
+   - Click **Add New**
+   - Enter the variable name (e.g., `OPENAI_API_KEY`)
+   - Enter the variable value
+   - Select environments (Production, Preview, Development) - check all that apply
+   - Click **Save**
+5. **Important**: After adding new environment variables, you need to redeploy your project for them to take effect
+
+**Required environment variables:**
 ```
 NODE_ENV=production
+OPENAI_API_KEY=sk-proj-your-api-key-here
+ENERGO_USERNAME=your_energo_username
+ENERGO_PASSWORD=your_energo_password
+```
+
+**Optional environment variables (if used):**
+```
 JWT_SECRET=your_jwt_secret_here
 DATABASE_URL=your_database_url_here
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_MESSAGING_SERVICE_SID=your_twilio_service_sid
+TWILIO_ALERT_PHONE=your_phone_number
+TWILIO_PHONE_NUMBER=your_twilio_phone
+CALENDAR_LINK=your_calendar_link
 ```
 
 ### 4. Deploy
