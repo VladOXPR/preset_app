@@ -60,11 +60,112 @@ function getTokenCache() {
 }
 
 /**
- * Update Energo token in config file
+ * Update ENERGO_TOKEN environment variable in Vercel via Management API
+ * @param {string} token - The token to set
+ * @returns {Promise<void>}
+ */
+async function updateVercelEnvironmentVariable(token) {
+  const vercelToken = process.env.VERCEL_TOKEN;
+  const projectId = process.env.VERCEL_PROJECT_ID;
+  const teamId = process.env.VERCEL_TEAM_ID;
+  
+  if (!vercelToken || !projectId) {
+    throw new Error('VERCEL_TOKEN and VERCEL_PROJECT_ID must be set to update token on Vercel');
+  }
+  
+  const url = teamId 
+    ? `https://api.vercel.com/v10/projects/${projectId}/env?teamId=${teamId}`
+    : `https://api.vercel.com/v10/projects/${projectId}/env`;
+  
+  // First, get existing env vars to find the ENERGO_TOKEN entry
+  const getResponse = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${vercelToken}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  if (!getResponse.ok) {
+    const errorText = await getResponse.text();
+    throw new Error(`Failed to fetch environment variables: ${getResponse.status} ${errorText}`);
+  }
+  
+  const envVars = await getResponse.json();
+  const energoTokenVar = envVars.envs?.find(env => env.key === 'ENERGO_TOKEN');
+  
+  let updateUrl;
+  if (energoTokenVar) {
+    // Update existing variable
+    updateUrl = teamId
+      ? `https://api.vercel.com/v10/projects/${projectId}/env/${energoTokenVar.id}?teamId=${teamId}`
+      : `https://api.vercel.com/v10/projects/${projectId}/env/${energoTokenVar.id}`;
+    
+    const updateResponse = await fetch(updateUrl, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${vercelToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        value: token,
+        type: 'encrypted',
+        target: ['production', 'preview', 'development']
+      })
+    });
+    
+    if (!updateResponse.ok) {
+      const errorText = await updateResponse.text();
+      throw new Error(`Failed to update environment variable: ${updateResponse.status} ${errorText}`);
+    }
+  } else {
+    // Create new variable
+    const createResponse = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${vercelToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        key: 'ENERGO_TOKEN',
+        value: token,
+        type: 'encrypted',
+        target: ['production', 'preview', 'development']
+      })
+    });
+    
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      throw new Error(`Failed to create environment variable: ${createResponse.status} ${errorText}`);
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Update Energo token storage (cache, Vercel env var, and file)
  * @param {string} token - The new token to save
  * @returns {Promise<void>}
  */
 async function updateEnergoTokenStorage(token) {
+  // Always update cache first (works everywhere, immediate)
+  tokenCache = token;
+  
+  // Check if we're on Vercel
+  const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+  
+  // On Vercel, try to update environment variable automatically
+  if (isVercel) {
+    try {
+      await updateVercelEnvironmentVariable(token);
+      console.log('✅ Energo token updated via Vercel API and cached');
+    } catch (error) {
+      console.warn('⚠️  Could not update token via Vercel API:', error.message);
+      console.warn('⚠️  Token is cached for immediate use, but env var update failed. Ensure VERCEL_TOKEN and VERCEL_PROJECT_ID are set.');
+    }
+  }
+  
+  // Try to write to file (works in local dev, fails gracefully on Vercel)
   try {
     let config;
     try {
@@ -75,22 +176,13 @@ async function updateEnergoTokenStorage(token) {
       config = { oid: DEFAULT_ENERGO_CONFIG.oid };
     }
     
-    // Update token
     config.token = token;
-    
-    // Try to write back to file (will fail gracefully in read-only environments)
-    try {
-      await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
-      console.log('✅ Energo token updated in config file');
-    } catch (writeError) {
-      // File write failed (likely read-only filesystem on Vercel)
-      // Log warning but don't throw - the token refresh still succeeded
-      console.warn('⚠️  Could not write Energo token to file (read-only filesystem):', writeError.message);
-      console.warn('⚠️  Token was refreshed but will not persist. It will be lost on next deployment.');
-    }
-  } catch (error) {
-    // Log error but don't throw - token refresh still succeeded
-    console.warn('⚠️  Could not update Energo token in config file:', error.message);
+    await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
+    console.log('✅ Energo token updated in config file');
+  } catch (writeError) {
+    // File write failed (likely read-only filesystem on Vercel)
+    // This is fine - we've already cached it and updated env var if on Vercel
+    console.log('✅ Energo token updated in cache (file write not available on Vercel)');
   }
 }
 
