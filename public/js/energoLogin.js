@@ -1,4 +1,16 @@
 const puppeteer = require('puppeteer');
+const path = require('path');
+
+// Load environment variables for local development
+// This ensures OPENAI_API_KEY is available when running locally
+try {
+    // Resolve .env.local path relative to project root (two directories up from this file)
+    const envPath = path.join(__dirname, '../../.env.local');
+    require('dotenv').config({ path: envPath });
+} catch (error) {
+    // dotenv might not be available or .env.local doesn't exist, that's okay
+    // Environment variables will come from process.env (set by parent module or system)
+}
 
 // Add fetch for Node.js
 let fetch;
@@ -16,7 +28,7 @@ if (typeof globalThis.fetch === 'undefined') {
 
 // Browser preview mode
 // Set to false to see the browser window, true to run in headless mode (no browser window)
-const SHOW_BROWSER_PREVIEW = false;
+const SHOW_BROWSER_PREVIEW = true;
 
 /**
  * Helper function to wait/sleep (replacement for deprecated page.waitForTimeout)
