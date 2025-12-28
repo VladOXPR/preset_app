@@ -67,7 +67,10 @@ NODE_ENV=production
 OPENAI_API_KEY=sk-proj-your-api-key-here
 ENERGO_USERNAME=your_energo_username
 ENERGO_PASSWORD=your_energo_password
+ENERGO_TOKEN=your_energo_token_here
 ```
+
+**Note:** `ENERGO_TOKEN` is the Energo API authorization token. The application reads from this environment variable first (Priority 1), then falls back to the file for local development. To update the token in production, update the `ENERGO_TOKEN` environment variable in Vercel dashboard.
 
 **Optional environment variables (if used):**
 ```
