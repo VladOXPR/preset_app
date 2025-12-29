@@ -138,7 +138,7 @@ async function updateEnergoTokenStorage(token) {
 let tokenRefreshPromise = null;
 
 // External token extraction service URL
-const TOKEN_EXTRACTION_SERVICE_URL = 'https://keyextractservice-406495793630.us-central1.run.app/token';
+const TOKEN_EXTRACTION_SERVICE_URL = 'https://api.cuub.tech/token';
 
 /**
  * Refresh Energo authorization token using external service
