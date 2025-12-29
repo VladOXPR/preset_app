@@ -19,9 +19,6 @@ if (typeof globalThis.fetch === 'undefined') {
 const fs = require('fs').promises;
 const path = require('path');
 
-// Import energoLogin for token refresh
-const { loginToEnergo, closeBrowser } = require('./public/js/energoLogin');
-
 // ========================================
 // CONFIGURATION
 // ========================================
@@ -163,50 +160,93 @@ async function updateEnergoTokenStorage(token) {
   }
 }
 
+// Mutex to prevent concurrent token refresh attempts
+let tokenRefreshPromise = null;
+
+// External token extraction service URL
+const TOKEN_EXTRACTION_SERVICE_URL = 'https://keyextractservice-406495793630.us-central1.run.app/token';
+
 /**
- * Refresh Energo authorization token by logging in
+ * Refresh Energo authorization token using external service
+ * Uses a mutex to prevent concurrent refresh attempts
  * @returns {Promise<string>} The new authorization token
  */
 async function refreshEnergoToken() {
-  console.log('🔄 Refreshing Energo authorization token...');
-  
-  try {
-    // Get credentials from environment variables or use defaults
-    const username = process.env.ENERGO_USERNAME || 'cubUSA2025';
-    const password = process.env.ENERGO_PASSWORD || 'cubUSA2025i^5Ft';
-    const openaiApiKey = process.env.OPENAI_API_KEY;
-    
-    // Call loginToEnergo to get a new token
-    const result = await loginToEnergo({
-      username: username,
-      password: password,
-      captcha: undefined, // Let it solve with OpenAI
-      openaiApiKey: openaiApiKey,
-      headless: true, // Always run headless for automatic refresh
-      timeout: 30000
-    });
-    
-    // Close the browser to free resources
-    if (result && result.browser) {
-      await closeBrowser(result);
-    }
-    
-    // Check if we got a token
-    if (!result || !result.token) {
-      throw new Error('Failed to extract token from login result');
-    }
-    
-    const newToken = result.token;
-    console.log('✅ Successfully refreshed Energo token');
-    
-    // Update token in config file
-    await updateEnergoTokenStorage(newToken);
-    
-    return newToken;
-  } catch (error) {
-    console.error('❌ Error refreshing Energo token:', error.message);
-    throw error;
+  // If a refresh is already in progress, wait for it and return the same result
+  if (tokenRefreshPromise) {
+    console.log('🔄 Token refresh already in progress, waiting for completion...');
+    return await tokenRefreshPromise;
   }
+  
+  // Create a new refresh promise
+  tokenRefreshPromise = (async () => {
+    try {
+      console.log('🔄 Refreshing Energo authorization token via external service...');
+      
+      // Retry logic for network errors
+      let retries = 3;
+      let lastError = null;
+      
+      while (retries > 0) {
+        try {
+          // Call external token extraction service
+          const response = await fetch(TOKEN_EXTRACTION_SERVICE_URL, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Token extraction service returned status ${response.status}: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          
+          // Validate response format
+          if (!data || !data.success || !data.token) {
+            throw new Error('Invalid response from token extraction service: missing success or token');
+          }
+          
+          const newToken = data.token;
+          console.log('✅ Successfully refreshed Energo token from external service');
+          
+          // Update token in Vercel environment variables
+          await updateEnergoTokenStorage(newToken);
+          
+          // Clear the promise so future calls can refresh again
+          tokenRefreshPromise = null;
+          
+          return newToken;
+        } catch (error) {
+          lastError = error;
+          const errorMsg = error.message || '';
+          
+          // Retry on network errors or service errors
+          if (retries > 1) {
+            retries--;
+            const waitTime = (4 - retries) * 1000; // Exponential backoff: 1s, 2s, 3s
+            console.warn(`⚠️  Token extraction error (${errorMsg}), retrying in ${waitTime}ms... (${retries} retries left)`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            continue;
+          }
+          
+          // If we're out of retries, throw
+          throw error;
+        }
+      }
+      
+      // If we exhausted retries, throw the last error
+      throw lastError;
+    } catch (error) {
+      // Clear the promise on error so future calls can retry
+      tokenRefreshPromise = null;
+      console.error('❌ Error refreshing Energo token:', error.message);
+      throw error;
+    }
+  })();
+  
+  return await tokenRefreshPromise;
 }
 
 /**
