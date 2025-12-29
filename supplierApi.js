@@ -15,7 +15,7 @@ if (typeof globalThis.fetch === 'undefined') {
   fetch = globalThis.fetch;
 }
 
-// File system for reading config
+// File system for reading stations data
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -28,15 +28,9 @@ const CHARGENOW_CONFIG = {
   credentials: 'Basic VmxhZFZhbGNoa292OlZWMTIxMg==', // Base64 encoded credentials
 };
 
-// Energo config path
-const energoConfigPath = path.join(__dirname, 'data/energo-config.json');
-
-// Default Energo config (fallback if file doesn't exist)
-const DEFAULT_ENERGO_CONFIG = {
-  baseUrl: 'https://backend.energo.vip/api',
-  token: 'eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiIyNGUyMWYxYjBmN2Q0MWU3ODU5NmZiYmVkOGM5NGMzMiIsInVzZXIiOiJjdWJVU0EyMDI1IiwiaXNBcGlUb2tlbiI6ZmFsc2UsInN1YiI6ImN1YlVTQTIwMjUiLCJBUElLRVkiOiJidXpOTEQyMDI0IiwiZXhwIjoxNzY5NDQ1NzA5fQ.A_YhhSjlMUbiEZ6l0RvX3eHdAqPsW36HTGukF8yBwVa1t_3rHQUHcwEmMUXDTkS3koQnhcYU20aNZ0Txvxk0ww',
-  oid: '3526',
-};
+// Energo config - only uses environment variables
+const ENERGO_BASE_URL = 'https://backend.energo.vip/api';
+const DEFAULT_ENERGO_OID = '3526';
 
 // Cache removed - tokens are now always updated in environment variables
 
@@ -124,39 +118,19 @@ async function updateVercelEnvironmentVariable(token) {
 }
 
 /**
- * Update Energo token storage (always updates Vercel env var, and file if possible)
+ * Update Energo token storage (only updates Vercel env var)
  * @param {string} token - The new token to save
  * @returns {Promise<void>}
  */
 async function updateEnergoTokenStorage(token) {
-  // Always try to update environment variable via Vercel API (works in all stages)
+  // Only update environment variable via Vercel API
   try {
     await updateVercelEnvironmentVariable(token);
     console.log('✅ Energo token updated via Vercel API');
   } catch (error) {
     console.warn('⚠️  Could not update token via Vercel API:', error.message);
     console.warn('⚠️  Ensure VERCEL_TOKEN and VERCEL_PROJECT_ID are set.');
-    // Continue to try file update even if Vercel API fails
-  }
-  
-  // Try to write to file (works in local dev, fails gracefully on Vercel)
-  try {
-    let config;
-    try {
-      const configData = await fs.readFile(energoConfigPath, 'utf8');
-      config = JSON.parse(configData);
-    } catch (error) {
-      // If file doesn't exist, create default config
-      config = { oid: DEFAULT_ENERGO_CONFIG.oid };
-    }
-    
-    config.token = token;
-    await fs.writeFile(energoConfigPath, JSON.stringify(config, null, 2), 'utf8');
-    console.log('✅ Energo token updated in config file');
-  } catch (writeError) {
-    // File write failed (likely read-only filesystem on Vercel)
-    // This is fine - we've already updated env var via Vercel API
-    console.log('✅ Energo token updated in env var (file write not available)');
+    throw error; // Re-throw since we have no fallback
   }
 }
 
@@ -294,32 +268,22 @@ async function refreshEnergoToken() {
 }
 
 /**
- * Get Energo configuration (reads from env var first, then file, then default)
+ * Get Energo configuration (only reads from environment variables)
  * @returns {Promise<Object>} Energo config object
  */
 async function getEnergoConfig() {
-  // Priority 1: Environment variable (always used when available)
-  if (process.env.ENERGO_TOKEN) {
-    return {
-      baseUrl: 'https://backend.energo.vip/api',
-      token: process.env.ENERGO_TOKEN,
-      oid: process.env.ENERGO_OID || DEFAULT_ENERGO_CONFIG.oid,
-    };
+  // Only use environment variable - no fallbacks
+  if (!process.env.ENERGO_TOKEN) {
+    throw new Error('ENERGO_TOKEN environment variable is not set. Please set it in Vercel dashboard or your environment variables.');
   }
   
-  // Priority 2: Config file (local development or initial load)
-  try {
-    const configData = await fs.readFile(energoConfigPath, 'utf8');
-    const config = JSON.parse(configData);
-    return {
-      baseUrl: 'https://backend.energo.vip/api',
-      token: config.token || DEFAULT_ENERGO_CONFIG.token,
-      oid: config.oid || DEFAULT_ENERGO_CONFIG.oid,
-    };
-  } catch (error) {
-    console.warn('⚠️  Could not read Energo config file, using default:', error.message);
-    return DEFAULT_ENERGO_CONFIG;
-  }
+  console.log(`🔑 Using ENERGO_TOKEN from environment variable (length: ${process.env.ENERGO_TOKEN.length}, starts with: ${process.env.ENERGO_TOKEN.substring(0, 20)}...)`);
+  
+  return {
+    baseUrl: ENERGO_BASE_URL,
+    token: process.env.ENERGO_TOKEN,
+    oid: process.env.ENERGO_OID || DEFAULT_ENERGO_OID,
+  };
 }
 
 // ========================================
