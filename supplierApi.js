@@ -189,38 +189,82 @@ async function refreshEnergoToken() {
       
       while (retries > 0) {
         try {
-          // Call external token extraction service
-          const response = await fetch(TOKEN_EXTRACTION_SERVICE_URL, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json'
+          console.log(`📡 Calling token extraction service: ${TOKEN_EXTRACTION_SERVICE_URL}`);
+          
+          // Call external token extraction service with timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+          
+          try {
+            const response = await fetch(TOKEN_EXTRACTION_SERVICE_URL, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'CUUB-Dashboard/1.0',
+                'Accept': 'application/json'
+              },
+              signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            console.log(`📥 Response status: ${response.status} ${response.statusText}`);
+            
+            // Get response body for error logging
+            let responseBody = null;
+            try {
+              const text = await response.text();
+              responseBody = text;
+              console.log(`📄 Response body preview: ${text.substring(0, 500)}`);
+            } catch (parseError) {
+              console.warn('⚠️  Could not read response body:', parseError.message);
             }
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Token extraction service returned status ${response.status}: ${response.statusText}`);
+            
+            if (!response.ok) {
+              const errorDetails = responseBody ? ` Response: ${responseBody.substring(0, 200)}` : '';
+              throw new Error(`Token extraction service returned status ${response.status}: ${response.statusText}${errorDetails}`);
+            }
+            
+            // Parse JSON response
+            let data;
+            try {
+              data = JSON.parse(responseBody || '{}');
+            } catch (jsonError) {
+              throw new Error(`Failed to parse JSON response: ${jsonError.message}. Response body: ${responseBody?.substring(0, 200)}`);
+            }
+            
+            // Validate response format
+            if (!data || !data.success || !data.token) {
+              throw new Error(`Invalid response from token extraction service: missing success or token. Response: ${JSON.stringify(data).substring(0, 200)}`);
+            }
+            
+            const newToken = data.token;
+            console.log('✅ Successfully refreshed Energo token from external service');
+            
+            // Update token in Vercel environment variables
+            await updateEnergoTokenStorage(newToken);
+            
+            // Clear the promise so future calls can refresh again
+            tokenRefreshPromise = null;
+            
+            return newToken;
+          } catch (fetchError) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+              throw new Error('Token extraction service request timed out after 60 seconds');
+            }
+            throw fetchError;
           }
-          
-          const data = await response.json();
-          
-          // Validate response format
-          if (!data || !data.success || !data.token) {
-            throw new Error('Invalid response from token extraction service: missing success or token');
-          }
-          
-          const newToken = data.token;
-          console.log('✅ Successfully refreshed Energo token from external service');
-          
-          // Update token in Vercel environment variables
-          await updateEnergoTokenStorage(newToken);
-          
-          // Clear the promise so future calls can refresh again
-          tokenRefreshPromise = null;
-          
-          return newToken;
         } catch (error) {
           lastError = error;
           const errorMsg = error.message || '';
+          
+          // Log full error details for debugging
+          console.error(`❌ Token extraction attempt failed:`, {
+            error: errorMsg,
+            retriesLeft: retries - 1,
+            stack: error.stack?.substring(0, 500)
+          });
           
           // Retry on network errors or service errors
           if (retries > 1) {
