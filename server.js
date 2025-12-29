@@ -868,19 +868,6 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       return res.status(401).json({ error: 'User not found' });
     }
 
-
-    ? user.station_ids.length : 'not array'
-    });
-    
-    // Debug: Check if station_ids contains the expected value
-
-    if (Array.isArray(user.station_ids)) {
-      );
-    } else if (typeof user.station_ids === 'object' && user.station_ids !== null) {
-
-    }
-    );
-
     // Determine which suppliers the user needs based on their station assignments
     const userStationIds = Array.isArray(user.station_ids) ? user.station_ids : Object.keys(user.station_ids || {});
     
@@ -946,7 +933,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
             const parsed = typeof chargeNowResult === 'string' ? JSON.parse(chargeNowResult) : chargeNowResult;
             if (parsed && parsed.data && Array.isArray(parsed.data)) {
               allStations.push(...parsed.data);
-              `);
+              console.log(`✅ Added ${parsed.data.length} ChargeNow station(s) from API`);
             }
           } catch (e) {
 
@@ -959,11 +946,11 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       
       // Fetch Energo stations if user has any
       if (hasEnergoStations && energoStationIds.length > 0) {
-        ...`);
+        console.log(`⚡ Fetching ${energoStationIds.length} Energo station(s)...`);
         try {
           const stationPromises = energoStationIds.map(stationId => 
             supplierAPI.fetchEnergoStation(stationId, req.user.username).catch(error => {
-
+              console.error(`❌ Error fetching Energo station ${stationId}:`, error.message);
               return null; // Return null on error
             })
           );
@@ -975,21 +962,20 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 const parsed = JSON.parse(stationJson);
                 if (parsed.data && Array.isArray(parsed.data)) {
                   allStations.push(...parsed.data);
-                  from response ${index + 1}`);
+                  console.log(`✅ Added ${parsed.data.length} Energo station(s) from response ${index + 1}`);
                 }
               } catch (e) {
-
+                console.error(`❌ Error parsing Energo station data ${index + 1}:`, e);
               }
             }
           });
         } catch (error) {
-
+          console.error('❌ Error in Energo station fetch batch:', error.message);
           // Continue to cache check below
         }
       }
       
-      
-      `);
+      console.log(`📦 Total stations fetched: ${allStations.length}`);
       result = JSON.stringify({ code: 0, msg: "success", data: allStations });
     }
     
@@ -1004,7 +990,8 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     let filteredStations = [];
     
     // Check if the API response has the expected structure
-    ,
+    console.log('📊 API response structure:', {
+      hasData: !!formattedData.data,
       dataLength: Array.isArray(formattedData.data) ? formattedData.data.length : 'not array'
     });
     
@@ -1017,7 +1004,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     }
 
     if (stationsArray.length > 0) {
-
+      console.log(`📊 Filtering ${stationsArray.length} stations based on user permissions`);
 
       // Handle both dictionary format (new) and array format (legacy)
       let userStationIdsForFilter = [];
@@ -1037,7 +1024,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
         // but ChargeNow stations need filtering from the full list
         filteredStations = stationsArray.filter(station => {
           const stationId = station.pCabinetid || station.id;
-          against user permissions: ${JSON.stringify(userStationIdsForFilter)}`);
+          console.log(`🔍 Checking station ${stationId} against user permissions: ${JSON.stringify(userStationIdsForFilter)}`);
           
           // Check for exact match first
           let hasAccess = userStationIdsForFilter.includes(stationId);
@@ -1051,9 +1038,9 @@ app.get('/api/stations', verifyToken, async (req, res) => {
 
           return hasAccess;
         });
-
-        );
+        console.log(`✅ Filtered to ${filteredStations.length} stations for user`);
       } else {
+        console.log('⚠️  No user station IDs found, returning empty array');
 
         // Don't set filteredStations = [] here, let the fallback logic handle it
       }
@@ -1093,7 +1080,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 success: true
               };
               
-              } revenue (DEMO DATA)`);
+              console.log(`[ENERGO] Using API totals: ${station.orderData.totalRecords} rents, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
             } else {
               let orderDataSuccess = false;
               let orderData = null;
@@ -1135,7 +1122,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 // Use the totals from the API response
                 station.orderData.totalRecords = orderData.page.total || 0;
                 station.orderData.totalRevenue = orderData.page.totalRevenue || 0;
-                } revenue`);
+                console.log(`[ENERGO] Using API totals: ${station.orderData.totalRecords} rents, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
               } else if (orderData.page?.records && Array.isArray(orderData.page.records)) {
                 // For ChargeNow, calculate from records
                 const validRecords = orderData.page.records.filter(record => {
@@ -1150,11 +1137,10 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 station.orderData.totalRevenue = validRecords.reduce((sum, record) => {
                   return sum + (parseFloat(record.settledAmount) || 0);
                 }, 0);
-                } revenue`);
+                console.log(`[ENERGO] Using API totals: ${station.orderData.totalRecords} rents, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
               }
               
-              
-              } revenue (rounded: $${Math.round(station.orderData.totalRevenue)})`);
+              console.log(`[CHARGENOW] Calculated totals: ${station.orderData.totalRecords} rents, $${station.orderData.totalRevenue.toFixed(2)} revenue (rounded: $${Math.round(station.orderData.totalRevenue)})`);
             }
             
           } catch (error) {
@@ -1190,7 +1176,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       debugTotalRevenue += roundedRevenue;
       debugTotalRents += rents;
       
-      } -> $${roundedRevenue} (total now: $${debugTotalRevenue})`);
+      console.log(`💰 Station ${station.pCabinetid || station.id}: $${revenue} -> $${roundedRevenue} (total now: $${debugTotalRevenue})`);
     });
 
     res.json({ 
@@ -1246,11 +1232,7 @@ app.post('/api/dispense-battery', verifyToken, async (req, res) => {
     const actualMessage = parsedData.msg || 'No message from API';
 
 
-
-
-
-
-    );
+    console.log(`🔋 Dispense request for station ${stationId}, slot ${slotNum}: ${isSuccessful ? 'SUCCESS' : 'FAILED'} - ${actualMessage}`);
 
     // Set proper JSON headers and return formatted response
     res.setHeader('Content-Type', 'application/json');
