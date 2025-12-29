@@ -27,16 +27,13 @@ let lastFetchTime = null;
 // Function to fetch and update station data (ChargeNow only - Energo stations are fetched on-demand)
 async function updateStationData() {
   try {
-    console.log('🔄 Scheduled station data update started at:', new Date().toISOString());
-    
     const result = await supplierAPI.fetchChargeNowStations();
     latestStationData = result;
     lastFetchTime = new Date().toISOString();
-    
-    console.log('✅ Station data updated successfully at:', lastFetchTime);
-    console.log('📊 Data size:', result.length, 'characters');
+
+
   } catch (error) {
-    console.error('❌ Scheduled station data update failed:', error.message);
+
     // Keep previous data if update fails
   }
 }
@@ -177,7 +174,7 @@ function verifyToken(req, res, next) {
     req.user = decoded;
     next();
   } catch (error) {
-    console.error('Token verification error:', error);
+
     return res.status(401).json({ error: 'Invalid token' });
   }
 }
@@ -211,7 +208,7 @@ app.get('/api/test-token-status', (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error getting token test status:', error);
+
     res.status(500).json({ 
       success: false,
       error: 'Failed to get test status',
@@ -223,7 +220,7 @@ app.get('/api/test-token-status', (req, res) => {
 // Trigger an immediate token test (optional - for manual testing)
 app.post('/api/test-token-now', async (req, res) => {
   try {
-    console.log('Manual token test triggered from UI');
+
     await performTokenTest();
     
     // Return the latest result
@@ -234,7 +231,7 @@ app.post('/api/test-token-now', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error triggering manual test:', error);
+
     res.status(500).json({ 
       success: false,
       error: 'Failed to perform test',
@@ -378,7 +375,7 @@ app.get('/api/energo-token', async (req, res) => {
     
     return res.status(404).json({ error: 'ENERGO_TOKEN environment variable is not set' });
   } catch (error) {
-    console.error('Error reading Energo token:', error);
+
     res.status(500).json({ error: 'Failed to read token' });
   }
 });
@@ -395,20 +392,20 @@ app.post('/api/energo-token', async (req, res) => {
     // Only update environment variable via Vercel API
     try {
       await updateVercelEnvironmentVariable(token);
-      console.log('✅ Energo token updated via Vercel API');
+
       return res.json({ 
         success: true, 
         message: 'Token updated successfully via Vercel API.',
         source: 'vercel-api'
       });
     } catch (error) {
-      console.error('Error updating token via Vercel API:', error);
+
       return res.status(500).json({ 
         error: 'Failed to update token via Vercel API: ' + error.message 
       });
     }
   } catch (error) {
-    console.error('Error updating Energo token:', error);
+
     res.status(500).json({ error: 'Failed to update token: ' + error.message });
   }
 });
@@ -471,35 +468,32 @@ app.get('/logout', (req, res) => {
 // User registration - handles new user signup
 app.post('/signup', async (req, res) => {
   try {
-    console.log('Signup attempt:', req.body);
+
     const { phone, username, password, password2, stationIds } = req.body;
     
     if (!phone || !username || !password || !password2 || password !== password2) {
-      console.log('Signup validation failed');
+
       return res.redirect('/signup?error=invalid');
     }
     
     // Check if user already exists
     if (await checkUserExists(username)) {
-      console.log('Signup failed - user already exists:', username);
+
       return res.redirect('/signup?error=exists');
     }
-    
-    console.log('Creating new user:', username);
+
     const hash = hashPassword(password);
     const stationIdsArray = parseStationIds(stationIds);
     await db.createUser(username, phone, hash, stationIdsArray);
-    
-    console.log('User created successfully, generating JWT token');
+
     const token = createAuthToken(username);
     
     // Set JWT token as HTTP-only cookie
     setAuthCookie(res, token);
-    
-    console.log('JWT token set, redirecting to home');
+
     res.redirect('/home');
   } catch (error) {
-    console.error('Signup error:', error);
+
     res.redirect('/signup?error=server');
   }
 });
@@ -507,37 +501,34 @@ app.post('/signup', async (req, res) => {
 // Admin user creation - handles new user creation from admin panel
 app.post('/newuser', async (req, res) => {
   try {
-    console.log('Admin user creation request:', req.body);
+
     const { phone, username, password, password2, stationIds } = req.body;
     
     // Validate input
     if (!phone || !username || !password || !password2) {
-      console.log('Missing required fields:', { phone, username, password: !!password, password2: !!password2 });
+
       return res.redirect('/newuser?error=invalid');
     }
     
     if (password !== password2) {
-      console.log('Passwords do not match');
+
       return res.redirect('/newuser?error=invalid');
     }
-    
-    console.log('Checking if user exists:', username);
+
     // Check if user already exists
     if (await checkUserExists(username)) {
-      console.log('User already exists:', username);
+
       return res.redirect('/newuser?error=exists');
     }
-    
-    console.log('Creating new user:', username);
+
     const hash = hashPassword(password);
     const stationIdsArray = parseStationIds(stationIds);
     const newUser = await db.createUser(username, phone, hash, stationIdsArray);
-    console.log('User created successfully:', newUser);
-    
+
     res.redirect('/admin');
   } catch (error) {
-    console.error('New user creation error:', error);
-    console.error('Error stack:', error.stack);
+
+
     res.redirect('/newuser?error=server');
   }
 });
@@ -545,25 +536,23 @@ app.post('/newuser', async (req, res) => {
 // User login - authenticates existing users
 app.post('/login', async (req, res) => {
   try {
-    console.log('Login attempt:', req.body);
+
     const { username, password } = req.body;
     const user = await db.getUserByUsername(username);
     
     if (!user || !bcrypt.compareSync(password, user.password)) {
-      console.log('Login failed for username:', username);
+
       return res.redirect('/login?error=invalid');
     }
-    
-          console.log('Login successful for username:', username);
+
     const token = createAuthToken(username, user.userType);
     
     // Set JWT token as HTTP-only cookie
     setAuthCookie(res, token);
-    
-    console.log('JWT token set, redirecting to home');
+
     res.redirect('/home');
   } catch (error) {
-    console.error('Login error:', error);
+
     res.redirect('/login?error=server');
   }
 });
@@ -571,19 +560,17 @@ app.post('/login', async (req, res) => {
 // API endpoints for frontend data
 app.get('/me', verifyToken, async (req, res) => {
   try {
-    console.log('GET /me - User from token:', req.user);
-    
+
     const user = await db.getUserByUsername(req.user.username);
-    console.log('GET /me - User from DB:', user);
-    
+
     if (!user) {
-      console.log('GET /me - User not found in DB');
+
       return res.status(401).json({ error: 'User not found' });
     }
     
     res.json({ username: user.username, phone: user.phone, userType: user.userType });
   } catch (error) {
-    console.error('GET /me - Error:', error);
+
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -591,14 +578,14 @@ app.get('/me', verifyToken, async (req, res) => {
 // Admin panel endpoints with full user details (including passwords)
 app.get('/admin/users-full', async (req, res) => {
   try {
-    console.log('GET /admin/users-full - Starting request');
+
     const users = await db.getAllUsersWithPasswords();
-    console.log('GET /admin/users-full - Users from DB:', users);
-    console.log('GET /admin/users-full - Users count:', users.length);
-    console.log('GET /admin/users-full - First user sample:', users[0]);
+
+
+
     res.json(users);
   } catch (error) {
-    console.error('Get admin users full error:', error);
+
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -606,7 +593,7 @@ app.get('/admin/users-full', async (req, res) => {
 // Endpoint to update user's station assignments
 app.post('/admin/update-user-stations', async (req, res) => {
   try {
-    console.log('Admin update user stations request:', req.body);
+
     const { userId, stationIds } = req.body;
     
     if (!userId) {
@@ -626,38 +613,35 @@ app.post('/admin/update-user-stations', async (req, res) => {
         stationIdsDict[id] = id; // Use station ID as title for legacy format
       });
     }
-    
-    console.log('Updating stations for user ID:', userId, 'with stations:', stationIdsDict);
+
     const updatedUser = await db.updateUserStations(userId, stationIdsDict);
     
     if (updatedUser) {
-      console.log('User stations updated successfully:', updatedUser.username);
+
       res.json({ success: true, updatedUser });
     } else {
       res.status(404).json({ error: 'User not found' });
     }
   } catch (error) {
-    console.error('Update user stations error:', error);
+
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 app.post('/admin/delete-user', async (req, res) => {
   try {
-    console.log('Admin delete user request:', req.body);
+
     const { userId } = req.body;
     
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
     }
-    
-    console.log('Deleting user with ID:', userId);
+
     const deletedUser = await db.deleteUser(userId);
-    console.log('User deleted successfully:', deletedUser);
-    
+
     res.json({ success: true, deletedUser });
   } catch (error) {
-    console.error('Delete user error:', error);
+
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -681,7 +665,7 @@ async function readStations() {
     const data = await fs.readFile(stationsFilePath, 'utf8');
     return JSON.parse(data);
   } catch (error) {
-    console.error('Error reading stations file:', error);
+
     return [];
   }
 }
@@ -694,7 +678,7 @@ async function writeStations(stations) {
     await fs.writeFile(stationsFilePath, JSON.stringify(stations, null, 2), 'utf8');
     return true;
   } catch (error) {
-    console.error('Error writing stations file:', error);
+
     return false;
   }
 }
@@ -704,12 +688,12 @@ async function writeStations(stations) {
  */
 app.get('/api/admin/stations', async (req, res) => {
   try {
-    console.log('GET /api/admin/stations - Fetching all stations');
+
     const stations = await readStations();
-    console.log('Stations loaded:', stations.length);
+
     res.json(stations);
   } catch (error) {
-    console.error('Error fetching stations:', error);
+
     res.status(500).json({ error: 'Failed to fetch stations' });
   }
 });
@@ -719,8 +703,7 @@ app.get('/api/admin/stations', async (req, res) => {
  */
 app.post('/api/admin/stations', async (req, res) => {
   try {
-    console.log('POST /api/admin/stations - Adding new station:', req.body);
-    
+
     const { id, name, address, coordinates } = req.body;
     
     // Validation
@@ -755,7 +738,7 @@ app.post('/api/admin/stations', async (req, res) => {
     const success = await writeStations(stations);
     
     if (success) {
-      console.log('Station added successfully:', newStation);
+
       res.status(201).json({
         message: 'Station added successfully',
         station: newStation
@@ -764,7 +747,7 @@ app.post('/api/admin/stations', async (req, res) => {
       res.status(500).json({ error: 'Failed to save station' });
     }
   } catch (error) {
-    console.error('Error adding station:', error);
+
     res.status(500).json({ error: 'Failed to add station' });
   }
 });
@@ -775,8 +758,7 @@ app.post('/api/admin/stations', async (req, res) => {
 app.put('/api/admin/stations/:id', async (req, res) => {
   try {
     const stationId = req.params.id;
-    console.log('PUT /api/admin/stations/:id - Updating station:', stationId, req.body);
-    
+
     const { id, name, address, coordinates } = req.body;
     
     // Validation
@@ -814,7 +796,7 @@ app.put('/api/admin/stations/:id', async (req, res) => {
     const success = await writeStations(stations);
     
     if (success) {
-      console.log('Station updated successfully:', stations[stationIndex]);
+
       res.json({
         message: 'Station updated successfully',
         station: stations[stationIndex]
@@ -823,7 +805,7 @@ app.put('/api/admin/stations/:id', async (req, res) => {
       res.status(500).json({ error: 'Failed to update station' });
     }
   } catch (error) {
-    console.error('Error updating station:', error);
+
     res.status(500).json({ error: 'Failed to update station' });
   }
 });
@@ -834,8 +816,7 @@ app.put('/api/admin/stations/:id', async (req, res) => {
 app.delete('/api/admin/stations/:id', async (req, res) => {
   try {
     const stationId = req.params.id;
-    console.log('DELETE /api/admin/stations/:id - Deleting station:', stationId);
-    
+
     // Read existing stations
     const stations = await readStations();
     
@@ -853,26 +834,26 @@ app.delete('/api/admin/stations/:id', async (req, res) => {
     const success = await writeStations(stations);
     
     if (success) {
-      console.log('Station deleted successfully:', deletedStation);
+
       res.json({ message: 'Station deleted successfully' });
     } else {
       res.status(500).json({ error: 'Failed to delete station' });
     }
   } catch (error) {
-    console.error('Error deleting station:', error);
+
     res.status(500).json({ error: 'Failed to delete station' });
   }
 });
 
 // Make initial API call when server starts (ChargeNow only)
-console.log('Making initial API call to ChargeNow...');
+
 supplierAPI.fetchChargeNowStations()
   .then(result => {
-    console.log('Device list received:', result);
-    console.log('Initial API call completed successfully');
+
+
   })
   .catch(error => {
-    console.error('Initial API call failed:', error);
+
   });
 
 
@@ -880,33 +861,26 @@ supplierAPI.fetchChargeNowStations()
 // Endpoint to get station data for the home page (filtered by user permissions)
 app.get('/api/stations', verifyToken, async (req, res) => {
   try {
-    console.log('Fetching stations for user:', req.user.username);
-    
+
     // Get user's station permissions
     const user = await db.getUserByUsername(req.user.username);
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
-    
-    console.log('=== STATION FILTERING DEBUG ===');
-    console.log('Request user:', req.user.username);
-    console.log('User data retrieved:', {
-      username: user.username,
-      station_ids: user.station_ids,
-      station_ids_type: typeof user.station_ids,
-      station_ids_length: Array.isArray(user.station_ids) ? user.station_ids.length : 'not array'
+
+
+    ? user.station_ids.length : 'not array'
     });
     
     // Debug: Check if station_ids contains the expected value
-    console.log('Expected station ID for Parlay: BJH09881');
+
     if (Array.isArray(user.station_ids)) {
-      console.log('User station_ids contains BJH09881:', user.station_ids.includes('BJH09881'));
+      );
     } else if (typeof user.station_ids === 'object' && user.station_ids !== null) {
-      console.log('User station_ids contains BJH09881:', 'BJH09881' in user.station_ids);
+
     }
-    console.log('User station_ids:', JSON.stringify(user.station_ids));
-    console.log('=== END DEBUG ===');
-    
+    );
+
     // Determine which suppliers the user needs based on their station assignments
     const userStationIds = Array.isArray(user.station_ids) ? user.station_ids : Object.keys(user.station_ids || {});
     
@@ -937,10 +911,9 @@ app.get('/api/stations', verifyToken, async (req, res) => {
             chargenowStationIds.push(stationId);
           }
         });
-        
-        console.log(`📊 User station breakdown: ${chargenowStationIds.length} ChargeNow, ${energoStationIds.length} Energo`);
+
       } catch (error) {
-        console.error('Error checking stations.json for supplier:', error);
+
         // Fallback: assume all are ChargeNow
         hasChargeNowStations = true;
         chargenowStationIds = userStationIds;
@@ -950,7 +923,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     // Use demo data for demo user, otherwise fetch from appropriate suppliers
     let result;
     if (req.user.username === 'demo') {
-      console.log('🎭 Using demo station data for demo user');
+
       result = supplierAPI.generateDemoStationData();
     } else {
       // Fetch stations from both suppliers if user has stations from both
@@ -958,14 +931,14 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       
       // Fetch ChargeNow stations if user has any
       if (hasChargeNowStations) {
-        console.log('🔌 Fetching ChargeNow stations...');
+
         let chargeNowResult;
         try {
           if (latestStationData && lastFetchTime) {
-            console.log('📋 Using cached ChargeNow station data from:', lastFetchTime);
+
             chargeNowResult = latestStationData;
           } else {
-            console.log('🔄 No cached data available, fetching fresh ChargeNow station data...');
+
             chargeNowResult = await supplierAPI.fetchChargeNowStations();
           }
           
@@ -973,24 +946,24 @@ app.get('/api/stations', verifyToken, async (req, res) => {
             const parsed = typeof chargeNowResult === 'string' ? JSON.parse(chargeNowResult) : chargeNowResult;
             if (parsed && parsed.data && Array.isArray(parsed.data)) {
               allStations.push(...parsed.data);
-              console.log(`✅ Added ${parsed.data.length} ChargeNow station(s)`);
+              `);
             }
           } catch (e) {
-            console.error('❌ Error parsing ChargeNow station data:', e);
+
           }
         } catch (error) {
-          console.error('❌ Error fetching ChargeNow stations:', error.message);
+
           // Will fall through to cache check below
         }
       }
       
       // Fetch Energo stations if user has any
       if (hasEnergoStations && energoStationIds.length > 0) {
-        console.log(`⚡ Fetching ${energoStationIds.length} Energo station(s)...`);
+        ...`);
         try {
           const stationPromises = energoStationIds.map(stationId => 
             supplierAPI.fetchEnergoStation(stationId, req.user.username).catch(error => {
-              console.error(`❌ Error fetching Energo station ${stationId}:`, error.message);
+
               return null; // Return null on error
             })
           );
@@ -1002,21 +975,21 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 const parsed = JSON.parse(stationJson);
                 if (parsed.data && Array.isArray(parsed.data)) {
                   allStations.push(...parsed.data);
-                  console.log(`✅ Added ${parsed.data.length} Energo station(s) from response ${index + 1}`);
+                  from response ${index + 1}`);
                 }
               } catch (e) {
-                console.error(`❌ Error parsing Energo station data ${index + 1}:`, e);
+
               }
             }
           });
         } catch (error) {
-          console.error('❌ Error in Energo station fetch batch:', error.message);
+
           // Continue to cache check below
         }
       }
       
       
-      console.log(`📦 Total stations fetched: ${allStations.length} (${hasChargeNowStations ? 'ChargeNow + ' : ''}${hasEnergoStations ? 'Energo' : ''})`);
+      `);
       result = JSON.stringify({ code: 0, msg: "success", data: allStations });
     }
     
@@ -1031,10 +1004,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     let filteredStations = [];
     
     // Check if the API response has the expected structure
-    console.log('API response structure:', {
-      hasData: !!formattedData.data,
-      dataType: typeof formattedData.data,
-      isArray: Array.isArray(formattedData.data),
+    ,
       dataLength: Array.isArray(formattedData.data) ? formattedData.data.length : 'not array'
     });
     
@@ -1045,19 +1015,10 @@ app.get('/api/stations', verifyToken, async (req, res) => {
     } else if (Array.isArray(formattedData)) {
       stationsArray = formattedData;
     }
-    
-    console.log('Stations array to filter:', {
-      length: stationsArray.length,
-      sampleStation: stationsArray[0] ? {
-        pCabinetid: stationsArray[0].pCabinetid,
-        id: stationsArray[0].id
-      } : 'no stations'
-    });
-    
+
     if (stationsArray.length > 0) {
-      console.log('User station permissions:', user.station_ids);
-      console.log('User station permissions type:', typeof user.station_ids);
-      
+
+
       // Handle both dictionary format (new) and array format (legacy)
       let userStationIdsForFilter = [];
       if (typeof user.station_ids === 'object' && user.station_ids !== null) {
@@ -1069,16 +1030,14 @@ app.get('/api/stations', verifyToken, async (req, res) => {
           userStationIdsForFilter = Object.keys(user.station_ids);
         }
       }
-      
-      console.log('User station permissions length:', userStationIdsForFilter.length);
-      
+
       if (userStationIdsForFilter.length > 0) {
         // Filter to only show stations the user has access to
         // Note: Energo stations are already filtered (we only fetch user's stations),
         // but ChargeNow stations need filtering from the full list
         filteredStations = stationsArray.filter(station => {
           const stationId = station.pCabinetid || station.id;
-          console.log(`Checking station: ${stationId} (type: ${typeof stationId}) against user permissions: ${JSON.stringify(userStationIdsForFilter)}`);
+          against user permissions: ${JSON.stringify(userStationIdsForFilter)}`);
           
           // Check for exact match first
           let hasAccess = userStationIdsForFilter.includes(stationId);
@@ -1089,32 +1048,27 @@ app.get('/api/stations', verifyToken, async (req, res) => {
               permittedId.toString().toLowerCase() === stationId.toString().toLowerCase()
             );
           }
-          
-          console.log(`Station ${stationId} access: ${hasAccess}`);
+
           return hasAccess;
         });
-        console.log(`Filtered stations: ${filteredStations.length} out of ${stationsArray.length}`);
-        console.log('Filtered station IDs:', filteredStations.map(s => s.pCabinetid || s.id));
+
+        );
       } else {
-        console.log('User has no station permissions in userStationIdsForFilter, will check cache or user permissions');
+
         // Don't set filteredStations = [] here, let the fallback logic handle it
       }
       
       if (filteredStations.length > 0) {
         
         // Fetch order data for each filtered station
-        console.log('Fetching order data for filtered stations...');
-        
+
         // Get date range from query parameters or use default
         const { sTime, eTime } = getDateRange(req.query.startDate, req.query.endDate);
-        console.log(`Using date range: ${sTime} to ${eTime}`);
-        
+
         for (let station of filteredStations) {
           try {
             const stationId = station.pCabinetid || station.id;
-            console.log(`Fetching orders for station: ${stationId}`);
-            
-            
+
             // Add station title - prefer user's custom title, then API title, then station ID
             if (typeof user.station_ids === 'object' && user.station_ids !== null && !Array.isArray(user.station_ids) && user.station_ids[stationId]) {
               // User has a custom title for this station - use it
@@ -1139,7 +1093,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 success: true
               };
               
-              console.log(`Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (DEMO DATA)`);
+              } revenue (DEMO DATA)`);
             } else {
               let orderDataSuccess = false;
               let orderData = null;
@@ -1156,7 +1110,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 orderData = orderDataResult;
                 orderDataSuccess = orderData.code === 0;
               } catch (error) {
-                console.error(`❌ Error fetching orders for station ${stationId}:`, error.message);
+
                 orderDataSuccess = false;
                 station.orderData = {
                   totalRecords: 0,
@@ -1181,7 +1135,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 // Use the totals from the API response
                 station.orderData.totalRecords = orderData.page.total || 0;
                 station.orderData.totalRevenue = orderData.page.totalRevenue || 0;
-                console.log(`[ENERGO] Using API totals: ${station.orderData.totalRecords} rents, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
+                } revenue`);
               } else if (orderData.page?.records && Array.isArray(orderData.page.records)) {
                 // For ChargeNow, calculate from records
                 const validRecords = orderData.page.records.filter(record => {
@@ -1196,15 +1150,15 @@ app.get('/api/stations', verifyToken, async (req, res) => {
                 station.orderData.totalRevenue = validRecords.reduce((sum, record) => {
                   return sum + (parseFloat(record.settledAmount) || 0);
                 }, 0);
-                console.log(`[CHARGENOW] Calculated from records: ${station.orderData.totalRecords} rents, $${station.orderData.totalRevenue.toFixed(2)} revenue`);
+                } revenue`);
               }
               
               
-              console.log(`[MAIN] Station ${stationId}: ${station.orderData.totalRecords} orders, $${station.orderData.totalRevenue.toFixed(2)} revenue (rounded: $${Math.round(station.orderData.totalRevenue)})`);
+              } revenue (rounded: $${Math.round(station.orderData.totalRevenue)})`);
             }
             
           } catch (error) {
-            console.error(`Error processing station ${station.pCabinetid || station.id}:`, error);
+
             station.orderData = {
               totalRecords: 0,
               totalRevenue: 0,
@@ -1215,11 +1169,11 @@ app.get('/api/stations', verifyToken, async (req, res) => {
         }
         
       } else {
-        console.log('User has no station permissions in filteredStations check, will check cache or user permissions');
+
         // Don't set filteredStations = [] here, let the fallback logic handle it
       }
     } else {
-      console.log('No stations found in API response, will use cache or user permissions');
+
       // Don't do anything here, let the fallback logic handle it
     }
     
@@ -1236,11 +1190,9 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       debugTotalRevenue += roundedRevenue;
       debugTotalRents += rents;
       
-      console.log(`[MAIN] Adding station ${station.pCabinetid}: $${revenue.toFixed(2)} -> $${roundedRevenue} (total now: $${debugTotalRevenue})`);
+      } -> $${roundedRevenue} (total now: $${debugTotalRevenue})`);
     });
-    
-    console.log(`[MAIN] Final totals: $${debugTotalRevenue} revenue, ${debugTotalRents} rents`);
-    
+
     res.json({ 
       success: true, 
       data: filteredStations,
@@ -1253,7 +1205,7 @@ app.get('/api/stations', verifyToken, async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching stations:', error);
+
     res.status(500).json({ 
       success: false, 
       error: error.message,
@@ -1283,30 +1235,23 @@ app.post('/api/dispense-battery', verifyToken, async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
-    
-    console.log(`Dispensing battery from station: ${stationId} for user: ${req.user.username}`);
-    
+
     // Make the API call to dispense battery via supplier-api module
-    console.log('Making dispense API call via supplier-api module for station:', stationId);
-    
+
     const { response, result: parsedData } = await supplierAPI.ejectBatteryByRepair(stationId, 0);
-    
-    console.log('Dispense API response status:', response.status);
-    console.log('Dispense API response:', parsedData);
-    
+
+
     // Check if the dispense was actually successful
     const isSuccessful = parsedData.code === 0;
     const actualMessage = parsedData.msg || 'No message from API';
-    
-    console.log('=== DISPENSE ANALYSIS ===');
-    console.log('Station ID:', stationId);
-    console.log('HTTP Status:', response.status);
-    console.log('API Response Code:', parsedData.code);
-    console.log('API Message:', actualMessage);
-    console.log('Is Successful:', isSuccessful);
-    console.log('Full API Response:', JSON.stringify(parsedData, null, 2));
-    console.log('=== END DISPENSE ANALYSIS ===');
-    
+
+
+
+
+
+
+    );
+
     // Set proper JSON headers and return formatted response
     res.setHeader('Content-Type', 'application/json');
     
@@ -1329,7 +1274,7 @@ app.post('/api/dispense-battery', verifyToken, async (req, res) => {
     // Return properly formatted JSON
     res.status(200).json(responseData);
   } catch (error) {
-    console.error('Dispense battery API call failed:', error);
+
     res.status(500).json({ 
       success: false, 
       error: error.message,
@@ -1344,16 +1289,16 @@ module.exports = app;
 // Start the server only if not in Vercel environment
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running at http://0.0.0.0:${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+
+
   });
 
   // Error handling for uncaught exceptions
   process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
+
   });
 
   process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+
   });
 }
