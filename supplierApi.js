@@ -185,9 +185,8 @@ async function refreshEnergoToken() {
             try {
               const text = await response.text();
               responseBody = text;
-              }`);
             } catch (parseError) {
-
+              // Ignore errors reading response body
             }
             
             if (!response.ok) {
@@ -229,14 +228,12 @@ async function refreshEnergoToken() {
           const errorMsg = error.message || '';
           
           // Log full error details for debugging
-
-          });
+          // (Logging removed for cleaner output)
           
           // Retry on network errors or service errors
           if (retries > 1) {
             retries--;
             const waitTime = (4 - retries) * 1000; // Exponential backoff: 1s, 2s, 3s
-            , retrying in ${waitTime}ms... (${retries} retries left)`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
             continue;
           }
@@ -269,7 +266,7 @@ async function getEnergoConfig() {
     throw new Error('ENERGO_TOKEN environment variable is not set. Please set it in Vercel dashboard or your environment variables.');
   }
   
-  }...)`);
+  // (Logging removed for cleaner output)
   
   return {
     baseUrl: ENERGO_BASE_URL,
@@ -547,7 +544,7 @@ function isAuthError(response, result) {
     if (errorMsg.includes('unauthorized') || 
         errorMsg.includes('forbidden') || 
         (errorMsg.includes('token') && (errorMsg.includes('expired') || errorMsg.includes('invalid') || errorMsg.includes('invalid')))) {
-      );
+      // (Logging removed for cleaner output)
       return true;
     }
   }
@@ -565,24 +562,20 @@ async function makeEnergoRequest(requestFn) {
     // Make the initial request
     const { response, result } = await requestFn();
 
-    if (result) {
-      .substring(0, 200));
-    }
+    // (Logging removed for cleaner output)
     
     // Check if request failed - refresh token on any failure
     if (!response.ok || isAuthError(response, result)) {
-
-      .substring(0, 200) : 'null' });
+      // (Logging removed for cleaner output)
       
       try {
         // Refresh the token (this will update the env var via updateEnergoTokenStorage)
         await refreshEnergoToken();
         
         // Retry the request once with the new token
-
         return await requestFn();
       } catch (refreshError) {
-
+        // (Logging removed for cleaner output)
         // Return the original error if refresh failed
         return { response, result };
       }
@@ -668,7 +661,7 @@ async function fetchEnergoStationAvailability(cabinetId, username = null) {
         result = JSON.parse(text);
       } catch (parseError) {
         // If JSON parsing fails, create an error result object
-        );
+        // (Logging removed for cleaner output)
         result = { error: 'Failed to parse response', raw: text.substring(0, 200) };
       }
     } catch (error) {
@@ -727,8 +720,6 @@ async function fetchEnergoStationRentalHistory(cabinetId, sTime, eTime, username
   
   // URL encode the array brackets
   const url = `${(await getEnergoConfig()).baseUrl}/order?page=0&size=0&createTime%5B0%5D=${startEpoch}&createTime%5B1%5D=${endEpoch}&cabinetid=${cabinetId}&sort=id%2Cdesc`;
-
-  `);
   
   // Wrap the API request with automatic token refresh on failure
   const { response, result } = await makeEnergoRequest(async () => {
@@ -754,7 +745,7 @@ async function fetchEnergoStationRentalHistory(cabinetId, sTime, eTime, username
         result = JSON.parse(text);
       } catch (parseError) {
         // If JSON parsing fails, create an error result object
-        );
+        // (Logging removed for cleaner output)
         result = { error: 'Failed to parse response', raw: text.substring(0, 200) };
       }
     } catch (error) {
@@ -1039,11 +1030,7 @@ async function sendEnergoKeepAliveRequest() {
       return { response, result };
     });
     
-    if (response.ok) {
-      .toISOString()}`);
-    } else {
-
-    }
+    // (Logging removed for cleaner output)
   } catch (error) {
 
   }
@@ -1053,7 +1040,7 @@ async function sendEnergoKeepAliveRequest() {
  * Starts the Energo API keep-alive interval (sends request every 1 minute)
  */
 function startEnergoKeepAlive() {
-  ');
+  // (Logging removed for cleaner output)
   
   // Send initial request immediately
   sendEnergoKeepAliveRequest();
