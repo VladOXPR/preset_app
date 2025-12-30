@@ -363,17 +363,22 @@ async function updateVercelEnvironmentVariable(token) {
 // Get current Energo token
 app.get('/api/energo-token', async (req, res) => {
   try {
-    // Always read directly from environment variable
+    // Get token from supplierAPI (which checks cache first, then env var)
+    // This ensures we get the most up-to-date token (from cache if recently updated)
+    const config = await supplierAPI.getEnergoConfig();
+    return res.json({ 
+      token: config.token,
+      source: 'environment'
+    });
+  } catch (error) {
+    // Fall back to environment variable if getEnergoConfig fails
     if (process.env.ENERGO_TOKEN) {
       return res.json({ 
         token: process.env.ENERGO_TOKEN,
         source: 'environment'
       });
     }
-    
     return res.status(404).json({ error: 'ENERGO_TOKEN environment variable is not set' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to read token: ' + error.message });
   }
 });
 
@@ -389,10 +394,15 @@ app.post('/api/energo-token', async (req, res) => {
     // Update environment variable via Vercel API
     try {
       await updateVercelEnvironmentVariable(token);
+      
+      // Also update cache in supplierAPI for immediate use
+      if (supplierAPI.setEnergoTokenCache) {
+        supplierAPI.setEnergoTokenCache(token);
+      }
 
       return res.json({ 
         success: true, 
-        message: 'Token updated successfully via Vercel API. The new token will be available after the next deployment or function invocation.',
+        message: 'Token updated successfully via Vercel API.',
         source: 'vercel-api'
       });
     } catch (error) {

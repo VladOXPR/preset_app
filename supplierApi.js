@@ -32,8 +32,22 @@ const CHARGENOW_CONFIG = {
 const ENERGO_BASE_URL = 'https://backend.energo.vip/api';
 const DEFAULT_ENERGO_OID = '3526';
 
-// Token is always read directly from process.env.ENERGO_TOKEN
-// When token refresh is needed, it's automatically updated via Vercel API
+// In-memory cache for token updates
+// Vercel serverless functions have environment variables baked in at deployment time,
+// so process.env.ENERGO_TOKEN won't change in a running instance until redeployment.
+// This cache allows immediate use of updated tokens within the same function instance.
+// Initialize with environment variable value on startup
+let energoTokenCache = process.env.ENERGO_TOKEN || null;
+
+// Function to set the token cache (called when token is updated)
+function setEnergoTokenCache(token) {
+  energoTokenCache = token;
+}
+
+// Function to get the token cache
+function getEnergoTokenCache() {
+  return energoTokenCache;
+}
 
 /**
  * Update ENERGO_TOKEN environment variable in Vercel via Management API
@@ -125,8 +139,10 @@ async function updateVercelEnvironmentVariable(token) {
  */
 async function updateEnergoTokenStorage(token) {
   // Update environment variable via Vercel API
-  // Note: The updated token will be available in process.env.ENERGO_TOKEN on the next function invocation/deployment
   await updateVercelEnvironmentVariable(token);
+  
+  // Also update in-memory cache for immediate use in the current function instance
+  setEnergoTokenCache(token);
 }
 
 // Mutex to prevent concurrent token refresh attempts
@@ -256,14 +272,17 @@ async function refreshEnergoToken() {
  * @returns {Promise<Object>} Energo config object
  */
 async function getEnergoConfig() {
-  // Always read directly from environment variable
-  if (!process.env.ENERGO_TOKEN) {
+  // Check cache first (for recently updated tokens), then fall back to env var
+  const cachedToken = getEnergoTokenCache();
+  const token = cachedToken || process.env.ENERGO_TOKEN;
+  
+  if (!token) {
     throw new Error('ENERGO_TOKEN environment variable is not set. Please set it in Vercel dashboard or your environment variables.');
   }
   
   return {
     baseUrl: ENERGO_BASE_URL,
-    token: process.env.ENERGO_TOKEN,
+    token: token,
     oid: process.env.ENERGO_OID || DEFAULT_ENERGO_OID,
   };
 }
@@ -1074,6 +1093,7 @@ module.exports = {
   // Configuration (for future customization)
   CHARGENOW_CONFIG,
   getEnergoConfig,
+  setEnergoTokenCache, // Export function to update token cache from server.js
   
   // Keep-alive function
   startEnergoKeepAlive
