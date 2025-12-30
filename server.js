@@ -278,8 +278,6 @@ app.get('/key', (req, res) => {
 // Check if we're running on Vercel
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
 
-// Tokens are only stored in environment variables
-
 /**
  * Update ENERGO_TOKEN environment variable in Vercel via Management API
  * Requires: VERCEL_TOKEN, VERCEL_PROJECT_ID (and optionally VERCEL_TEAM_ID)
@@ -365,18 +363,26 @@ async function updateVercelEnvironmentVariable(token) {
 // Get current Energo token
 app.get('/api/energo-token', async (req, res) => {
   try {
-    // Only read from environment variable
-    if (process.env.ENERGO_TOKEN) {
+    // Try to get token from supplierAPI (which checks cache first, then env var)
+    try {
+      const config = await supplierAPI.getEnergoConfig();
+      const cachedToken = supplierAPI.getEnergoTokenCache ? supplierAPI.getEnergoTokenCache() : null;
       return res.json({ 
-        token: process.env.ENERGO_TOKEN,
-        source: 'environment'
+        token: config.token,
+        source: cachedToken ? 'cache' : 'environment'
       });
+    } catch (configError) {
+      // If getEnergoConfig fails, fall back to environment variable
+      if (process.env.ENERGO_TOKEN) {
+        return res.json({ 
+          token: process.env.ENERGO_TOKEN,
+          source: 'environment'
+        });
+      }
+      throw configError;
     }
-    
-    return res.status(404).json({ error: 'ENERGO_TOKEN environment variable is not set' });
   } catch (error) {
-
-    res.status(500).json({ error: 'Failed to read token' });
+    res.status(500).json({ error: 'Failed to read token: ' + error.message });
   }
 });
 
@@ -389,9 +395,14 @@ app.post('/api/energo-token', async (req, res) => {
       return res.status(400).json({ error: 'Token is required' });
     }
     
-    // Only update environment variable via Vercel API
+    // Update environment variable via Vercel API
     try {
       await updateVercelEnvironmentVariable(token);
+      
+      // Also update in-memory cache for immediate use (so getEnergoConfig() uses the new token)
+      if (supplierAPI.setEnergoTokenCache) {
+        supplierAPI.setEnergoTokenCache(token);
+      }
 
       return res.json({ 
         success: true, 

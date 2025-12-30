@@ -32,7 +32,20 @@ const CHARGENOW_CONFIG = {
 const ENERGO_BASE_URL = 'https://backend.energo.vip/api';
 const DEFAULT_ENERGO_OID = '3526';
 
-// Cache removed - tokens are now always updated in environment variables
+// In-memory cache for token updates (persists for the lifetime of the serverless function instance)
+// This allows immediate use of updated tokens without waiting for a redeployment
+// Initialize with environment variable value if available
+let energoTokenCache = process.env.ENERGO_TOKEN || null;
+
+// Function to set the token cache (called from server.js when token is updated)
+function setEnergoTokenCache(token) {
+  energoTokenCache = token;
+}
+
+// Function to get the token cache (for internal use)
+function getEnergoTokenCache() {
+  return energoTokenCache;
+}
 
 /**
  * Update ENERGO_TOKEN environment variable in Vercel via Management API
@@ -123,13 +136,14 @@ async function updateVercelEnvironmentVariable(token) {
  * @returns {Promise<void>}
  */
 async function updateEnergoTokenStorage(token) {
-  // Only update environment variable via Vercel API
+  // Update environment variable via Vercel API
   try {
     await updateVercelEnvironmentVariable(token);
+    
+    // Also update in-memory cache for immediate use
+    setEnergoTokenCache(token);
 
   } catch (error) {
-
-
     throw error; // Re-throw since we have no fallback
   }
 }
@@ -210,12 +224,12 @@ async function refreshEnergoToken() {
             const newToken = data.token;
 
             // Update token in Vercel environment variables
-            await updateEnergoTokenStorage(newToken);
+    await updateEnergoTokenStorage(newToken);
             
             // Clear the promise so future calls can refresh again
             tokenRefreshPromise = null;
-            
-            return newToken;
+    
+    return newToken;
           } catch (fetchError) {
             clearTimeout(timeoutId);
             if (fetchError.name === 'AbortError') {
@@ -223,7 +237,7 @@ async function refreshEnergoToken() {
             }
             throw fetchError;
           }
-        } catch (error) {
+  } catch (error) {
           lastError = error;
           const errorMsg = error.message || '';
           
@@ -239,8 +253,8 @@ async function refreshEnergoToken() {
           }
           
           // If we're out of retries, throw
-          throw error;
-        }
+    throw error;
+  }
       }
       
       // If we exhausted retries, throw the last error
@@ -261,16 +275,19 @@ async function refreshEnergoToken() {
  * @returns {Promise<Object>} Energo config object
  */
 async function getEnergoConfig() {
-  // Only use environment variable - no fallbacks
-  if (!process.env.ENERGO_TOKEN) {
+  // Check in-memory cache first (for recently updated tokens)
+  const cachedToken = getEnergoTokenCache();
+  const token = cachedToken || process.env.ENERGO_TOKEN;
+  
+  if (!token) {
     throw new Error('ENERGO_TOKEN environment variable is not set. Please set it in Vercel dashboard or your environment variables.');
   }
   
   // (Logging removed for cleaner output)
   
-  return {
+    return {
     baseUrl: ENERGO_BASE_URL,
-    token: process.env.ENERGO_TOKEN,
+    token: token,
     oid: process.env.ENERGO_OID || DEFAULT_ENERGO_OID,
   };
 }
@@ -354,10 +371,10 @@ async function fetchChargeNowStations() {
     headers: myHeaders,
     redirect: 'follow'
   };
-
+  
   const response = await fetch(`${CHARGENOW_CONFIG.baseUrl}/cabinet/getAllDevice`, requestOptions);
   const result = await response.text();
-
+  
   return result;
 }
 
@@ -379,10 +396,10 @@ async function fetchBatteryRentalInfo(page = 1, limit = 100) {
   };
   
   const url = `${CHARGENOW_CONFIG.baseUrl}/order/list?page=${page}&limit=${limit}`;
-
+  
   const response = await fetch(url, requestOptions);
   const result = await response.json();
-
+  
   return { response, result };
 }
 
@@ -403,10 +420,10 @@ async function fetchStationAvailability(stationId) {
   };
   
   const url = `${CHARGENOW_CONFIG.baseUrl}/rent/cabinet/query?deviceId=${stationId}`;
-
+  
   const response = await fetch(url, requestOptions);
   const result = await response.json();
-
+  
   return { response, result };
 }
 
@@ -432,11 +449,11 @@ async function fetchChargeNowStationRentalHistory(stationId, sTime, eTime, page 
   
   // Use pCabinetid parameter for station-specific queries
   const url = `${CHARGENOW_CONFIG.baseUrl}/order/list?page=${page}&limit=${limit}&sTime=${encodeURIComponent(sTime)}&eTime=${encodeURIComponent(eTime)}&pCabinetid=${stationId}`;
-
+  
   try {
     const response = await fetch(url, requestOptions);
     const result = await response.text();
-
+    
     // Parse the result
     let parsedResult;
     try {
@@ -474,11 +491,11 @@ async function dispenseBattery(stationId) {
   };
   
   const url = `${CHARGENOW_CONFIG.baseUrl}/rent/popAll`;
-
+  
   const response = await fetch(url, requestOptions);
   const result = await response.json();
-
-
+  
+  
   return { response, result };
 }
 
@@ -500,10 +517,10 @@ async function ejectBatteryByRepair(stationId, slotNum = 0) {
   };
   
   const url = `${CHARGENOW_CONFIG.baseUrl}/cabinet/ejectByRepair?cabinetid=${stationId}&slotNum=${slotNum}`;
-
+  
   const response = await fetch(url, requestOptions);
   const result = await response.text();
-
+  
   // Parse the result
   let parsedResult;
   try {
@@ -561,7 +578,7 @@ async function makeEnergoRequest(requestFn) {
   try {
     // Make the initial request
     const { response, result } = await requestFn();
-
+    
     // (Logging removed for cleaner output)
     
     // Check if request failed - refresh token on any failure
@@ -588,11 +605,11 @@ async function makeEnergoRequest(requestFn) {
     // If it's a JSON parse error and we got a response, refresh token
     if (error.message && error.message.includes('JSON') && error.response) {
 
-      try {
-        await refreshEnergoToken();
+        try {
+          await refreshEnergoToken();
 
-        return await requestFn();
-      } catch (refreshError) {
+          return await requestFn();
+        } catch (refreshError) {
 
         throw error;
       }
@@ -606,7 +623,7 @@ async function makeEnergoRequest(requestFn) {
       return await requestFn();
     } catch (refreshError) {
 
-      throw error;
+    throw error;
     }
   }
 }
@@ -636,7 +653,7 @@ function dateToEpoch(dateStr) {
  */
 async function fetchEnergoStationAvailability(cabinetId, username = null) {
   const url = `${(await getEnergoConfig()).baseUrl}/cabinet?cabinetId=${cabinetId}`;
-
+  
   // Wrap the API request with automatic token refresh on failure
   const { response, result } = await makeEnergoRequest(async () => {
     const energoConfig = await getEnergoConfig();
@@ -668,7 +685,7 @@ async function fetchEnergoStationAvailability(cabinetId, username = null) {
 
       result = { error: 'Failed to read response', message: error.message };
     }
-
+    
     return { response, result };
   });
   
@@ -752,7 +769,7 @@ async function fetchEnergoStationRentalHistory(cabinetId, sTime, eTime, username
 
       result = { error: 'Failed to read response', message: error.message };
     }
-
+    
     return { response, result };
   });
   
@@ -869,7 +886,7 @@ async function fetchStationRentalHistory(username, stationId, sTime, eTime, page
   
   if (supplier === 'energo') {
     const { response, result } = await fetchEnergoStationRentalHistory(stationId, sTime, eTime, username);
-
+    
     // Convert Energo format to ChargeNow-compatible format
     return {
       response,
@@ -1081,6 +1098,8 @@ module.exports = {
   // Configuration (for future customization)
   CHARGENOW_CONFIG,
   getEnergoConfig,
+  setEnergoTokenCache, // Export function to update token cache from server.js
+  getEnergoTokenCache, // Export function to check if cache exists
   
   // Keep-alive function
   startEnergoKeepAlive
