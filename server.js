@@ -360,6 +360,51 @@ async function updateVercelEnvironmentVariable(token) {
   return true;
 }
 
+/**
+ * Trigger a Vercel redeployment to pick up the updated environment variable
+ * Uses Vercel's Deployments API to create a new deployment from the latest git commit
+ * @returns {Promise<void>}
+ */
+async function triggerVercelRedeployment() {
+  const vercelToken = process.env.VERCEL_TOKEN;
+  const projectId = process.env.VERCEL_PROJECT_ID;
+  const teamId = process.env.VERCEL_TEAM_ID;
+  
+  if (!vercelToken || !projectId) {
+    // Silently fail if credentials aren't available
+    return;
+  }
+  
+  try {
+    // Build the URL with query parameters
+    // Use 'name' parameter which is the project name/ID
+    let url = `https://api.vercel.com/v13/deployments?name=${encodeURIComponent(projectId)}`;
+    if (teamId) {
+      url += `&teamId=${encodeURIComponent(teamId)}`;
+    }
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${vercelToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        target: 'production'
+      })
+    });
+    
+    if (!response.ok) {
+      // Don't throw error - redeployment failure shouldn't break token update
+      const errorText = await response.text();
+      console.error(`Failed to trigger Vercel redeployment: ${response.status} ${errorText}`);
+    }
+  } catch (error) {
+    // Don't throw error - redeployment failure shouldn't break token update
+    console.error('Error triggering Vercel redeployment:', error.message);
+  }
+}
+
 // Get current Energo token
 app.get('/api/energo-token', async (req, res) => {
   try {
@@ -399,10 +444,13 @@ app.post('/api/energo-token', async (req, res) => {
       if (supplierAPI.setEnergoTokenCache) {
         supplierAPI.setEnergoTokenCache(token);
       }
+      
+      // Trigger a redeployment to pick up the updated environment variable
+      await triggerVercelRedeployment();
 
       return res.json({ 
         success: true, 
-        message: 'Token updated successfully via Vercel API.',
+        message: 'Token updated successfully via Vercel API. Redeployment triggered.',
         source: 'vercel-api'
       });
     } catch (error) {

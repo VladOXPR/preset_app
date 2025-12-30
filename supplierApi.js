@@ -133,6 +133,50 @@ async function updateVercelEnvironmentVariable(token) {
 }
 
 /**
+ * Trigger a Vercel redeployment to pick up the updated environment variable
+ * @returns {Promise<void>}
+ */
+async function triggerVercelRedeployment() {
+  const vercelToken = process.env.VERCEL_TOKEN;
+  const projectId = process.env.VERCEL_PROJECT_ID;
+  const teamId = process.env.VERCEL_TEAM_ID;
+  
+  if (!vercelToken || !projectId) {
+    // Silently fail if credentials aren't available
+    return;
+  }
+  
+  try {
+    // Build the URL with query parameters
+    // Use 'name' parameter which is the project name/ID
+    let url = `https://api.vercel.com/v13/deployments?name=${encodeURIComponent(projectId)}`;
+    if (teamId) {
+      url += `&teamId=${encodeURIComponent(teamId)}`;
+    }
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${vercelToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        target: 'production'
+      })
+    });
+    
+    if (!response.ok) {
+      // Don't throw error - redeployment failure shouldn't break token update
+      const errorText = await response.text();
+      console.error(`Failed to trigger Vercel redeployment: ${response.status} ${errorText}`);
+    }
+  } catch (error) {
+    // Don't throw error - redeployment failure shouldn't break token update
+    console.error('Error triggering Vercel redeployment:', error.message);
+  }
+}
+
+/**
  * Update Energo token storage (only updates Vercel env var)
  * @param {string} token - The new token to save
  * @returns {Promise<void>}
@@ -143,6 +187,9 @@ async function updateEnergoTokenStorage(token) {
   
   // Also update in-memory cache for immediate use in the current function instance
   setEnergoTokenCache(token);
+  
+  // Trigger a redeployment to pick up the updated environment variable
+  await triggerVercelRedeployment();
 }
 
 // Mutex to prevent concurrent token refresh attempts
