@@ -126,10 +126,10 @@ async function updateEnergoTokenStorage(token) {
   // Only update environment variable via Vercel API
   try {
     await updateVercelEnvironmentVariable(token);
-    console.log('✅ Energo token updated via Vercel API');
+
   } catch (error) {
-    console.warn('⚠️  Could not update token via Vercel API:', error.message);
-    console.warn('⚠️  Ensure VERCEL_TOKEN and VERCEL_PROJECT_ID are set.');
+
+
     throw error; // Re-throw since we have no fallback
   }
 }
@@ -148,23 +148,21 @@ const TOKEN_EXTRACTION_SERVICE_URL = 'https://api.cuub.tech/token';
 async function refreshEnergoToken() {
   // If a refresh is already in progress, wait for it and return the same result
   if (tokenRefreshPromise) {
-    console.log('🔄 Token refresh already in progress, waiting for completion...');
+
     return await tokenRefreshPromise;
   }
   
   // Create a new refresh promise
   tokenRefreshPromise = (async () => {
     try {
-      console.log('🔄 Refreshing Energo authorization token via external service...');
-      
+
       // Retry logic for network errors
       let retries = 3;
       let lastError = null;
       
       while (retries > 0) {
         try {
-          console.log(`📡 Calling token extraction service: ${TOKEN_EXTRACTION_SERVICE_URL}`);
-          
+
           // Call external token extraction service with timeout
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
@@ -181,17 +179,15 @@ async function refreshEnergoToken() {
             });
             
             clearTimeout(timeoutId);
-            
-            console.log(`📥 Response status: ${response.status} ${response.statusText}`);
-            
+
             // Get response body for error logging
             let responseBody = null;
             try {
               const text = await response.text();
               responseBody = text;
-              console.log(`📄 Response body preview: ${text.substring(0, 500)}`);
+              }`);
             } catch (parseError) {
-              console.warn('⚠️  Could not read response body:', parseError.message);
+
             }
             
             if (!response.ok) {
@@ -213,8 +209,7 @@ async function refreshEnergoToken() {
             }
             
             const newToken = data.token;
-            console.log('✅ Successfully refreshed Energo token from external service');
-            
+
             // Update token in Vercel environment variables
             await updateEnergoTokenStorage(newToken);
             
@@ -234,17 +229,14 @@ async function refreshEnergoToken() {
           const errorMsg = error.message || '';
           
           // Log full error details for debugging
-          console.error(`❌ Token extraction attempt failed:`, {
-            error: errorMsg,
-            retriesLeft: retries - 1,
-            stack: error.stack?.substring(0, 500)
+
           });
           
           // Retry on network errors or service errors
           if (retries > 1) {
             retries--;
             const waitTime = (4 - retries) * 1000; // Exponential backoff: 1s, 2s, 3s
-            console.warn(`⚠️  Token extraction error (${errorMsg}), retrying in ${waitTime}ms... (${retries} retries left)`);
+            , retrying in ${waitTime}ms... (${retries} retries left)`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
             continue;
           }
@@ -259,7 +251,7 @@ async function refreshEnergoToken() {
     } catch (error) {
       // Clear the promise on error so future calls can retry
       tokenRefreshPromise = null;
-      console.error('❌ Error refreshing Energo token:', error.message);
+
       throw error;
     }
   })();
@@ -277,7 +269,7 @@ async function getEnergoConfig() {
     throw new Error('ENERGO_TOKEN environment variable is not set. Please set it in Vercel dashboard or your environment variables.');
   }
   
-  console.log(`🔑 Using ENERGO_TOKEN from environment variable (length: ${process.env.ENERGO_TOKEN.length}, starts with: ${process.env.ENERGO_TOKEN.substring(0, 20)}...)`);
+  }...)`);
   
   return {
     baseUrl: ENERGO_BASE_URL,
@@ -319,7 +311,7 @@ async function determineSupplier(username, stationId = null) {
         return 'energo';
       }
     } catch (error) {
-      console.warn('Could not read stations.json for supplier detection:', error.message);
+
     }
   }
   
@@ -365,12 +357,10 @@ async function fetchChargeNowStations() {
     headers: myHeaders,
     redirect: 'follow'
   };
-  
-  console.log('Making API call to ChargeNow: /cabinet/getAllDevice');
+
   const response = await fetch(`${CHARGENOW_CONFIG.baseUrl}/cabinet/getAllDevice`, requestOptions);
   const result = await response.text();
-  
-  console.log('ChargeNow API response status:', response.status);
+
   return result;
 }
 
@@ -392,12 +382,10 @@ async function fetchBatteryRentalInfo(page = 1, limit = 100) {
   };
   
   const url = `${CHARGENOW_CONFIG.baseUrl}/order/list?page=${page}&limit=${limit}`;
-  console.log('Making API call to ChargeNow: /order/list');
-  
+
   const response = await fetch(url, requestOptions);
   const result = await response.json();
-  
-  console.log('Battery rental API response status:', response.status);
+
   return { response, result };
 }
 
@@ -418,12 +406,10 @@ async function fetchStationAvailability(stationId) {
   };
   
   const url = `${CHARGENOW_CONFIG.baseUrl}/rent/cabinet/query?deviceId=${stationId}`;
-  console.log('Making API call to ChargeNow: /rent/cabinet/query for station:', stationId);
-  
+
   const response = await fetch(url, requestOptions);
   const result = await response.json();
-  
-  console.log('ChargeNow station availability response status:', response.status);
+
   return { response, result };
 }
 
@@ -449,14 +435,11 @@ async function fetchChargeNowStationRentalHistory(stationId, sTime, eTime, page 
   
   // Use pCabinetid parameter for station-specific queries
   const url = `${CHARGENOW_CONFIG.baseUrl}/order/list?page=${page}&limit=${limit}&sTime=${encodeURIComponent(sTime)}&eTime=${encodeURIComponent(eTime)}&pCabinetid=${stationId}`;
-  console.log('Making API call to ChargeNow: /order/list for station:', stationId);
-  
+
   try {
     const response = await fetch(url, requestOptions);
     const result = await response.text();
-    
-    console.log('ChargeNow rental history response status:', response.status);
-    
+
     // Parse the result
     let parsedResult;
     try {
@@ -467,7 +450,7 @@ async function fetchChargeNowStationRentalHistory(stationId, sTime, eTime, page 
     
     return { response, result: parsedResult };
   } catch (error) {
-    console.error(`❌ Error fetching ChargeNow rental history for ${stationId}:`, error.message);
+
     throw error;
   }
 }
@@ -494,14 +477,11 @@ async function dispenseBattery(stationId) {
   };
   
   const url = `${CHARGENOW_CONFIG.baseUrl}/rent/popAll`;
-  console.log('Making API call to ChargeNow: /rent/popAll for station:', stationId);
-  
+
   const response = await fetch(url, requestOptions);
   const result = await response.json();
-  
-  console.log('ChargeNow dispense battery response status:', response.status);
-  console.log('ChargeNow dispense battery response:', result);
-  
+
+
   return { response, result };
 }
 
@@ -523,13 +503,10 @@ async function ejectBatteryByRepair(stationId, slotNum = 0) {
   };
   
   const url = `${CHARGENOW_CONFIG.baseUrl}/cabinet/ejectByRepair?cabinetid=${stationId}&slotNum=${slotNum}`;
-  console.log('Making API call to ChargeNow: /cabinet/ejectByRepair for station:', stationId, 'slot:', slotNum);
-  
+
   const response = await fetch(url, requestOptions);
   const result = await response.text();
-  
-  console.log('ChargeNow eject battery response status:', response.status);
-  
+
   // Parse the result
   let parsedResult;
   try {
@@ -554,13 +531,13 @@ async function ejectBatteryByRepair(stationId, slotNum = 0) {
 function isAuthError(response, result) {
   // Check HTTP status codes first
   if (response.status === 401 || response.status === 403) {
-    console.log('🔐 Auth error detected: HTTP status', response.status);
+
     return true;
   }
   
   // Check if response is not OK (any non-2xx status) - treat as potential auth error
   if (!response.ok) {
-    console.log('🔐 Response not OK, treating as potential auth error. Status:', response.status);
+
     return true;
   }
   
@@ -570,7 +547,7 @@ function isAuthError(response, result) {
     if (errorMsg.includes('unauthorized') || 
         errorMsg.includes('forbidden') || 
         (errorMsg.includes('token') && (errorMsg.includes('expired') || errorMsg.includes('invalid') || errorMsg.includes('invalid')))) {
-      console.log('🔐 Auth error detected in response message:', errorMsg.substring(0, 100));
+      );
       return true;
     }
   }
@@ -587,26 +564,25 @@ async function makeEnergoRequest(requestFn) {
   try {
     // Make the initial request
     const { response, result } = await requestFn();
-    
-    console.log(`[ENERGO REQUEST] Status: ${response.status}, OK: ${response.ok}`);
+
     if (result) {
-      console.log(`[ENERGO REQUEST] Result preview:`, JSON.stringify(result).substring(0, 200));
+      .substring(0, 200));
     }
     
     // Check if request failed - refresh token on any failure
     if (!response.ok || isAuthError(response, result)) {
-      console.log('⚠️  Energo API request failed, refreshing token and updating env var...');
-      console.log('Response details:', { status: response.status, statusText: response.statusText, result: result ? JSON.stringify(result).substring(0, 200) : 'null' });
+
+      .substring(0, 200) : 'null' });
       
       try {
         // Refresh the token (this will update the env var via updateEnergoTokenStorage)
         await refreshEnergoToken();
         
         // Retry the request once with the new token
-        console.log('🔄 Retrying Energo API request with new token...');
+
         return await requestFn();
       } catch (refreshError) {
-        console.error('❌ Failed to refresh token:', refreshError.message);
+
         // Return the original error if refresh failed
         return { response, result };
       }
@@ -618,25 +594,25 @@ async function makeEnergoRequest(requestFn) {
     // Handle JSON parsing errors or other exceptions
     // If it's a JSON parse error and we got a response, refresh token
     if (error.message && error.message.includes('JSON') && error.response) {
-      console.log('⚠️  JSON parsing error, refreshing token...');
+
       try {
         await refreshEnergoToken();
-        console.log('🔄 Retrying Energo API request with new token...');
+
         return await requestFn();
       } catch (refreshError) {
-        console.error('❌ Failed to refresh token:', refreshError.message);
+
         throw error;
       }
     }
     
     // For other network errors, also try refreshing token
-    console.error('❌ Energo API request error, attempting token refresh:', error.message);
+
     try {
       await refreshEnergoToken();
-      console.log('🔄 Retrying Energo API request with new token...');
+
       return await requestFn();
     } catch (refreshError) {
-      console.error('❌ Failed to refresh token:', refreshError.message);
+
       throw error;
     }
   }
@@ -667,8 +643,7 @@ function dateToEpoch(dateStr) {
  */
 async function fetchEnergoStationAvailability(cabinetId, username = null) {
   const url = `${(await getEnergoConfig()).baseUrl}/cabinet?cabinetId=${cabinetId}`;
-  console.log('Making API call to Energo: /cabinet for station:', cabinetId);
-  
+
   // Wrap the API request with automatic token refresh on failure
   const { response, result } = await makeEnergoRequest(async () => {
     const energoConfig = await getEnergoConfig();
@@ -693,15 +668,14 @@ async function fetchEnergoStationAvailability(cabinetId, username = null) {
         result = JSON.parse(text);
       } catch (parseError) {
         // If JSON parsing fails, create an error result object
-        console.warn('Failed to parse JSON response:', text.substring(0, 200));
+        );
         result = { error: 'Failed to parse response', raw: text.substring(0, 200) };
       }
     } catch (error) {
-      console.error('Error reading response:', error.message);
+
       result = { error: 'Failed to read response', message: error.message };
     }
-    
-    console.log('Energo station availability response status:', response.status);
+
     return { response, result };
   });
   
@@ -753,8 +727,8 @@ async function fetchEnergoStationRentalHistory(cabinetId, sTime, eTime, username
   
   // URL encode the array brackets
   const url = `${(await getEnergoConfig()).baseUrl}/order?page=0&size=0&createTime%5B0%5D=${startEpoch}&createTime%5B1%5D=${endEpoch}&cabinetid=${cabinetId}&sort=id%2Cdesc`;
-  console.log('Making API call to Energo: /order for station:', cabinetId);
-  console.log('Date range:', sTime, 'to', eTime, `(${startEpoch} to ${endEpoch})`);
+
+  `);
   
   // Wrap the API request with automatic token refresh on failure
   const { response, result } = await makeEnergoRequest(async () => {
@@ -780,15 +754,14 @@ async function fetchEnergoStationRentalHistory(cabinetId, sTime, eTime, username
         result = JSON.parse(text);
       } catch (parseError) {
         // If JSON parsing fails, create an error result object
-        console.warn('Failed to parse JSON response:', text.substring(0, 200));
+        );
         result = { error: 'Failed to parse response', raw: text.substring(0, 200) };
       }
     } catch (error) {
-      console.error('Error reading response:', error.message);
+
       result = { error: 'Failed to read response', message: error.message };
     }
-    
-    console.log('Energo rental history response status:', response.status);
+
     return { response, result };
   });
   
@@ -863,7 +836,7 @@ async function fetchEnergoStation(cabinetId, username = null) {
     
     return JSON.stringify(chargeNowFormat);
   } catch (error) {
-    console.error('Error fetching Energo station:', error);
+
     return JSON.stringify({ code: -1, msg: error.message, data: [] });
   }
 }
@@ -883,7 +856,7 @@ async function fetchStations(username) {
   if (supplier === 'energo') {
     // For Energo, we need to fetch individual stations
     // This is a placeholder - in practice, you'd need to know which stations to fetch
-    console.log('Energo supplier detected, but fetchStations requires station IDs');
+
     return JSON.stringify({ code: 0, msg: "success", data: [] });
   }
   
@@ -905,9 +878,7 @@ async function fetchStationRentalHistory(username, stationId, sTime, eTime, page
   
   if (supplier === 'energo') {
     const { response, result } = await fetchEnergoStationRentalHistory(stationId, sTime, eTime, username);
-    
-    console.log(`[ENERGO RENTAL HISTORY] Station ${stationId}: totalElements=${result.totalElements}, totalPay=${result.totalPay}`);
-    
+
     // Convert Energo format to ChargeNow-compatible format
     return {
       response,
@@ -1069,12 +1040,12 @@ async function sendEnergoKeepAliveRequest() {
     });
     
     if (response.ok) {
-      console.log(`[ENERGO KEEP-ALIVE] Successfully sent keep-alive request at ${new Date().toISOString()}`);
+      .toISOString()}`);
     } else {
-      console.warn(`[ENERGO KEEP-ALIVE] Keep-alive request returned status ${response.status}`);
+
     }
   } catch (error) {
-    console.error('[ENERGO KEEP-ALIVE] Error sending keep-alive request:', error.message);
+
   }
 }
 
@@ -1082,7 +1053,7 @@ async function sendEnergoKeepAliveRequest() {
  * Starts the Energo API keep-alive interval (sends request every 1 minute)
  */
 function startEnergoKeepAlive() {
-  console.log('[ENERGO KEEP-ALIVE] Starting Energo API keep-alive service (1 minute interval)');
+  ');
   
   // Send initial request immediately
   sendEnergoKeepAliveRequest();
