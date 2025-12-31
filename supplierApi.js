@@ -320,8 +320,8 @@ async function refreshEnergoToken() {
  */
 async function getEnergoConfig() {
   // Check cache first (for recently updated tokens), then fall back to env var
-  const cachedToken = getEnergoTokenCache();
-  const token = cachedToken || process.env.ENERGO_TOKEN;
+  let cachedToken = getEnergoTokenCache();
+  let token = cachedToken || process.env.ENERGO_TOKEN;
   
   if (!token) {
     throw new Error('ENERGO_TOKEN environment variable is not set. Please set it in Vercel dashboard or your environment variables.');
